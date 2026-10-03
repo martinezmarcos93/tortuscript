@@ -270,6 +270,19 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertTrue(seleccion.headers["Location"].startswith("/"))
         self.assertNotIn("evil.example", seleccion.headers["Location"])
 
+    def test_login_rechaza_post_de_origen_cruzado(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={
+                "Origin": "https://evil.example",
+                "Sec-Fetch-Site": "cross-site",
+            },
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+        self.assertEqual(self.client.get("/cuenta/me").status_code, 401)
+
     def test_login_html_no_revela_si_la_cuenta_existe_o_esta_verificada(self):
         self.client.post("/cuenta/registro", json={
             "email": "pendiente@example.com",
