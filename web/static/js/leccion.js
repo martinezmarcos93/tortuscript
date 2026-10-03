@@ -428,7 +428,7 @@
           mostrarPie("bien",["✅ ¡Consulta correcta!","⭐".repeat(p.estrellas)+"☆".repeat(3-p.estrellas)+"  +"+p.xp+" XP"],actual+1<pasos.length?"Continuar":"Terminar",siguientePaso,false); return;
         }
         Tortu.tocar("error"); mostrarPie("mal",["🤔 La consulta todavía no cumple la consigna.",(r.evaluacion&&r.evaluacion.mensaje)||"Revisá el resultado y probá otra vez."],"Reintentar",()=>{ocultarPie();editor.focus();},false);
-      } catch(e) { mostrarPie("mal",["😵 No pude comunicarme con TortuScript.",String(e)],"Reintentar",()=>ocultarPie(),false); }
+      } catch(e) { mostrarPie("mal",["😵 No pude comunicarme con TortuScript.",(e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")],"Reintentar",()=>ocultarPie(),false); }
       finally { if(!editor.getOption("readOnly")) run.disabled=false; }
     }
     run.addEventListener("click", ejecutar);
@@ -519,7 +519,7 @@
         mostrarPie("mal", ["🤔 Todavía no cumple la consigna.", (r.evaluacion && r.evaluacion.mensaje) || "Revisá el código y probalo otra vez."],
           "Reintentar", () => { ocultarPie(); editor.focus(); }, false);
       } catch (e) {
-        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", String(e)], "Reintentar", () => ocultarPie(), false);
+        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", (e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")], "Reintentar", () => ocultarPie(), false);
       } finally {
         if (!editor.getOption("readOnly")) run.disabled = false;
       }
@@ -664,7 +664,7 @@
         }[ev.estado] || ["Revisalo otra vez."];
         mostrarPie("mal", texto.filter(Boolean), "Reintentar", () => { ocultarPie(); editor.focus(); }, false);
       } catch (e) {
-        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", String(e)], "Reintentar", () => ocultarPie(), false);
+        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", (e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")], "Reintentar", () => ocultarPie(), false);
       } finally { if (!editor.getOption("readOnly")) run.disabled = false; }
     }
     run.addEventListener("click", ejecutar);
