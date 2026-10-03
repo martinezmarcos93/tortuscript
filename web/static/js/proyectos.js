@@ -59,7 +59,7 @@ const Proyectos = (() => {
         mensaje("💾 ¡Guardado!", nombre);
         Tortu.avisos(r.avisos);
       } catch (e) {
-        mensaje("😵 No se pudo guardar", (e.datos && e.datos.mensaje) || String(e));
+        mensaje("😵 No se pudo guardar", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.");
       } finally { boton.disabled = false; }
     }
 
@@ -84,7 +84,7 @@ const Proyectos = (() => {
           await Tortu.api(`/api/proyectos/${id}/${accion}`, {});
           location.reload();
         } catch (e) {
-          mensaje("😵 No se pudo", (e.datos && e.datos.mensaje) || String(e));
+          mensaje("😵 No se pudo", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.");
         }
       });
     }
