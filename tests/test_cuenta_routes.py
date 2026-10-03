@@ -283,6 +283,36 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertNotIn("Set-Cookie", respuesta.headers)
         self.assertEqual(self.client.get("/cuenta/me").status_code, 401)
 
+    def test_login_rechaza_fetch_metadata_cross_site_sin_origin(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={"Sec-Fetch-Site": "cross-site"},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
+    def test_login_rechaza_referer_de_otro_origen_si_falta_origin(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={"Referer": "https://evil.example/formulario"},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
+    def test_login_acepta_origen_propio_y_sigue_validando_credenciales(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "no-existe@example.com", "password": "clave-incorrecta"},
+            headers={
+                "Origin": "http://localhost",
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+        self.assertEqual(respuesta.status_code, 401)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
     def test_login_html_no_revela_si_la_cuenta_existe_o_esta_verificada(self):
         self.client.post("/cuenta/registro", json={
             "email": "pendiente@example.com",
