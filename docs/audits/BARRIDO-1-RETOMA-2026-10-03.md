@@ -21,8 +21,16 @@ La prueba `test_cuenta_perfil_activo_abre_onboarding_y_progreso_persiste` cubre 
 ### B1-03 — Revisar avisos editoriales del validador
 Persisten avisos no bloqueantes sobre ordenamientos alternativos equivalentes en tres ejercicios. Hay una regresión que acepta los órdenes equivalentes; falta decidir si las consignas deberían aclarar el objetivo pedagógico. No cambiar la evaluación hasta revisar el contenido concreto.
 
-### B1-04 — Login CSRF: mitigación añadida, CI pendiente
-La revisión confirmó que `POST /cuenta/login` acepta formularios HTML y crea sesión sin token CSRF previo. Se añadió un control de origen en el blueprint: rechaza `Sec-Fetch-Site: cross-site` y un `Origin`/`Referer` que no coincida con esquema y host de la aplicación. La regresión `test_login_rechaza_post_de_origen_cruzado` comprueba HTTP 403, ausencia de `Set-Cookie` y que no se crea sesión. El CI de la rama sigue ejecutándose; no declarar la mitigación validada hasta ver los tres trabajos en verde. Las solicitudes de clientes no navegador que no envían Origin/Referer siguen admitidas, mientras que los navegadores modernos se cubren con Fetch Metadata.
+### B1-04 — Login CSRF: mitigación añadida y validada en CI
+La revisión confirmó que `POST /cuenta/login` acepta formularios HTML y crea sesión sin token CSRF previo. Se añadió un control de origen en el blueprint: rechaza `Sec-Fetch-Site: cross-site` y un `Origin`/`Referer` que no coincida con esquema y host de la aplicación. La regresión `test_login_rechaza_post_de_origen_cruzado` comprueba HTTP 403, ausencia de `Set-Cookie` y que no se crea sesión. Los tres trabajos del CI (Python 3.9, Python 3.12 y auditoría de navegador) terminaron en verde para el commit `79b24706c5be7c07a88621f4e66e75b5611489c4`. Las solicitudes de clientes no navegador que no envían Origin/Referer siguen admitidas, mientras que los navegadores modernos se cubren con Fetch Metadata.
+
+
+### B1-06 — Fallos de UX silenciados en acciones cotidianas
+La revisión de JavaScript encontró dos fallos de bajo riesgo, pero visibles para el alumno:
+- En el resumen, cambiar la meta diaria solo recargaba si la API devolvía `ok`; una respuesta válida negativa quedaba silenciosa y las excepciones solo se escribían en consola.
+- En la página de ejercicio, el botón de pista no capturaba errores de red/servidor. La promesa podía rechazarse sin mensaje y el alumno no recibía una vía clara para reintentar.
+
+**Correcciones aplicadas en esta rama:** el resumen muestra un aviso de error cuando no se confirma el cambio y evita clics duplicados durante la petición; el botón de pista se deshabilita mientras carga, muestra un error comprensible si falla y vuelve a habilitarse para reintentar, salvo que ya se hayan agotado las tres pistas. El CI de estos cambios queda pendiente de la ejecución correspondiente al nuevo head.
 
 ### B1-05 — Separar fallos actuales de resultados históricos
 Los informes de los primeros pases incluyen conteos de fallos anteriores al estado actual. Deben conservarse como historial, pero nunca presentarse como estado actual de CI. Usar el workflow del commit concreto como fuente para cada declaración de estado.
@@ -30,7 +38,7 @@ Los informes de los primeros pases incluyen conteos de fallos anteriores al esta
 ## Próximas acciones del Barrido 1
 
 1. Verificar el contrato de origen/CSRF del login y definir una regresión reproducible antes de tocar autenticación.
-2. Revisar las rutas de formularios y estados de error/loading/vacío con foco en inconsistencias de bajo riesgo.
+2. Revisar más rutas de formularios y estados de error/loading/vacío; ya se corrigieron los dos fallos de UX descritos en B1-06.
 3. Revisar el validador de contenido y los tres avisos editoriales, sin alterar reglas curriculares por intuición.
 4. Cerrar los hallazgos con pruebas automatizadas y enlazar la ejecución de CI correspondiente.
 5. Mantener en una lista separada las comprobaciones que requieren dispositivo, correo real o copia local; no declararlas completadas remotamente.
