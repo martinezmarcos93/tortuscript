@@ -35,6 +35,7 @@ class TestAjustes(Base):
     def test_guardar_y_recordar(self):
         p = persistencia_local.cargar_progreso()
         self.assertTrue(progreso.guardar_ajustes(p, tam="grande", contraste="alto", voz="si"))
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         again = progreso.ajustes_de(persistencia_local.cargar_progreso())
         self.assertEqual((again["tam"], again["contraste"], again["voz"], again["letra"]), ("grande", "alto", "si", "normal"))
 
@@ -62,6 +63,7 @@ class TestAjustes(Base):
     def test_cada_perfil_tiene_los_suyos(self):
         a = persistencia_local.cargar_progreso("lua")
         progreso.guardar_ajustes(a, tam="enorme")
+        self.assertTrue(persistencia_local.guardar_progreso(a))
         self.assertEqual(progreso.ajustes_de(persistencia_local.cargar_progreso("lua"))["tam"], "enorme")
         self.assertEqual(progreso.ajustes_de(persistencia_local.cargar_progreso("tomi"))["tam"], "normal")
 
@@ -75,9 +77,17 @@ class TestPaginas(Base):
     def setUp(self):
         super().setUp()
         from web.app import create_app
-        self.c = create_app(token="t").test_client()
+        app = create_app(token="t")
+        app.config.update(
+            TESTING=True,
+            ACCOUNT_DB=self._dir / "cuentas.sqlite3",
+            ACCOUNT_COOKIE_SECURE=False,
+            PROGRESS_DIR=self._dir / "progreso_perfiles",
+        )
+        self.c = app.test_client()
         self.h = {"X-Tortu-Token": "t"}
-        progreso.guardar_config(persistencia_local.cargar_progreso(), onboarding=True)
+        from fixtures_cuenta import preparar_sesion_educativa
+        preparar_sesion_educativa(app, self.c, email="accesibilidad@example.com", nombre="Ana", token="t")
 
     def post(self, ruta, datos=None):
         return self.c.post(ruta, json=datos or {}, headers=self.h)

@@ -46,7 +46,24 @@ def _click_exacto(pg, selector, texto):
 def _jugar_paso(pg, paso):
     tipo, entradas = paso["tipo"], list(paso.get("entradas_prueba") or [])
     if tipo == "explicacion":
+        # El pie empieza oculto y lo muestra leccion.js; esperar a que el
+        # navegador lo inicialice y a que termine la comprobación asíncrona.
+        contador_antes = pg.locator("#lec-contador").inner_text()
+        try:
+            pg.wait_for_selector("#lec-principal:visible", timeout=10000)
+        except Exception as exc:
+            raise AssertionError(
+                f"El control de explicación no aparece en {pg.url}; "
+                f"cuerpo={pg.locator('body').inner_text()[:400]!r}"
+            ) from exc
         pg.click("#lec-principal")
+        pg.wait_for_function(
+            "(antes) => { const c = document.querySelector('#lec-contador'); "
+            "const f = document.querySelector('#lec-paso h2'); "
+            "return !c || c.textContent !== antes || (f && /Lección perfecta|Lección completada|Práctica terminada/.test(f.textContent)); }",
+            arg=contador_antes,
+            timeout=10000,
+        )
         return
     if tipo in ("elegir", "predecir"):
         pg.wait_for_selector(".opcion-paso")
@@ -62,7 +79,14 @@ def _jugar_paso(pg, paso):
     elif tipo == "escribir":
         pg.wait_for_selector(".paso-caja .CodeMirror")
         pg.evaluate("s => document.querySelector('.paso-caja .CodeMirror').CodeMirror.setValue(s)", paso["solucion"])
-        pg.click("text=▶ Jugar" if paso.get("juego") else "text=▶ Dibujar" if paso.get("tortuga") else "text=▶ Ejecutar")
+        boton = (
+            "text=▶ Probar" if paso.get("web")
+            else "text=▶ Ejecutar consulta" if paso.get("lenguaje") == "sql"
+            else "text=▶ Jugar" if paso.get("juego")
+            else "text=▶ Dibujar" if paso.get("tortuga")
+            else "text=▶ Ejecutar"
+        )
+        pg.click(boton)
         _esperar_pie(pg, entradas)
         pg.click("#lec-principal")
         return
@@ -85,6 +109,7 @@ def main():
         pg = navegador.new_page(viewport={"width": 1280, "height": 900})
         pg.on("console", lambda m: errores.append(m.text) if m.type == "error" else None)
         pg.on("pageerror", lambda e: errores.append(str(e)))
+        pg.goto(args.url + "/cuenta/__test__/bootstrap")
         pg.goto(args.url + "/bienvenida")
         pg.evaluate("t => fetch('/api/onboarding', {method: 'POST', headers: {'Content-Type': 'application/json', "
                     "'X-Tortu-Token': t}, body: JSON.stringify({meta_min: 10})})", "prueba")

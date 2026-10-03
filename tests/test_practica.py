@@ -130,6 +130,7 @@ class TestProgresoPractica(unittest.TestCase):
     def test_se_guarda_y_los_pasos_de_leccion_recuerdan_la_fecha(self):
         p = persistencia_local.cargar_progreso()
         progreso.registrar_practica(p, "hola-mundo", 1, True, HOY)
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         self.assertIn("hola-mundo:1", persistencia_local.cargar_progreso()["repaso"])
         progreso.registrar_paso_leccion(p, "hola-mundo", 1, 5, True, 6)
         fecha = p["lecciones"]["hola-mundo"]["pasos"]["1"]["fecha"]

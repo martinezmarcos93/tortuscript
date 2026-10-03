@@ -1,4 +1,4 @@
-name: Verificación Fase 0
+name: Verificación base y barridos
 
 on:
   workflow_dispatch:
@@ -6,6 +6,10 @@ on:
     branches:
       - main
       - audit/ux-v1-2026-09-30
+      - sweep/consolidacion-ux-v1
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -13,17 +17,70 @@ permissions:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: Dependencias
         run: python -m pip install --require-hashes -r requirements.lock
+      - name: Verificar reproducibilidad del lock portable
+        if: matrix.python-version == '3.9'
+        run: |
+          python herramientas/auditar_dependencias.py --generar-lock
+          git diff --exit-code -- requirements.lock
+      - name: Compilar módulos Python
+        run: python -m compileall -q tortuscript web herramientas
+      - name: Contrato comercial y educativo
+        run: python -m unittest discover -s tests -p 'test_cuenta_routes.py'
       - name: Tests Python y JavaScript
         run: python -m unittest discover -s tests
       - name: Validador de contenido
+        if: always()
         run: python herramientas/validar_contenido.py
+
+  auditoria-navegador:
+    if: ${{ !startsWith(github.event.head_commit.message, 'docs:') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencias de la aplicación
+        run: python -m pip install --require-hashes -r requirements.lock
+      - name: Playwright
+        run: |
+          python -m pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium
+      - name: Iniciar servidor de prueba aislado
+        run: |
+          python herramientas/servidor_de_prueba.py 5077 --todo-desbloqueado > /tmp/tortuscript-browser.log 2>&1 &
+          for intento in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:5077/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/tortuscript-browser.log
+          exit 1
+      - name: Auditoría responsive
+        run: python herramientas/revisar_responsive.py --url http://127.0.0.1:5077 --capturas artifacts/responsive
+      - name: Recorrido de todos los cursos por navegador
+        if: always()
+        run: python herramientas/jugar_cursos.py --url http://127.0.0.1:5077
+      - name: Auditoría de contraste WCAG AA
+        if: always()
+        run: python herramientas/revisar_contraste.py --url http://127.0.0.1:5077
+      - name: Guardar capturas de diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-navegador
+          path: artifacts/
+          if-no-files-found: ignore

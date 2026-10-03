@@ -27,6 +27,7 @@ class TestGuardado(BaseTemporal):
     def test_ida_y_vuelta(self):
         p = persistencia_local.cargar_progreso()
         progreso.registrar_ejercicio(p, 0, 3, 30)
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         p2 = persistencia_local.cargar_progreso()
         self.assertEqual(p2["xp_total"], 30)
         self.assertEqual(p2["ejercicios"]["0"]["estrellas"], 3)
@@ -42,7 +43,9 @@ class TestGuardado(BaseTemporal):
         # Bug P1: antes se arrancaba de cero y el siguiente guardado pisaba el archivo.
         p = persistencia_local.cargar_progreso()
         progreso.registrar_ejercicio(p, 0, 3, 30)
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         progreso.registrar_ejercicio(p, 1, 3, 30)          # crea el .bak con xp=30
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         archivo = persistencia_local.get_archivo_progreso()
         archivo.write_text("{ roto", encoding="utf-8")
         recuperado = persistencia_local.cargar_progreso()
@@ -76,6 +79,7 @@ class TestPerfiles(BaseTemporal):
         p_ana = persistencia_local.cargar_progreso()
         persistencia_local.set_perfil("beto")
         progreso.registrar_ejercicio(p_ana, 0, 3, 30)
+        self.assertTrue(persistencia_local.guardar_progreso(p_ana))
         self.assertTrue(persistencia_local.get_archivo_progreso("ana").exists())
         self.assertFalse(persistencia_local.get_archivo_progreso("beto").exists())
 

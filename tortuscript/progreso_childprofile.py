@@ -47,7 +47,12 @@ class ProgresoChildProfile:
             return None
         try:
             documento = json.loads(archivo.read_text(encoding="utf-8"))
-            return importar_snapshot(documento)
+            snapshot = importar_snapshot(documento)
+            if snapshot.profile_id != profile_id:
+                raise ProgresoPerfilError(
+                    "El identificador del progreso no coincide con el archivo propietario."
+                )
+            return snapshot
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
             raise ProgresoPerfilError("El progreso asociado al perfil no es válido.") from exc
 

@@ -10,6 +10,7 @@ Revisa TODO lo que un chico va a ver, sin abrir la app:
 Uso: validar_curso(curso) -> list[Hallazgo];  herramientas/validar_contenido.py lo imprime.
 """
 import ast
+from collections import Counter
 import itertools
 import re
 from dataclasses import dataclass
@@ -118,6 +119,31 @@ def _requeridos(paso, campos, donde, hallazgos):
     return not faltan
 
 
+def _validar_fichas_completar(paso, donde, hallazgos):
+    """Valida la estructura interactiva de completar, incluso en pasos HTML/CSS/JS."""
+    if not _requeridos(paso, ["consigna", "codigo", "fichas", "respuesta"], donde, hallazgos):
+        return False
+    huecos, respuesta = paso["codigo"].count(HUECO), paso["respuesta"]
+    if huecos != len(respuesta):
+        hallazgos.append(Hallazgo(ERROR, donde, f"{huecos} huecos pero {len(respuesta)} respuestas"))
+        return False
+    faltantes = [r for r in respuesta if r not in paso["fichas"]]
+    if faltantes:
+        hallazgos.append(Hallazgo(ERROR, donde, f"respuestas que no están entre las fichas: {faltantes}"))
+        return False
+    disponibles = Counter(paso["fichas"])
+    necesarias = Counter(respuesta)
+    insuficientes = {ficha: cantidad for ficha, cantidad in necesarias.items()
+                     if cantidad > disponibles[ficha]}
+    if insuficientes:
+        hallazgos.append(Hallazgo(
+            ERROR, donde,
+            f"faltan fichas duplicadas para respuestas repetidas: {insuficientes}",
+        ))
+        return False
+    return True
+
+
 def _validar_laberinto(paso, ordenes, usadas, donde, hallazgos):
     """Un laberinto se evalúa por reglas (no chocar, llegar a la salida): la solución oficial tiene que cumplirlas."""
     if not paso.get("tortuga"):
@@ -175,7 +201,14 @@ def _validar_paso(paso, donde, hallazgos):
     if paso.get("lenguaje") in {"html", "css", "javascript", "web-conceptual"}:
         from .web_evaluacion import validar_codigo
         reglas = paso.get("web") or {}
-        codigo = paso.get("codigo") or paso.get("solucion") or ""
+        if tipo == "completar":
+            if not _validar_fichas_completar(paso, donde, hallazgos):
+                return set()
+            codigo = paso["codigo"]
+            for respuesta in paso["respuesta"]:
+                codigo = codigo.replace(HUECO, respuesta, 1)
+        else:
+            codigo = paso.get("codigo") or paso.get("solucion") or ""
         if paso.get("lineas"):
             codigo = "\n".join(paso["lineas"])
         if not codigo.strip():
@@ -249,15 +282,9 @@ def _validar_paso(paso, donde, hallazgos):
                 hallazgos.append(Hallazgo(ERROR, donde, f"el código de la pregunta no corre: {err}"))
 
     elif tipo == "completar":
-        if not _requeridos(paso, ["consigna", "codigo", "fichas", "respuesta"], donde, hallazgos):
+        if not _validar_fichas_completar(paso, donde, hallazgos):
             return set()
-        huecos, respuesta = paso["codigo"].count(HUECO), paso["respuesta"]
-        if huecos != len(respuesta):
-            hallazgos.append(Hallazgo(ERROR, donde, f"{huecos} huecos pero {len(respuesta)} respuestas"))
-            return set()
-        faltantes = [r for r in respuesta if r not in paso["fichas"]]
-        if faltantes:
-            hallazgos.append(Hallazgo(ERROR, donde, f"respuestas que no están entre las fichas: {faltantes}"))
+        respuesta = paso["respuesta"]
         codigo = paso["codigo"]
         for r in respuesta:
             codigo = codigo.replace(HUECO, r, 1)

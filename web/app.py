@@ -97,6 +97,10 @@ def create_app(token=None):
     app.config["ACCOUNT_DB"] = Path(app.instance_path) / "cuentas.sqlite3"
     app.config["ACCOUNT_COOKIE_SECURE"] = False
     app.config["ACCOUNT_COOKIE_SAMESITE"] = "Lax"
+    # La migración desde perfiles locales legados puede exponer datos entre
+    # cuentas en una instalación compartida. Solo habilitar en modo local,
+    # de un único usuario, mediante configuración explícita.
+    app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = False
     app.register_blueprint(cuenta_bp)
     # Pistas vistas por (perfil, lección, paso): se reinician al abrir el ejercicio o la lección.
     pistas_vistas = {}
@@ -206,6 +210,14 @@ def create_app(token=None):
         return respuesta
 
     @app.before_request
+    def _proteger():
+        if request.host.split(":")[0] not in HOSTS_PERMITIDOS:
+            abort(403)
+        if request.path.startswith("/api/") and \
+                request.headers.get("X-Tortu-Token") != app.config["TOKEN"]:
+            abort(403)
+
+    @app.before_request
     def _requiere_contexto_educativo():
         if request.endpoint in (None, "static") or request.path.startswith("/cuenta"):
             return None
@@ -226,14 +238,6 @@ def create_app(token=None):
                 return redirect(url_for("cuenta.seleccionar_perfil_pagina", next=request.full_path))
             return redirect(url_for("cuenta.ingresar"))
         return None
-
-    @app.before_request
-    def _proteger():
-        if request.host.split(":")[0] not in HOSTS_PERMITIDOS:
-            abort(403)
-        if request.path.startswith("/api/") and \
-                request.headers.get("X-Tortu-Token") != app.config["TOKEN"]:
-            abort(403)
 
     @app.before_request
     def _de_a_uno():
@@ -316,7 +320,7 @@ def create_app(token=None):
             "lecciones_total": len(planas),
             "xp_hoy": hoy_xp, "meta_xp": meta, "meta_min": p["config"]["meta_min"],
             "meta_pct": min(100, round(100 * hoy_xp / meta)) if meta else 0,
-            "nombre": p["config"].get("nombre") or _perfil_contexto(),
+            "nombre": _nombre_perfil_contexto(),
             "xp": xp, "nivel": nivel, "titulo": progreso.titulo_nivel(nivel),
             "color_tortuga": progreso.color_tortuga(nivel),
             "xp_actual": xp_actual, "xp_max": xp_max,

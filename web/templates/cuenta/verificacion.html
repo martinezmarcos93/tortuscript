@@ -9,7 +9,15 @@
 <body>
 <main id="contenido" class="columna-ancha pagina-error">
   <section class="tarjeta centrado">
-    {% if ok %}
+    {% if confirmar %}
+      <div class="mascota gran" aria-hidden="true">✉️</div>
+      <h1>Confirmar correo</h1>
+      <p class="texto-grande">Para verificar la cuenta, confirmá que querés continuar.</p>
+      <form method="post" action="{{ url_for('cuenta.confirmar_verificacion_email') }}">
+        <input type="hidden" name="token" value="{{ token }}">
+        <button class="boton verde grande" type="submit">Confirmar correo</button>
+      </form>
+    {% elif ok %}
       <div class="mascota gran" aria-hidden="true">✅</div>
       <h1>Correo verificado</h1>
       <p class="texto-grande">La cuenta ya puede ingresar a TortuScript.</p>

@@ -94,6 +94,28 @@ class TestComprobar(unittest.TestCase):
         # mostrar antes de definir → error → no vale
         self.assertFalse(leccion.comprobar(ORDEN_LIBRE, ["mostrar a + b", "a es 1", "b es 2"], ejecutar_real)["ok"])
 
+    def test_tres_ordenamientos_equivalentes_del_curso_se_aceptan(self):
+        # El validador editorial avisa de permutaciones que conservan la salida.
+        # El contrato de evaluación acepta esas alternativas si ejecutan lo mismo.
+        curso = contenido.cargar_curso()
+        alternativas = {
+            "dos-variables": ["b es 2", "a es 1", "mostrar a", "mostrar b"],
+            "tabla-del-2": [
+                "contador es 1", "n es 2", "repetir 3 veces:",
+                "    mostrar n * contador", "    contador es contador + 1",
+            ],
+            "solo-los-pares": [
+                "n es 1", "repetir 4 veces:", "    n es n + 1",
+                "    si n % 2 == 0:", "        mostrar n",
+            ],
+        }
+        for leccion_id, lineas in alternativas.items():
+            _, leccion_data, _ = leccion.buscar_leccion(curso, leccion_id)
+            paso = next(p for p in leccion_data["pasos"] if p["tipo"] == "ordenar")
+            with self.subTest(leccion=leccion_id):
+                resultado = leccion.comprobar(paso, lineas, ejecutar_real)
+                self.assertTrue(resultado["ok"], resultado)
+
     def test_explicacion_siempre_ok_y_escribir_no_se_comprueba_aca(self):
         self.assertTrue(leccion.comprobar(EXPLICACION, None)["ok"])
         with self.assertRaises(ValueError):
@@ -177,6 +199,7 @@ class TestProgresoLecciones(unittest.TestCase):
     def test_se_guarda_y_sobrevive_al_recargar(self):
         p = persistencia_local.cargar_progreso()
         progreso.registrar_paso_leccion(p, "l", 0, 5, True, 1)
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         again = persistencia_local.cargar_progreso()
         self.assertTrue(again["lecciones"]["l"]["completada"])
         self.assertEqual(again["version"], progreso.VERSION_ESQUEMA)
@@ -386,6 +409,7 @@ class TestSaltearHasta(unittest.TestCase):
         p = persistencia_local.cargar_progreso()
         p["lecciones"]["b"] = {"pasos": {}, "completada": True, "perfecta": False}
         progreso.saltear_hasta(p, ["a", "b", "c", "d"], "c")
+        self.assertTrue(persistencia_local.guardar_progreso(p))
         self.assertEqual(sorted(persistencia_local.cargar_progreso()["salteadas"]), ["a"])
         with self.assertRaises(ValueError):
             progreso.saltear_hasta(p, ["a", "b"], "z")

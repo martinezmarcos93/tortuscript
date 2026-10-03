@@ -97,9 +97,17 @@ class TestWebProyectos(unittest.TestCase):
         persistencia_local.DIRECTORIO = self._dir
         persistencia_local.PERFIL_ACTUAL = "default"
         from web.app import create_app
-        self.c = create_app(token="t").test_client()
+        self.app = create_app(token="t")
+        self.app.config.update(
+            TESTING=True,
+            ACCOUNT_DB=self._dir / "cuentas.sqlite3",
+            ACCOUNT_COOKIE_SECURE=False,
+            PROGRESS_DIR=self._dir / "progreso_perfiles",
+        )
+        self.c = self.app.test_client()
         self.h = {"X-Tortu-Token": "t"}
-        progreso.guardar_config(persistencia_local.cargar_progreso(), onboarding=True)
+        from fixtures_cuenta import preparar_sesion_educativa
+        preparar_sesion_educativa(self.app, self.c, email="proyectos@example.com", nombre="Ana", token="t")
 
     def tearDown(self):
         persistencia_local.DIRECTORIO, persistencia_local.PERFIL_ACTUAL = self._orig
@@ -111,6 +119,12 @@ class TestWebProyectos(unittest.TestCase):
     def guardar(self, nombre="Mi dibujo", tipo="tortuga", codigo="avanzar 50", **extra):
         return self.post("/api/proyectos", {"nombre": nombre, "tipo": tipo, "codigo": codigo, **extra}).get_json()
 
+    def progreso_cuenta(self):
+        respuesta = self.c.get("/cuenta/progreso")
+        if respuesta.status_code != 200 or not respuesta.json.get("progreso"):
+            raise AssertionError(f"no se pudo leer el progreso comercial: {respuesta.status_code} {respuesta.get_data(as_text=True)}")
+        return respuesta.json["progreso"]["data"]
+
     def test_guardar_abrir_y_editar(self):
         r = self.guardar()
         self.assertTrue(r["ok"])
@@ -120,7 +134,7 @@ class TestWebProyectos(unittest.TestCase):
         self.assertIn("avanzar 50", html)
         self.assertIn("Mi dibujo", html)
         self.assertEqual(self.guardar(nombre="Mi dibujo 2", codigo="avanzar 99", id=id_)["id"], id_)
-        self.assertEqual(persistencia_local.cargar_progreso()["proyectos"][id_]["codigo"], "avanzar 99")
+        self.assertEqual(self.progreso_cuenta()["proyectos"][id_]["codigo"], "avanzar 99")
         self.assertEqual(self.guardar(id=id_)["avisos"], [])                            # el logro no se repite
 
     def test_un_proyecto_se_abre_en_su_pagina(self):
@@ -157,7 +171,8 @@ class TestWebProyectos(unittest.TestCase):
         html = self.c.get("/proyectos").get_data(as_text=True)
         self.assertNotIn("<script>alert(1)</script>", html)
         self.assertNotIn("<b>x</b>", html)
-        pagina = self.c.get("/tortuga?proyecto=" + persistencia_local.cargar_progreso()["proyectos"].__iter__().__next__()).get_data(as_text=True)
+        proyecto_id = next(iter(self.progreso_cuenta()["proyectos"]))
+        pagina = self.c.get("/tortuga?proyecto=" + proyecto_id).get_data(as_text=True)
         self.assertNotIn("<script>alert(1)</script>", pagina)                                 # va como JSON, no como HTML
 
 

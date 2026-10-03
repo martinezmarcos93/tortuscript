@@ -39,6 +39,20 @@ class ProgresoChildProfileTests(unittest.TestCase):
         snapshot = self.store.crear_si_no_existe(profile, {"xp_total": 999})
         self.assertEqual(snapshot.data["xp_total"], 10)
 
+    def test_rechaza_snapshot_cuyo_profile_id_no_coincide_con_el_archivo(self):
+        import json
+
+        profile_a = "child_0123456789abcdef01234567"
+        profile_b = "child_abcdef012345678901234567"
+        self.store.crear_si_no_existe(profile_a, {"xp_total": 10})
+        archivo = self.tmp / f"progreso_{profile_a}.json"
+        documento = json.loads(archivo.read_text(encoding="utf-8"))
+        documento["profile_id"] = profile_b
+        archivo.write_text(json.dumps(documento), encoding="utf-8")
+
+        with self.assertRaises(ProgresoPerfilError):
+            self.store.cargar(profile_a)
+
 
 if __name__ == "__main__":
     unittest.main()

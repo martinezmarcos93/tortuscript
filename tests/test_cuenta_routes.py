@@ -2,6 +2,7 @@
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from web.app import create_app
@@ -26,6 +27,33 @@ class CuentaRoutesTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
+    def test_migracion_local_legada_desactivada_por_defecto(self):
+        listado = self.client.get("/cuenta/progreso/locales")
+        importacion = self.client.post(
+            "/cuenta/progreso/importar-local",
+            json={"perfil_local": "ana"},
+        )
+        self.assertEqual(listado.status_code, 404)
+        self.assertEqual(importacion.status_code, 404)
+
+    def test_migracion_local_legada_solo_se_habilita_explicita(self):
+        self.app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = True
+        listado = self.client.get("/cuenta/progreso/locales")
+        # La capacidad queda habilitada, pero sigue requiriendo sesión con perfil.
+        self.assertEqual(listado.status_code, 401)
+
+    def test_api_valida_token_antes_de_resolver_la_sesion_educativa(self):
+        # El token de la app local y la sesión de cuenta son controles distintos.
+        # Sin token, la petición debe rechazarse por el gateway; con token pero sin
+        # sesión, debe rechazarse por identidad educativa.
+        sin_token = self.client.get("/api/estado")
+        self.assertEqual(sin_token.status_code, 403)
+
+        con_token_sin_sesion = self.client.get(
+            "/api/estado", headers={"X-Tortu-Token": "test-token"}
+        )
+        self.assertEqual(con_token_sin_sesion.status_code, 401)
+
     def test_gateway_web_redirige_al_login_y_perfil(self):
         inicio = self.client.get("/", follow_redirects=False)
         self.assertEqual(inicio.status_code, 302)
@@ -38,6 +66,167 @@ class CuentaRoutesTests(unittest.TestCase):
         registro_page = self.client.get("/cuenta/registrar")
         self.assertEqual(registro_page.status_code, 200)
         self.assertIn("Crear cuenta adulta", registro_page.get_data(as_text=True))
+
+    def test_registro_y_recuperacion_fallan_cerrado_sin_sender_email(self):
+        self.app.config["ACCOUNT_EMAIL_SENDER"] = None
+
+        registro = self.client.post("/cuenta/registro", json={
+            "email": "sin-correo@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(registro.status_code, 503)
+        self.assertEqual(registro.json["codigo"], "envio_email_no_configurado")
+
+        registro_html = self.client.post("/cuenta/registrar", data={
+            "email": "sin-correo-html@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(registro_html.status_code, 503)
+
+        repo = CuentaRepository(self.tmp / "cuentas.sqlite3")
+        repo.ensure_schema()
+        self.assertIsNone(repo.obtener_account_por_email("sin-correo@example.com"))
+        self.assertIsNone(repo.obtener_account_por_email("sin-correo-html@example.com"))
+
+        recuperacion = self.client.post(
+            "/cuenta/recuperar",
+            json={"email": "cualquiera@example.com"},
+        )
+        self.assertEqual(recuperacion.status_code, 503)
+        self.assertEqual(recuperacion.json["codigo"], "envio_email_no_configurado")
+
+        reenvio = self.client.post(
+            "/cuenta/reenviar-verificacion",
+            json={"email": "cualquiera@example.com"},
+        )
+        self.assertEqual(reenvio.status_code, 503)
+        self.assertEqual(reenvio.json["codigo"], "envio_email_no_configurado")
+
+    def test_registro_password_invalida_no_reserva_email(self):
+        invalido = self.client.post("/cuenta/registro", json={
+            "email": "reintento@example.com",
+            "password": "corta",
+        })
+        self.assertEqual(invalido.status_code, 400)
+        valido = self.client.post("/cuenta/registro", json={
+            "email": "reintento@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(valido.status_code, 202)
+        self.assertEqual(valido.json["estado"], "pendiente_verificacion")
+
+    def test_fallo_de_proveedor_no_rompe_registro_y_se_puede_reintentar(self):
+        def proveedor_roto(**payload):
+            raise RuntimeError("fallo simulado del proveedor")
+
+        self.app.config["ACCOUNT_EMAIL_SENDER"] = proveedor_roto
+        registro = self.client.post("/cuenta/registro", json={
+            "email": "reintento-correo@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(registro.status_code, 503)
+        self.assertEqual(registro.json["codigo"], "envio_email_fallido")
+
+        repo = CuentaRepository(self.tmp / "cuentas.sqlite3")
+        repo.ensure_schema()
+        cuenta = repo.obtener_account_por_email("reintento-correo@example.com")
+        self.assertIsNotNone(cuenta)
+        auth = AuthRepository(self.tmp / "cuentas.sqlite3")
+        with auth._db() as db:
+            row = db.execute(
+                "SELECT password_hash,verified_at FROM accounts WHERE id=?", (cuenta.id,)
+            ).fetchone()
+        self.assertTrue(row["password_hash"])
+        self.assertIsNone(row["verified_at"])
+
+        self.app.config["ACCOUNT_EMAIL_SENDER"] = lambda **payload: self.emails.append(payload)
+        reenvio = self.client.post("/cuenta/reenviar-verificacion", json={
+            "email": "REINTENTO-CORREO@example.com",
+        })
+        self.assertEqual(reenvio.status_code, 202)
+        self.assertEqual(reenvio.json["estado"], "solicitud_recibida")
+        self.assertEqual(len(self.emails), 1)
+        self.assertEqual(self.emails[0]["tipo"], "verification")
+        verificado = self.client.post("/cuenta/verificar-email", json={
+            "token": self.emails[0]["token"],
+        }, headers={"Accept": "application/json"})
+        self.assertEqual(verificado.status_code, 200)
+        self.assertEqual(verificado.json["estado"], "correo_verificado")
+
+    def test_reenvio_aplica_limite_por_ip(self):
+        for _ in range(5):
+            respuesta = self.client.post("/cuenta/reenviar-verificacion", json={
+                "email": "ausente@example.com",
+            })
+            self.assertEqual(respuesta.status_code, 202)
+        bloqueado = self.client.post("/cuenta/reenviar-verificacion", json={
+            "email": "otro@example.com",
+        })
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado.headers)
+
+    def test_reenvio_no_revela_si_correo_existe_o_ya_esta_verificado(self):
+        email = "ya-verificada@example.com"
+        creado = self.client.post("/cuenta/registro", json={
+            "email": email, "password": "una-clave-larga-123",
+        })
+        self.assertEqual(creado.status_code, 202)
+        cuenta_id = "acc_" + __import__("hashlib").sha256(email.encode()).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+        self.emails.clear()
+
+        desconocido = self.client.post("/cuenta/reenviar-verificacion", json={
+            "email": "no-existe@example.com",
+        })
+        verificado = self.client.post("/cuenta/reenviar-verificacion", json={
+            "email": email,
+        })
+        self.assertEqual(desconocido.status_code, 202)
+        self.assertEqual(verificado.status_code, 202)
+        self.assertEqual(desconocido.json, verificado.json)
+        self.assertEqual(self.emails, [])
+
+    def test_fallo_de_proveedor_en_recuperacion_no_filtra_estado_de_cuenta(self):
+        email = "recuperar-correo@example.com"
+        self.client.post("/cuenta/registro", json={
+            "email": email, "password": "una-clave-larga-123",
+        })
+        cuenta_id = "acc_" + __import__("hashlib").sha256(email.encode()).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+
+        def proveedor_roto(**payload):
+            raise RuntimeError("fallo simulado del proveedor")
+
+        self.app.config["ACCOUNT_EMAIL_SENDER"] = proveedor_roto
+        recuperacion = self.client.post("/cuenta/recuperar", json={"email": email})
+        desconocido = self.client.post(
+            "/cuenta/recuperar", json={"email": "ausente@example.com"}
+        )
+        self.assertEqual(recuperacion.status_code, 202)
+        self.assertEqual(desconocido.status_code, 202)
+        self.assertEqual(recuperacion.json, desconocido.json)
+
+    def test_registro_aplica_rate_limit_por_ip_y_devuelve_retry_after(self):
+        for indice in range(5):
+            respuesta = self.client.post("/cuenta/registro", json={
+                "email": f"registro-{indice}@example.com",
+                "password": "una-clave-larga-123",
+            })
+            self.assertEqual(respuesta.status_code, 202)
+
+        bloqueado = self.client.post("/cuenta/registro", json={
+            "email": "registro-extra@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado.headers)
+
+        # Las rutas HTML y JSON comparten el mismo límite por IP.
+        bloqueado_html = self.client.post("/cuenta/registrar", data={
+            "email": "registro-html@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(bloqueado_html.status_code, 429)
 
     def test_registro_queda_pendiente_de_verificacion(self):
         r = self.client.post("/cuenta/registro", json={
@@ -52,6 +241,105 @@ class CuentaRoutesTests(unittest.TestCase):
             "password": "una-clave-larga-123",
         })
         self.assertEqual(login.status_code, 401)
+
+    def test_seleccion_perfil_rechaza_redireccion_externa(self):
+        email = "redirect@example.com"
+        self.client.post("/cuenta/registro", json={
+            "email": email, "password": "una-clave-larga-123",
+        })
+        cuenta_id = "acc_" + __import__("hashlib").sha256(email.encode()).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+        login = self.client.post("/cuenta/login", json={
+            "email": email, "password": "una-clave-larga-123",
+        })
+        csrf = login.json["csrf"]
+        creado = self.client.post("/cuenta/perfiles", json={"nombre": "Ana"},
+                                  headers={"X-Tortu-CSRF": csrf})
+        self.assertEqual(creado.status_code, 201)
+
+        pagina = self.client.get("/cuenta/seleccionar-perfil?next=https://evil.example")
+        self.assertEqual(pagina.status_code, 200)
+        self.assertNotIn("evil.example", pagina.get_data(as_text=True))
+
+        seleccion = self.client.post("/cuenta/perfil", data={
+            "perfil_id": creado.json["perfil"]["id"],
+            "csrf": csrf,
+            "next": "https://evil.example",
+        })
+        self.assertEqual(seleccion.status_code, 302)
+        self.assertTrue(seleccion.headers["Location"].startswith("/"))
+        self.assertNotIn("evil.example", seleccion.headers["Location"])
+
+    def test_login_html_no_revela_si_la_cuenta_existe_o_esta_verificada(self):
+        self.client.post("/cuenta/registro", json={
+            "email": "pendiente@example.com",
+            "password": "una-clave-larga-123",
+        })
+        existente = self.client.post("/cuenta/login", data={
+            "email": "pendiente@example.com",
+            "password": "una-clave-larga-123",
+        })
+        inexistente = self.client.post("/cuenta/login", data={
+            "email": "no-existe@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(existente.status_code, 401)
+        self.assertEqual(inexistente.status_code, 401)
+        self.assertEqual(existente.get_data(as_text=True), inexistente.get_data(as_text=True))
+
+    def test_login_tiene_limite_agregado_por_ip_al_rotar_correos(self):
+        for indice in range(30):
+            respuesta = self.client.post("/cuenta/login", json={
+                "email": f"rotacion-{indice}@example.com",
+                "password": "clave-incorrecta",
+            })
+            self.assertEqual(respuesta.status_code, 401)
+        bloqueado = self.client.post("/cuenta/login", json={
+            "email": "rotacion-final@example.com",
+            "password": "clave-incorrecta",
+        })
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado.headers)
+
+    def test_recuperacion_limita_tambien_solicitudes_malformadas(self):
+        for _ in range(5):
+            respuesta = self.client.post("/cuenta/recuperar", json={})
+            self.assertEqual(respuesta.status_code, 202)
+        bloqueado = self.client.post("/cuenta/recuperar", json={})
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado.headers)
+
+    def test_limites_por_ip_en_login_verificacion_y_restablecimiento(self):
+        for _ in range(10):
+            login = self.client.post("/cuenta/login", json={
+                "email": "ausente@example.com", "password": "clave-incorrecta",
+            })
+            self.assertEqual(login.status_code, 401)
+        login_bloqueado = self.client.post("/cuenta/login", json={
+            "email": "ausente@example.com", "password": "clave-incorrecta",
+        })
+        self.assertEqual(login_bloqueado.status_code, 429)
+        self.assertIn("Retry-After", login_bloqueado.headers)
+
+        for _ in range(10):
+            verificacion = self.client.post("/cuenta/verificar-email", json={
+                "token": "token-invalido",
+            })
+            self.assertEqual(verificacion.status_code, 400)
+        verificacion_bloqueada = self.client.post("/cuenta/verificar-email", json={
+            "token": "otro-token-invalido",
+        })
+        self.assertEqual(verificacion_bloqueada.status_code, 429)
+
+        for _ in range(10):
+            restablecimiento = self.client.post("/cuenta/restablecer-password", json={
+                "token": "token-invalido", "password": "una-clave-larga-123",
+            })
+            self.assertEqual(restablecimiento.status_code, 400)
+        restablecimiento_bloqueado = self.client.post("/cuenta/restablecer-password", json={
+            "token": "otro-token-invalido", "password": "una-clave-larga-123",
+        })
+        self.assertEqual(restablecimiento_bloqueado.status_code, 429)
 
     def test_login_cookie_me_csrf_perfil_y_logout(self):
         self.client.post("/cuenta/registro", json={
@@ -69,8 +357,9 @@ class CuentaRoutesTests(unittest.TestCase):
         })
         self.assertEqual(login.status_code, 200)
         csrf = login.json["csrf"]
-        self.assertIn("tortu_session=", login.headers.get("Set-Cookie", ""))
-        self.assertIn("tortu_csrf=", login.headers.get("Set-Cookie", ""))
+        cookies = "\\n".join(login.headers.getlist("Set-Cookie"))
+        self.assertIn("tortu_session=", cookies)
+        self.assertIn("tortu_csrf=", cookies)
 
         me = self.client.get("/cuenta/me")
         self.assertEqual(me.status_code, 200)
@@ -91,11 +380,6 @@ class CuentaRoutesTests(unittest.TestCase):
         me2 = self.client.get("/cuenta/me")
         self.assertEqual([p["nombre"] for p in me2.json["perfiles"]], ["Ana"])
 
-        perfiles_api = self.client.get("/api/perfiles", headers={"X-Tortu-Token": "test-token"})
-        self.assertEqual(perfiles_api.status_code, 200)
-        self.assertEqual(perfiles_api.json["modo"], "cuenta")
-        self.assertEqual(perfiles_api.json["perfiles"][0]["id"], created.json["perfil"]["id"])
-
         selected = self.client.post(
             "/cuenta/perfil",
             json={"perfil_id": created.json["perfil"]["id"]},
@@ -104,6 +388,11 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertEqual(selected.status_code, 200)
         self.assertEqual(selected.json["perfil_activo"], created.json["perfil"]["id"])
 
+        perfiles_api = self.client.get("/api/perfiles", headers={"X-Tortu-Token": "test-token"})
+        self.assertEqual(perfiles_api.status_code, 200)
+        self.assertEqual(perfiles_api.json["modo"], "cuenta")
+        self.assertEqual(perfiles_api.json["perfiles"][0]["id"], created.json["perfil"]["id"])
+
         me3 = self.client.get("/cuenta/me")
         self.assertEqual(me3.json["perfil_activo"], created.json["perfil"]["id"])
 
@@ -111,18 +400,19 @@ class CuentaRoutesTests(unittest.TestCase):
             "contract_version": 1,
             "profile_id": created.json["perfil"]["id"],
             "updated_at": "2026-09-30T12:00:00+00:00",
-            "data": {"xp_total": 25},
+            "data": {"xp_total": 25000},
         }
         saved = self.client.put(
             "/cuenta/progreso",
             json=progress,
             headers={"X-Tortu-CSRF": csrf},
         )
-        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.status_code, 410)
+        self.assertEqual(saved.json["codigo"], "escritura_no_autoritativa")
 
         loaded = self.client.get("/cuenta/progreso")
         self.assertEqual(loaded.status_code, 200)
-        self.assertEqual(loaded.json["progreso"]["data"]["xp_total"], 25)
+        self.assertIsNone(loaded.json["progreso"])
 
         acceso = self.client.get("/cuenta/acceso?producto=tortuscript-premium")
         self.assertEqual(acceso.status_code, 200)
@@ -145,13 +435,71 @@ class CuentaRoutesTests(unittest.TestCase):
             json=bad_progress,
             headers={"X-Tortu-CSRF": csrf},
         )
-        self.assertEqual(rejected.status_code, 400)
+        self.assertEqual(rejected.status_code, 410)
+        self.assertEqual(rejected.json["codigo"], "escritura_no_autoritativa")
 
         logout = self.client.post("/cuenta/logout", headers={"X-Tortu-CSRF": csrf})
         self.assertEqual(logout.status_code, 200)
         self.assertEqual(self.client.get("/cuenta/me").status_code, 401)
 
 
+
+    def test_cuenta_perfil_activo_abre_onboarding_y_progreso_persiste(self):
+        # Recorrido integrado mínimo del producto actual: cuenta adulta, perfil,
+        # sesión educativa, primera página y persistencia asociada al perfil.
+        registro = self.client.post("/cuenta/registro", json={
+            "email": "flujo@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(registro.status_code, 202)
+
+        repo = CuentaRepository(self.tmp / "cuentas.sqlite3")
+        repo.ensure_schema()
+        cuenta_id = "acc_" + __import__("hashlib").sha256(
+            "flujo@example.com".encode()
+        ).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+
+        login = self.client.post("/cuenta/login", json={
+            "email": "flujo@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(login.status_code, 200)
+        csrf = login.json["csrf"]
+
+        creado = self.client.post(
+            "/cuenta/perfiles",
+            json={"nombre": "Perfil de prueba"},
+            headers={"X-Tortu-CSRF": csrf},
+        )
+        self.assertEqual(creado.status_code, 201)
+        perfil_id = creado.json["perfil"]["id"]
+
+        seleccionado = self.client.post(
+            "/cuenta/perfil",
+            json={"perfil_id": perfil_id},
+            headers={"X-Tortu-CSRF": csrf},
+        )
+        self.assertEqual(seleccionado.status_code, 200)
+
+        inicio = self.client.get("/", follow_redirects=False)
+        self.assertEqual(inicio.status_code, 302)
+        self.assertIn("/bienvenida", inicio.headers["Location"])
+        bienvenida = self.client.get("/bienvenida")
+        self.assertEqual(bienvenida.status_code, 200)
+
+        guardado = self.client.post(
+            "/api/onboarding",
+            json={"nombre": "Perfil de prueba", "experiencia": "nunca", "meta_min": 5},
+            headers={"X-Tortu-Token": "test-token"},
+        )
+        self.assertEqual(guardado.status_code, 200, guardado.get_data(as_text=True))
+
+        recuperado = self.client.get("/cuenta/progreso")
+        self.assertEqual(recuperado.status_code, 200)
+        self.assertEqual(recuperado.json["perfil"]["id"], perfil_id)
+        self.assertEqual(recuperado.json["progreso"]["data"]["config"]["nombre"], "Perfil de prueba")
+        self.assertEqual(recuperado.json["progreso"]["data"]["xp_total"], 0)
 
     def test_aislamiento_entre_cuentas_para_perfiles_y_progreso(self):
         for email in ("a@example.com", "b@example.com"):
@@ -200,6 +548,13 @@ class CuentaRoutesTests(unittest.TestCase):
         pid_a = perfil_a.json["perfil"]["id"]
         pid_b = perfil_b.json["perfil"]["id"]
 
+        seleccionado_b = cliente_b.post(
+            "/cuenta/perfil",
+            json={"perfil_id": pid_b},
+            headers={"X-Tortu-CSRF": csrf_b},
+        )
+        self.assertEqual(seleccionado_b.status_code, 200)
+
         seleccionado_a = cliente_a.post(
             "/cuenta/perfil",
             json={"perfil_id": pid_a},
@@ -225,7 +580,7 @@ class CuentaRoutesTests(unittest.TestCase):
             json=snapshot,
             headers={"X-Tortu-CSRF": csrf_a},
         )
-        self.assertEqual(escritura_cruzada.status_code, 400)
+        self.assertEqual(escritura_cruzada.status_code, 410)
 
         acceso_b = cliente_b.get("/cuenta/acceso?producto=tortuscript-premium")
         self.assertEqual(acceso_b.status_code, 200)
@@ -265,19 +620,21 @@ class CuentaRoutesTests(unittest.TestCase):
         ejercicio = self.client.post("/cuenta/runtime/ejercicio", json={
             "indice": 0, "estrellas": 3, "xp_ganado": 10
         }, headers={"X-Tortu-CSRF": csrf})
-        self.assertEqual(ejercicio.status_code, 200)
+        self.assertEqual(ejercicio.status_code, 410)
+        self.assertEqual(ejercicio.json["codigo"], "evaluacion_requerida")
 
         leccion = self.client.post("/cuenta/runtime/leccion/paso", json={
-            "leccion_id": "leccion-runtime", "indice": 0, "xp": 5,
+            "leccion_id": "leccion-runtime", "indice": 0, "xp": 5000,
             "perfecto": True, "total_pasos": 1, "estrellas": 3
         }, headers={"X-Tortu-CSRF": csrf})
-        self.assertEqual(leccion.status_code, 200)
-        self.assertTrue(leccion.json["resultado"]["completa"])
+        self.assertEqual(leccion.status_code, 410)
+        self.assertEqual(leccion.json["codigo"], "evaluacion_requerida")
 
         practica = self.client.post("/cuenta/runtime/practica", json={
             "leccion_id": "leccion-runtime", "paso": 0, "acierto": True
         }, headers={"X-Tortu-CSRF": csrf})
-        self.assertEqual(practica.status_code, 200)
+        self.assertEqual(practica.status_code, 410)
+        self.assertEqual(practica.json["codigo"], "comprobacion_requerida")
 
         proyecto = self.client.post("/cuenta/runtime/proyectos", json={
             "nombre": "Mi proyecto", "tipo": "experimentar", "codigo": "print('hola')"
@@ -290,8 +647,9 @@ class CuentaRoutesTests(unittest.TestCase):
 
         progreso = self.client.get("/cuenta/runtime/progreso")
         self.assertEqual(progreso.status_code, 200)
-        self.assertGreater(progreso.json["progreso"]["data"]["xp_total"], 0)
-        self.assertIn("leccion-runtime", progreso.json["progreso"]["data"]["lecciones"])
+        # Las peticiones de puntuación falsificada no deben mutar el progreso.
+        self.assertEqual(progreso.json["progreso"]["data"]["xp_total"], 0)
+        self.assertNotIn("leccion-runtime", progreso.json["progreso"]["data"]["lecciones"])
         self.assertEqual(len(progreso.json["progreso"]["data"]["proyectos"]), 1)
 
 
@@ -322,23 +680,22 @@ class CuentaRoutesTests(unittest.TestCase):
             headers={"X-Tortu-CSRF": csrf},
         )
 
-        estado = self.client.get("/api/estado")
+        api_headers = {"X-Tortu-Token": "test-token"}
+        estado = self.client.get("/api/estado", headers=api_headers)
         self.assertEqual(estado.status_code, 200)
         self.assertEqual(estado.json["nombre"], "Ana")
 
         proyecto = self.client.post(
             "/api/proyectos",
-            json={"nombre": "Proyecto UI", "tipo": "python", "codigo": "print(1)"},
+            json={"nombre": "Proyecto UI", "tipo": "experimentar", "codigo": "print(1)"},
+            headers=api_headers,
         )
         self.assertEqual(proyecto.status_code, 200)
 
-        listado = self.client.get("/api/proyectos")
-        self.assertEqual(listado.status_code, 200)
-
         snapshot = self.client.get("/cuenta/progreso")
         self.assertEqual(snapshot.status_code, 200)
+        self.assertEqual(snapshot.json["perfil"]["nombre"], "Ana")
         data = snapshot.json["progreso"]["data"]
-        self.assertEqual(data["config"]["nombre"], "Ana")
         self.assertEqual(len(data["proyectos"]), 1)
 
         archivos = list((self.tmp / "progreso_perfiles").glob("progreso_*.json"))
@@ -450,6 +807,23 @@ class CuentaRoutesTests(unittest.TestCase):
 
         verificado = self.client.get("/cuenta/verificar-email", query_string={"token": token})
         self.assertEqual(verificado.status_code, 200)
+        self.assertIn("Confirmar correo", verificado.get_data(as_text=True))
+
+        # Un GET de escáner no debe consumir el token.
+        repo = CuentaRepository(self.tmp / "cuentas.sqlite3")
+        cuenta = repo.obtener_account_por_email("seguridad@example.com")
+        auth_repo = AuthRepository(self.tmp / "cuentas.sqlite3")
+        with auth_repo._db() as db:
+            self.assertIsNone(db.execute(
+                "SELECT verified_at FROM accounts WHERE id=?", (cuenta.id,)
+            ).fetchone()[0])
+
+        confirmado = self.client.post("/cuenta/verificar-email", data={"token": token})
+        self.assertEqual(confirmado.status_code, 200)
+        with auth_repo._db() as db:
+            self.assertIsNotNone(db.execute(
+                "SELECT verified_at FROM accounts WHERE id=?", (cuenta.id,)
+            ).fetchone()[0])
 
         login = self.client.post("/cuenta/login", json={
             "email": "seguridad@example.com",
@@ -498,6 +872,226 @@ class CuentaRoutesTests(unittest.TestCase):
         })
         self.assertEqual(bloqueado.status_code, 429)
         self.assertIn("Retry-After", bloqueado.headers)
+
+    def test_cambiar_perfil_mantiene_progreso_independiente_por_perfil(self):
+        self.client.post("/cuenta/registro", json={
+            "email": "aislamiento@example.com",
+            "password": "una-clave-larga-123",
+        })
+        repo = CuentaRepository(self.tmp / "cuentas.sqlite3")
+        repo.ensure_schema()
+        cuenta_id = "acc_" + __import__("hashlib").sha256(
+            "aislamiento@example.com".encode()
+        ).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+        login = self.client.post("/cuenta/login", json={
+            "email": "aislamiento@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(login.status_code, 200)
+        csrf = login.json["csrf"]
+        headers = {"X-Tortu-CSRF": csrf}
+
+        perfiles = []
+        for nombre in ("Ana", "Beto"):
+            respuesta = self.client.post(
+                "/cuenta/perfiles", json={"nombre": nombre}, headers=headers
+            )
+            self.assertEqual(respuesta.status_code, 201)
+            perfiles.append(respuesta.json["perfil"]["id"])
+
+        def seleccionar_y_guardar(pid, xp, timestamp):
+            seleccionado = self.client.post(
+                "/cuenta/perfil", json={"perfil_id": pid}, headers=headers
+            )
+            self.assertEqual(seleccionado.status_code, 200)
+            guardado = self.client.post("/api/onboarding", json={
+                "nombre": f"Perfil-{xp}",
+                "experiencia": "nunca",
+                "meta_min": 5,
+            }, headers={"X-Tortu-Token": "test-token"})
+            self.assertEqual(guardado.status_code, 200, guardado.get_data(as_text=True))
+            cargado = self.client.get("/cuenta/progreso")
+            self.assertEqual(cargado.status_code, 200)
+            self.assertEqual(cargado.json["progreso"]["data"]["config"]["nombre"], f"Perfil-{xp}")
+            self.assertEqual(cargado.json["progreso"]["data"]["xp_total"], 0)
+
+        seleccionar_y_guardar(perfiles[0], 11, "2026-10-02T12:00:00+00:00")
+        seleccionar_y_guardar(perfiles[1], 22, "2026-10-02T12:01:00+00:00")
+        seleccionar_y_guardar(perfiles[0], 11, "2026-10-02T12:00:00+00:00")
+        seleccionar_y_guardar(perfiles[1], 22, "2026-10-02T12:01:00+00:00")
+
+
+    def test_evaluacion_canonica_persiste_y_aisla_xp_entre_perfiles(self):
+        # Recorrido autenticado completo: cuenta → perfiles → onboarding →
+        # evaluación canónica en servidor → persistencia → cambio y recuperación.
+        email = "evaluacion-integrada@example.com"
+        self.client.post("/cuenta/registro", json={
+            "email": email,
+            "password": "una-clave-larga-123",
+        })
+        cuenta_id = "acc_" + __import__("hashlib").sha256(email.encode()).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+
+        login = self.client.post("/cuenta/login", json={
+            "email": email,
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(login.status_code, 200)
+        csrf = login.json["csrf"]
+        headers = {"X-Tortu-CSRF": csrf, "X-Tortu-Token": "test-token"}
+
+        perfiles = {}
+        for nombre in ("Ana", "Beto"):
+            creado = self.client.post(
+                "/cuenta/perfiles", json={"nombre": nombre}, headers=headers
+            )
+            self.assertEqual(creado.status_code, 201, creado.get_data(as_text=True))
+            perfiles[nombre] = creado.json["perfil"]["id"]
+
+        def seleccionar(perfil_id):
+            respuesta = self.client.post(
+                "/cuenta/perfil", json={"perfil_id": perfil_id},
+                headers={"X-Tortu-CSRF": csrf},
+            )
+            self.assertEqual(respuesta.status_code, 200, respuesta.get_data(as_text=True))
+
+        def completar_onboarding(nombre):
+            respuesta = self.client.post("/api/onboarding", json={
+                "nombre": nombre, "experiencia": "nunca", "meta_min": 5,
+            }, headers={"X-Tortu-Token": "test-token"})
+            self.assertEqual(respuesta.status_code, 200, respuesta.get_data(as_text=True))
+
+        seleccionar(perfiles["Ana"])
+        completar_onboarding("Ana")
+        evaluacion = self.client.post(
+            "/api/ejercicios/1/evaluar",
+            json={"codigo": 'mostrar "Hola mundo"'},
+            headers={"X-Tortu-Token": "test-token"},
+        )
+        self.assertEqual(evaluacion.status_code, 200, evaluacion.get_data(as_text=True))
+        self.assertEqual(evaluacion.json["evaluacion"]["estado"], "correcto")
+        self.assertEqual(evaluacion.json["premio"]["xp"], 30)
+
+        # La ruta canónica de lección debe evaluar el mismo paso sin crear
+        # una segunda recompensa ni divergir del progreso del ejercicio.
+        evaluacion_leccion = self.client.post(
+            "/api/lecciones/hola-mundo/pasos/5/evaluar",
+            json={"codigo": 'mostrar "Hola mundo"'},
+            headers={"X-Tortu-Token": "test-token"},
+        )
+        self.assertEqual(
+            evaluacion_leccion.status_code, 200,
+            evaluacion_leccion.get_data(as_text=True),
+        )
+        self.assertEqual(evaluacion_leccion.json["evaluacion"]["estado"], "correcto")
+
+        progreso_ana = self.client.get("/cuenta/progreso")
+        self.assertEqual(progreso_ana.status_code, 200)
+        self.assertEqual(progreso_ana.json["perfil"]["id"], perfiles["Ana"])
+        self.assertEqual(progreso_ana.json["progreso"]["data"]["xp_total"], 30)
+
+        seleccionar(perfiles["Beto"])
+        completar_onboarding("Beto")
+        progreso_beto = self.client.get("/cuenta/progreso")
+        self.assertEqual(progreso_beto.status_code, 200)
+        self.assertEqual(progreso_beto.json["perfil"]["id"], perfiles["Beto"])
+        self.assertEqual(progreso_beto.json["progreso"]["data"]["xp_total"], 0)
+        self.assertEqual(
+            progreso_beto.json["progreso"]["data"]["config"]["nombre"], "Beto"
+        )
+
+        seleccionar(perfiles["Ana"])
+        recuperado = self.client.get("/cuenta/progreso")
+        self.assertEqual(recuperado.status_code, 200)
+        self.assertEqual(recuperado.json["perfil"]["id"], perfiles["Ana"])
+        self.assertEqual(recuperado.json["progreso"]["data"]["xp_total"], 30)
+        self.assertEqual(
+            recuperado.json["progreso"]["data"]["config"]["nombre"], "Ana"
+        )
+
+
+    def test_practica_canonica_autenticada_persiste_en_perfil_activo(self):
+        email = "practica-integrada@example.com"
+        self.client.post("/cuenta/registro", json={
+            "email": email, "password": "una-clave-larga-123",
+        })
+        cuenta_id = "acc_" + __import__("hashlib").sha256(email.encode()).hexdigest()[:24]
+        AuthRepository(self.tmp / "cuentas.sqlite3").marcar_verificada(cuenta_id)
+        login = self.client.post("/cuenta/login", json={
+            "email": email, "password": "una-clave-larga-123",
+        })
+        self.assertEqual(login.status_code, 200)
+        csrf = login.json["csrf"]
+        creado = self.client.post(
+            "/cuenta/perfiles", json={"nombre": "Practica"},
+            headers={"X-Tortu-CSRF": csrf},
+        )
+        self.assertEqual(creado.status_code, 201)
+        perfil_id = creado.json["perfil"]["id"]
+        seleccionado = self.client.post(
+            "/cuenta/perfil", json={"perfil_id": perfil_id},
+            headers={"X-Tortu-CSRF": csrf},
+        )
+        self.assertEqual(seleccionado.status_code, 200)
+
+        onboarding = self.client.post("/api/onboarding", json={
+            "nombre": "Practica", "experiencia": "nunca", "meta_min": 5,
+        }, headers={"X-Tortu-Token": "test-token"})
+        self.assertEqual(onboarding.status_code, 200, onboarding.get_data(as_text=True))
+
+        # Completar los pasos rápidos crea tarjetas vencidas cuando avanzamos
+        # el reloj de la aplicación de prueba dos días, sin tocar el reloj real.
+        respuestas = {
+            0: True,
+            1: "mostrar",
+            2: ["mostrar"],
+            3: ['mostrar "Hola"', 'mostrar "Chau"'],
+            4: "Buen día",
+        }
+        for indice, respuesta in respuestas.items():
+            comprobado = self.client.post(
+                f"/api/lecciones/hola-mundo/pasos/{indice}/comprobar",
+                json={"respuesta": respuesta},
+                headers={"X-Tortu-Token": "test-token"},
+            )
+            self.assertEqual(
+                comprobado.status_code, 200,
+                f"paso {indice}: {comprobado.get_data(as_text=True)}",
+            )
+            self.assertTrue(comprobado.json["ok"])
+
+        progreso_antes = self.client.get("/cuenta/progreso")
+        self.assertEqual(progreso_antes.status_code, 200)
+        xp_antes = progreso_antes.json["progreso"]["data"]["xp_total"]
+
+        fecha_real = __import__("datetime").date
+        delta = __import__("datetime").timedelta
+
+        class FechaFutura(fecha_real):
+            @classmethod
+            def today(cls):
+                return fecha_real.today() + delta(days=2)
+
+        with patch("web.app.date", FechaFutura):
+            pagina = self.client.get("/practica")
+            self.assertEqual(pagina.status_code, 200, pagina.get_data(as_text=True))
+            respuesta = self.client.post(
+                "/api/practica/comprobar",
+                json={"leccion": "hola-mundo", "paso": 1, "respuesta": "mostrar"},
+                headers={"X-Tortu-Token": "test-token"},
+            )
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_data(as_text=True))
+        self.assertTrue(respuesta.json["ok"])
+
+        progreso_despues = self.client.get("/cuenta/progreso")
+        self.assertEqual(progreso_despues.status_code, 200)
+        self.assertEqual(progreso_despues.json["perfil"]["id"], perfil_id)
+        self.assertEqual(
+            progreso_despues.json["progreso"]["data"]["xp_total"], xp_antes + 2
+        )
+        tarjeta = progreso_despues.json["progreso"]["data"]["repaso"]["hola-mundo:1"]
+        self.assertEqual(tarjeta["aciertos"], 1)
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,7 +5,7 @@ Requiere Playwright (opcional) y un servidor de prueba andando:
     python herramientas/servidor_de_prueba.py            (en otra terminal)
     python herramientas/revisar_responsive.py [--url http://127.0.0.1:5077] [--capturas carpeta]
 
-Prueba anchos de 320, 360, 414 y 768 px sobre las páginas principales y sobre un paso de cada tipo
+Prueba los viewports obligatorios 320×800, 375×812, 390×844 y 768×1024 sobre las páginas principales y sobre un paso de cada tipo
 de lección. Sale con código 1 si algo se desborda; con --capturas guarda una imagen de cada caso.
 """
 import argparse
@@ -16,9 +16,9 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "herramientas"))
 
-ANCHOS = (320, 360, 414, 768)
-RUTAS = ["/", "/leccion/hola-mundo", "/referencia", "/mapa", "/resumen", "/logros", "/liga", "/experimentar", "/tortuga",
-         "/proyectos", "/repaso", "/practica", "/bienvenida", "/ayuda", "/leccion/laberinto-1", "/leccion/rpg-heroe",
+VIEWPORTS = ((320, 800), (375, 812), (390, 844), (768, 1024))
+RUTAS = ["/", "/bienvenida", "/aprender", "/leccion/hola-mundo", "/ejercicios/1", "/referencia", "/mapa", "/resumen", "/logros", "/liga", "/experimentar", "/tortuga",
+         "/proyectos", "/proyectos-integradores", "/repaso", "/practica", "/ayuda", "/leccion/laberinto-1", "/leccion/rpg-heroe",
          "/juego", "/leccion/juego-ganar", "/no-existe"]   # la última: página de error 404
 
 # Qué elementos se salen del ancho de la ventana (ignora los que se desplazan por dentro a propósito)
@@ -47,12 +47,13 @@ def main():
     with sync_playwright() as p:
         navegador = p.chromium.launch()
         pg = navegador.new_page(viewport={"width": 1280, "height": 900})
+        pg.goto(args.url + "/cuenta/__test__/bootstrap")
         pg.goto(args.url + "/bienvenida")
         pg.evaluate("t => fetch('/api/onboarding', {method: 'POST', headers: {'Content-Type': 'application/json', "
                     "'X-Tortu-Token': t}, body: JSON.stringify({meta_min: 10})})", "prueba")
         pg.wait_for_timeout(400)
-        for ancho in ANCHOS:
-            pg.set_viewport_size({"width": ancho, "height": 800})
+        for ancho, alto in VIEWPORTS:
+            pg.set_viewport_size({"width": ancho, "height": alto})
             for ruta in RUTAS:
                 pg.goto(args.url + ruta)
                 pg.wait_for_timeout(200)
@@ -67,9 +68,9 @@ def main():
         import jugar_cursos
         from tortuscript import contenido
         leccion = contenido.cargar_curso()["secciones"][0]["lecciones"][0]
-        for ancho in ANCHOS:
-            pg.set_viewport_size({"width": ancho, "height": 800})
-            pg.goto(f"{args.url}/leccion/hola-mundo")
+        for ancho, alto in VIEWPORTS:
+            pg.set_viewport_size({"width": ancho, "height": alto})
+            pg.goto(f"{args.url}/leccion/{leccion['id']}")
             for i, paso in enumerate(leccion["pasos"]):
                 pg.wait_for_timeout(250)
                 r = pg.evaluate(JS_DESBORDE)

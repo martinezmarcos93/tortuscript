@@ -145,6 +145,14 @@ class TestElValidadorAtrapaErrores(unittest.TestCase):
         self.assertTrue(any("no están entre las fichas" in m for m in errores(EXPL, {
             "tipo": "completar", "consigna": "c", "codigo": '___ "x"', "fichas": ["sumar"], "respuesta": ["mostrar"]})))
 
+    def test_completar_requiere_fichas_duplicadas_para_respuestas_repetidas(self):
+        hallazgos = errores(EXPL, {
+            "tipo": "completar", "consigna": "c", "codigo": "___ ___",
+            "fichas": ["h1"], "respuesta": ["h1", "h1"], "lenguaje": "html",
+        })
+        self.assertTrue(any("faltan fichas duplicadas" in m for m in hallazgos))
+
+
     def test_completar_que_no_muestra_lo_esperado(self):
         m = errores(EXPL, {"tipo": "completar", "consigna": "c", "codigo": '___ "x"', "fichas": ["mostrar"],
                            "respuesta": ["mostrar"], "salida": "otra cosa"})

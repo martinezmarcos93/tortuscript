@@ -107,6 +107,23 @@ class AuthTests(unittest.TestCase):
         fila = self.cuentas.obtener_account(cuenta.id)
         self.assertEqual(fila.email, "adulto@example.com")
 
+    def test_password_invalida_no_consumo_token_recuperacion(self):
+        cuenta = self.cuentas.crear_account("recuperar@example.com")
+        self.auth.set_password(cuenta.id, "una-clave-larga-123")
+        self.auth.marcar_verificada(cuenta.id)
+        token, _ = self.auth.create_recovery_token(cuenta.email)
+        with self.assertRaisesRegex(AuthError, "al menos 12 caracteres"):
+            self.auth.reset_password(token, "corta")
+        self.assertEqual(
+            self.auth.verify_password(cuenta.email, "una-clave-larga-123")["id"],
+            cuenta.id,
+        )
+        self.auth.reset_password(token, "otra-clave-larga-456")
+        self.assertEqual(
+            self.auth.verify_password(cuenta.email, "otra-clave-larga-456")["id"],
+            cuenta.id,
+        )
+
     def test_recuperacion_cambia_password_y_revoca_sesiones(self):
         cuenta = self.cuentas.crear_account("adulto@example.com")
         self.auth.set_password(cuenta.id, "una-clave-larga-123")

@@ -83,6 +83,23 @@ class AuthRepository:
         self.marcar_verificada(account_id)
         return account_id
 
+    def create_verification_token_for_email(self, email):
+        """Crea token solo para cuentas existentes aún no verificadas.
+
+        Devuelve None tanto para correos desconocidos como verificados para que
+        la ruta HTTP pueda responder de forma indistinguible.
+        """
+        email = (email or "").strip().lower()
+        if not email:
+            return None
+        with self._db() as db:
+            row = db.execute(
+                "SELECT id,verified_at FROM accounts WHERE email=?", (email,)
+            ).fetchone()
+        if not row or row["verified_at"]:
+            return None
+        return self.create_verification_token(row["id"])
+
     def create_recovery_token(self, email):
         email = (email or "").strip().lower()
         with self._db() as db:
@@ -92,6 +109,9 @@ class AuthRepository:
         return self._create_account_token(row["id"], "recovery", RECOVERY_HOURS)
 
     def reset_password(self, raw_token, new_password):
+        # Validar antes de consumir el token: un error de política no debe
+        # inutilizar un enlace de recuperación todavía válido.
+        self.validar_password(new_password)
         account_id = self._consume_account_token(raw_token, "recovery")
         self.set_password(account_id, new_password)
         with self._db() as db:
@@ -143,9 +163,13 @@ class AuthRepository:
                 (_iso(_now()), account_id),
             )
 
-    def set_password(self, account_id, password):
+    @staticmethod
+    def validar_password(password):
         if not isinstance(password, str) or len(password) < 12:
             raise AuthError("La contraseña debe tener al menos 12 caracteres.")
+
+    def set_password(self, account_id, password):
+        self.validar_password(password)
         encoded = generate_password_hash(password, method="scrypt")
         with self._db() as db:
             db.execute("UPDATE accounts SET password_hash=? WHERE id=?", (encoded, account_id))

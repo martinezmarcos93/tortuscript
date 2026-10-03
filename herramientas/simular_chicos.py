@@ -137,6 +137,7 @@ class Chico:
     # ── recorrido ──
     def bienvenida(self):
         pg = self.pg
+        pg.goto(self.url + "/cuenta/__test__/bootstrap?perfil=" + self.p["nombre"])
         pg.goto(self.url + "/bienvenida")                     # cada perfil nuevo empieza por la bienvenida
         pg.fill("#bv-nombre", self.p["nombre"]); pg.click("#bv-sig-1")
         pg.click(f'[data-campo="experiencia"] [data-valor="{self.p["experiencia"]}"]')

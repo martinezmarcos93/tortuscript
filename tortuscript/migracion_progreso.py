@@ -22,14 +22,28 @@ class MigracionProgresoLocal:
         self.educativo = educativo
 
     def importar_local(self, raw_session: str | None, perfil_local: str, reemplazar: bool = False):
-        nombre = sanitizar_perfil(perfil_local)
-        if not nombre or nombre != perfil_local.strip().lower().replace(" ", "_"):
+        if not isinstance(perfil_local, str):
             raise MigracionProgresoError("El nombre del perfil local no es válido.")
+        nombre = sanitizar_perfil(perfil_local)
+        normalizado = perfil_local.strip().lower().replace(" ", "_")
+        if not nombre or nombre != normalizado:
+            raise MigracionProgresoError("El nombre del perfil local no es válido.")
+
+        # No permitir que un nombre inexistente se convierta silenciosamente en
+        # un perfil vacío: cargar_progreso() crea el progreso inicial si falta.
+        if nombre not in obtener_perfiles():
+            raise MigracionProgresoError("El perfil local solicitado no existe.")
+
         contexto = self.educativo.contexto(raw_session)
         actual = self.educativo.cargar_progreso(raw_session)
         if actual is not None and not reemplazar:
             raise MigracionProgresoError("El perfil comercial ya tiene progreso; se requiere reemplazo explícito.")
-        datos = cargar_progreso(nombre)
+        try:
+            datos = cargar_progreso(nombre)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            raise MigracionProgresoError("El progreso local no tiene un formato válido.") from exc
+        if not isinstance(datos, dict):
+            raise MigracionProgresoError("El progreso local no tiene un formato válido.")
         datos.pop("_perfil", None)
         snapshot = nuevo_snapshot(contexto.perfil.id, deepcopy(datos))
         self.educativo.guardar_progreso(raw_session, snapshot)

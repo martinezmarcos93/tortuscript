@@ -41,6 +41,7 @@
               "codigo": "<___>Dragón</___>",
               "fichas": [
                 "h1",
+                "h1",
                 "css",
                 "button"
               ],
@@ -551,7 +552,7 @@
                 "boton"
               ],
               "correcta": 0,
-              "pista": "El primer argumento de addEventListener es el evento.",
+              "pista": "El primer dato de addEventListener indica qué evento escuchar.",
               "lenguaje": "javascript"
             },
             {
@@ -762,7 +763,7 @@
                 "click"
               ],
               "correcta": 0,
-              "pista": "El segundo argumento es la función que se ejecutará.",
+              "pista": "El segundo dato es la función que se ejecutará.",
               "lenguaje": "javascript"
             },
             {

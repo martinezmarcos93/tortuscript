@@ -15,14 +15,16 @@ Reglas:
 from __future__ import annotations
 
 import re
+import secrets
 import sqlite3
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 MAX_CHILD_PROFILES = 3
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -79,6 +81,11 @@ def _normalizar_nombre(nombre: str) -> str:
     return nombre
 
 
+def _clave_nombre(nombre: str) -> str:
+    """Clave estable para unicidad: compatibilidad Unicode + comparación sin caso."""
+    return unicodedata.normalize("NFKC", _normalizar_nombre(nombre)).casefold()
+
+
 class CuentaRepository:
     """Repositorio SQLite pequeño y explícito; no conoce Flask ni la sesión HTTP."""
 
@@ -94,6 +101,19 @@ class CuentaRepository:
 
     def ensure_schema(self) -> None:
         with self._conexion() as con:
+            # Nunca modificar una base creada por una versión futura del programa.
+            existe_version = con.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_version'"
+            ).fetchone()
+            if existe_version:
+                try:
+                    version_actual = con.execute(
+                        "SELECT MAX(version) AS version FROM schema_version"
+                    ).fetchone()
+                except sqlite3.DatabaseError as exc:
+                    raise CuentaError("La versión del esquema de cuentas no es compatible.") from exc
+                if version_actual and version_actual["version"] not in (1, 2, SCHEMA_VERSION):
+                    raise CuentaError("Versión de esquema de cuentas no compatible.")
             con.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS schema_version (
@@ -143,12 +163,43 @@ class CuentaRepository:
                 """
             )
             cols = {r["name"] for r in con.execute("PRAGMA table_info(accounts)")}
+            profile_cols = {r["name"] for r in con.execute("PRAGMA table_info(child_profiles)")}
+            # Validar todos los alias históricos antes de tocar el esquema: ALTER TABLE
+            # puede persistir aunque después abortemos la migración por duplicados.
+            filas = con.execute(
+                "SELECT id,account_id,display_name FROM child_profiles ORDER BY created_at,id"
+            ).fetchall()
+            claves = {}
+            claves_por_id = {}
+            for perfil in filas:
+                clave = (perfil["account_id"], _clave_nombre(perfil["display_name"]))
+                anterior = claves.get(clave)
+                if anterior is not None and anterior != perfil["id"]:
+                    raise CuentaError(
+                        "Hay perfiles existentes con nombres equivalentes por mayúsculas o Unicode; "
+                        "resolvé esos duplicados antes de actualizar el esquema."
+                    )
+                claves[clave] = perfil["id"]
+                claves_por_id[perfil["id"]] = clave[1]
+            # No alterar ninguna tabla existente hasta validar todo el historial.
             if "role" not in cols:
                 con.execute("ALTER TABLE accounts ADD COLUMN role TEXT NOT NULL DEFAULT 'adult'")
+            if "display_name_key" not in profile_cols:
+                con.execute("ALTER TABLE child_profiles ADD COLUMN display_name_key TEXT")
+            for perfil_id, clave in claves_por_id.items():
+                con.execute(
+                    "UPDATE child_profiles SET display_name_key=? WHERE id=?",
+                    (clave, perfil_id),
+                )
+            con.execute(
+                """CREATE UNIQUE INDEX IF NOT EXISTS idx_child_profiles_account_name_key
+                   ON child_profiles(account_id, display_name_key)"""
+            )
+
             row = con.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
             if row is None:
                 con.execute("INSERT INTO schema_version(version) VALUES (?)", (SCHEMA_VERSION,))
-            elif row["version"] == 1:
+            elif row["version"] in (1, 2):
                 con.execute("UPDATE schema_version SET version=?", (SCHEMA_VERSION,))
             elif row["version"] != SCHEMA_VERSION:
                 raise CuentaError("Versión de esquema de cuentas no compatible.")
@@ -214,11 +265,20 @@ class CuentaRepository:
     def crear_child_profile(self, account_id: str, display_name: str) -> ChildProfile:
         display_name = _normalizar_nombre(display_name)
         now = _ahora()
-        profile_id = _id("child", f"{account_id}:{display_name.lower()}")
+        # El ID interno es opaco y no deriva del alias visible: renombrar/recrear
+        # un perfil no debe volver a asociar accidentalmente progreso huérfano.
+        profile_id = f"child_{secrets.token_hex(12)}"
+        display_name_key = _clave_nombre(display_name)
         with self._conexion() as con:
             account = con.execute("SELECT 1 FROM accounts WHERE id=?", (account_id,)).fetchone()
             if not account:
                 raise CuentaError("La cuenta no existe.")
+            duplicado = con.execute(
+                "SELECT 1 FROM child_profiles WHERE account_id=? AND display_name_key=?",
+                (account_id, display_name_key),
+            ).fetchone()
+            if duplicado:
+                raise CuentaError("Ya existe un perfil con ese nombre.")
             cantidad = con.execute(
                 "SELECT COUNT(*) AS n FROM child_profiles WHERE account_id=? AND active=1",
                 (account_id,),
@@ -227,8 +287,9 @@ class CuentaRepository:
                 raise CuentaError(f"Una cuenta admite como máximo {MAX_CHILD_PROFILES} perfiles.")
             try:
                 con.execute(
-                    "INSERT INTO child_profiles(id,account_id,display_name,created_at) VALUES (?,?,?,?)",
-                    (profile_id, account_id, display_name, now),
+                    """INSERT INTO child_profiles(id,account_id,display_name,created_at,display_name_key)
+                       VALUES (?,?,?,?,?)""",
+                    (profile_id, account_id, display_name, now, display_name_key),
                 )
             except sqlite3.IntegrityError as exc:
                 raise CuentaError("Ya existe un perfil con ese nombre.") from exc

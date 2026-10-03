@@ -11,8 +11,17 @@
   <section class="tarjeta centrado">
     <div class="mascota gran" aria-hidden="true">✉️</div>
     <h1>Verificá tu correo</h1>
+    {% if mensaje %}
+    <p class="texto-grande">{{ mensaje }}</p>
+    {% else %}
     <p class="texto-grande">Enviamos un enlace de verificación a <strong>{{ email }}</strong>.</p>
+    {% endif %}
     <p>Después de verificarlo, podés ingresar a TortuScript.</p>
+    <form method="post" action="{{ url_for('cuenta.reenviar_verificacion') }}">
+      <label for="email">Correo de la cuenta</label>
+      <input id="email" name="email" type="email" autocomplete="email" required value="{{ email or '' }}">
+      <button class="boton grande" type="submit">Reenviar enlace de verificación</button>
+    </form>
     <p><a class="boton verde grande" href="{{ url_for('cuenta.ingresar') }}">Ir a ingresar</a></p>
   </section>
 </main>

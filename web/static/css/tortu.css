@@ -236,9 +236,15 @@ a.nodo:hover { transform: translateY(-3px) scale(1.04); }
 /* ───────── tortuga ───────── */
 .ordenes { margin-top: .7rem; font-size: .9rem; }
 .ordenes code { color: var(--celeste); }
-.tortuga-grid { grid-template-columns: 1fr minmax(320px, 520px); align-items: start; }
+.tortuga-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
 .lienzo-caja { background: #fff; border: 2px solid var(--borde); border-radius: var(--radio-chico); overflow: hidden; }
 .lienzo-caja canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+/* La escena de TortuGame conserva su proporción lógica de 640 × 400. */
+.lienzo-caja canvas#escena { aspect-ratio: 8 / 5; }
+@media (min-width: 901px) {
+  /* En escritorio, el editor ocupa el mismo alto disponible que el lienzo/escena. */
+  .tortuga-grid > .panel-editor.tortu .CodeMirror { flex: 1 1 auto; height: auto; min-height: 300px; }
+}
 .lienzo-panel h3 { color: var(--celeste); }
 .opcion { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; max-width: 100%; font-weight: 800; color: var(--texto-suave); }
 .opcion input[type=checkbox] { width: 1.2rem; height: 1.2rem; accent-color: var(--violeta); flex: none; }
@@ -263,7 +269,7 @@ a.nodo:hover { transform: translateY(-3px) scale(1.04); }
 .nivel-mapa.n5 { --c: #ff7b8f; --c-fondo: #5c1626; } .nivel-mapa.n6 { --c: #ff9b4a; --c-fondo: #5c2a0c; }
 .nivel-mapa.n7 { --c: #f08cff; --c-fondo: #5a1466; } .nivel-mapa.n8 { --c: #4cc9ff; --c-fondo: #0b3c5c; }
 .nivel-mapa h2 { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; font-size: 1rem; }
-.etiqueta-nivel { background: var(--c-fondo); color: var(--c); padding: .3rem .9rem; border-radius: 8px; font-family: var(--fuente-codigo); font-weight: 700; }
+.etiqueta-nivel { background: var(--c-fondo); color: var(--texto); border: 1px solid var(--c); padding: .3rem .9rem; border-radius: 8px; font-family: var(--fuente-codigo); font-weight: 700; }
 .fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
 .ficha {
   display: flex; flex-direction: column; align-items: center; gap: .15rem; text-align: center; text-decoration: none;

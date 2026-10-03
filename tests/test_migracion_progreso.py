@@ -10,6 +10,7 @@ from tortuscript.cuentas import CuentaRepository
 from tortuscript.perfil_educativo import PerfilEducativoService, ContextoEducativoError
 from tortuscript.progreso_childprofile import ProgresoChildProfile
 from tortuscript.progreso import PROGRESO_INICIAL
+from tortuscript import persistencia_local
 from tortuscript.progreso_contrato import nuevo_snapshot
 from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProgresoLocal
 
@@ -32,17 +33,16 @@ class MigracionProgresoTests(unittest.TestCase):
         self.local.mkdir()
         self.old_cwd = Path.cwd()
         # El módulo legado usa su raíz de proyecto; parcheamos únicamente su directorio durante la prueba.
-        import tortuscript.progreso as progreso
-        self.progreso = progreso
-        self.old_dir = progreso.DIRECTORIO
-        progreso.DIRECTORIO = self.local
+        self.progreso = persistencia_local
+        self.old_dir = persistencia_local.DIRECTORIO
+        persistencia_local.DIRECTORIO = self.local
         self.service = PerfilEducativoService(
             self.cuentas, self.auth, ProgresoChildProfile(self.tmp / "commercial"), AccesoProducto(self.cuentas)
         )
         self.migracion = MigracionProgresoLocal(self.service)
 
     def tearDown(self):
-        self.progreso.DIRECTORIO = self.old_dir
+        persistencia_local.DIRECTORIO = self.old_dir
         shutil.rmtree(self.tmp)
 
     def test_importacion_expresa_copia_al_perfil_activo(self):
@@ -55,6 +55,27 @@ class MigracionProgresoTests(unittest.TestCase):
         self.assertEqual(snapshot.profile_id, self.perfil.id)
         self.assertEqual(snapshot.data["xp_total"], 123)
 
+    def test_rechaza_nombre_de_perfil_no_textual_sin_error_500(self):
+        for nombre in (None, [], {}, 17):
+            with self.subTest(nombre=nombre):
+                with self.assertRaises(MigracionProgresoError):
+                    self.migracion.importar_local(self.session, nombre)
+
+    def test_rechaza_perfil_local_inexistente(self):
+        with self.assertRaises(MigracionProgresoError):
+            self.migracion.importar_local(self.session, "perfil_que_no_existe")
+        self.assertIsNone(self.service.cargar_progreso(self.session))
+
+    def test_rechaza_progreso_local_malformado_sin_persistirlo(self):
+        archivo = self.local / "progreso_ana.json"
+        archivo.write_text(
+            '{"ejercicios": {}, "config": []}',
+            encoding="utf-8",
+        )
+        with self.assertRaises(MigracionProgresoError):
+            self.migracion.importar_local(self.session, "ana")
+        self.assertIsNone(self.service.cargar_progreso(self.session))
+
     def test_no_reemplaza_progreso_comercial_sin_confirmacion(self):
         self.service.guardar_progreso(self.session, nuevo_snapshot(self.perfil.id, {"xp_total": 999}))
         with self.assertRaises(MigracionProgresoError):
@@ -63,6 +84,7 @@ class MigracionProgresoTests(unittest.TestCase):
     def test_reemplazo_debe_ser_explicito(self):
         datos = dict(PROGRESO_INICIAL)
         datos["xp_total"] = 123
+        datos["_perfil"] = "ana"
         self.progreso.guardar_progreso(datos)
         self.service.guardar_progreso(self.session, nuevo_snapshot(self.perfil.id, {"xp_total": 999}))
         snapshot = self.migracion.importar_local(self.session, "ana", reemplazar=True)

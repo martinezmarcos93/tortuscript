@@ -1,5 +1,6 @@
 """Pruebas del límite de identidad/comercial, sin autenticar ni cobrar."""
 import shutil
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -53,6 +54,131 @@ class CuentaRepositoryTests(unittest.TestCase):
         self.repo.crear_child_profile(cuenta.id, "Ana")
         with self.assertRaises(CuentaError):
             self.repo.crear_child_profile(cuenta.id, " Ana ")
+
+    def test_nombre_de_perfil_no_duplica_por_mayusculas(self):
+        cuenta = self.repo.crear_account("adulto@example.com")
+        self.repo.crear_child_profile(cuenta.id, "Ana")
+        with self.assertRaises(CuentaError):
+            self.repo.crear_child_profile(cuenta.id, "ANA")
+
+    def test_id_de_perfil_es_opaco_y_unico(self):
+        cuenta = self.repo.crear_account("adulto@example.com")
+        ana = self.repo.crear_child_profile(cuenta.id, "Ana")
+        beto = self.repo.crear_child_profile(cuenta.id, "Beto")
+        self.assertRegex(ana.id, r"^child_[a-f0-9]{24}$")
+        self.assertRegex(beto.id, r"^child_[a-f0-9]{24}$")
+        self.assertNotEqual(ana.id, beto.id)
+
+    def test_nombre_equivalente_por_unicode_nfkc_no_se_duplica(self):
+        cuenta = self.repo.crear_account("adulto@example.com")
+        self.repo.crear_child_profile(cuenta.id, "Ana")
+        with self.assertRaises(CuentaError):
+            self.repo.crear_child_profile(cuenta.id, "Ａna")
+
+    def test_esquema_v2_migra_a_v3_y_conserva_perfiles(self):
+        legacy_path = self.tmp / "legacy.sqlite3"
+        with sqlite3.connect(legacy_path) as con:
+            con.executescript("""
+                CREATE TABLE schema_version (version INTEGER NOT NULL);
+                INSERT INTO schema_version(version) VALUES (2);
+                CREATE TABLE accounts (
+                    id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'adult'
+                );
+                CREATE TABLE child_profiles (
+                    id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    display_name TEXT NOT NULL, created_at TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 1,
+                    UNIQUE(account_id, display_name)
+                );
+                INSERT INTO accounts(id,email,created_at,role)
+                    VALUES ('acc_legacy','legacy@example.com','2026-01-01','adult');
+                INSERT INTO child_profiles(id,account_id,display_name,created_at,active)
+                    VALUES ('child_legacy','acc_legacy','Ana','2026-01-02',1);
+            """)
+        migrated = CuentaRepository(legacy_path)
+        migrated.ensure_schema()
+        with sqlite3.connect(legacy_path) as con:
+            version = con.execute("SELECT version FROM schema_version").fetchone()[0]
+            columns = {row[1] for row in con.execute("PRAGMA table_info(child_profiles)")}
+            profile = con.execute(
+                "SELECT id,display_name,display_name_key FROM child_profiles"
+            ).fetchone()
+            indexes = {row[1] for row in con.execute("PRAGMA index_list(child_profiles)")}
+        self.assertEqual(version, 3)
+        self.assertIn("display_name_key", columns)
+        self.assertEqual(profile, ("child_legacy", "Ana", "ana"))
+        self.assertIn("idx_child_profiles_account_name_key", indexes)
+
+    def test_migracion_rechaza_alias_historicos_equivalentes_sin_perder_filas(self):
+        legacy_path = self.tmp / "legacy-duplicados.sqlite3"
+        with sqlite3.connect(legacy_path) as con:
+            con.executescript("""
+                CREATE TABLE schema_version (version INTEGER NOT NULL);
+                INSERT INTO schema_version(version) VALUES (2);
+                CREATE TABLE accounts (
+                    id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE child_profiles (
+                    id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    display_name TEXT NOT NULL, created_at TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 1,
+                    UNIQUE(account_id, display_name)
+                );
+                INSERT INTO accounts(id,email,created_at)
+                    VALUES ('acc_legacy','legacy@example.com','2026-01-01');
+                INSERT INTO child_profiles(id,account_id,display_name,created_at,active)
+                    VALUES ('child_1','acc_legacy','Ana','2026-01-02',1);
+                INSERT INTO child_profiles(id,account_id,display_name,created_at,active)
+                    VALUES ('child_2','acc_legacy','ANA','2026-01-03',1);
+            """)
+        migrated = CuentaRepository(legacy_path)
+        with self.assertRaisesRegex(CuentaError, "nombres equivalentes"):
+            migrated.ensure_schema()
+        with sqlite3.connect(legacy_path) as con:
+            profiles = con.execute(
+                "SELECT id,display_name FROM child_profiles ORDER BY id"
+            ).fetchall()
+            columns = {row[1] for row in con.execute("PRAGMA table_info(child_profiles)")}
+            account_columns = {row[1] for row in con.execute("PRAGMA table_info(accounts)")}
+        self.assertEqual(profiles, [("child_1", "Ana"), ("child_2", "ANA")])
+        self.assertNotIn("display_name_key", columns)
+        self.assertNotIn("role", account_columns)
+
+    def test_esquema_futuro_se_rechaza_sin_alterar_tablas_existentes(self):
+        future_path = self.tmp / "future.sqlite3"
+        with sqlite3.connect(future_path) as con:
+            con.executescript("""
+                CREATE TABLE schema_version (version INTEGER NOT NULL);
+                INSERT INTO schema_version(version) VALUES (3);
+                INSERT INTO schema_version(version) VALUES (4);
+                CREATE TABLE accounts (
+                    id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE child_profiles (
+                    id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    display_name TEXT NOT NULL, created_at TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 1,
+                    UNIQUE(account_id, display_name)
+                );
+            """)
+        with self.assertRaisesRegex(CuentaError, "no compatible"):
+            CuentaRepository(future_path).ensure_schema()
+        with sqlite3.connect(future_path) as con:
+            account_columns = {row[1] for row in con.execute("PRAGMA table_info(accounts)")}
+            profile_columns = {row[1] for row in con.execute("PRAGMA table_info(child_profiles)")}
+            tables = {row[0] for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )}
+        self.assertNotIn("role", account_columns)
+        self.assertNotIn("display_name_key", profile_columns)
+        self.assertNotIn("subscriptions", tables)
+        self.assertNotIn("entitlements", tables)
 
     def test_esquema_es_reproducible(self):
         self.repo.ensure_schema()

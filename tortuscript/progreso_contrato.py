@@ -10,6 +10,7 @@ visible del alumno ni Account.email.
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Protocol
@@ -32,6 +33,28 @@ def _validar_profile_id(profile_id: str) -> str:
     return profile_id.strip()
 
 
+def _validar_updated_at(updated_at: str) -> str:
+    if not isinstance(updated_at, str) or not updated_at.strip():
+        raise ProgresoContratoError("updated_at debe ser una fecha ISO 8601 con zona horaria.")
+    try:
+        parsed = datetime.fromisoformat(updated_at)
+    except ValueError as exc:
+        raise ProgresoContratoError("updated_at debe ser una fecha ISO 8601 con zona horaria.") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ProgresoContratoError("updated_at debe incluir zona horaria.")
+    return updated_at
+
+
+def _validar_data(data: Any) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ProgresoContratoError("data debe ser un objeto JSON.")
+    try:
+        json.dumps(data, ensure_ascii=False, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise ProgresoContratoError("data contiene valores que no son JSON válidos.") from exc
+    return data
+
+
 @dataclass(frozen=True)
 class ProgresoSnapshot:
     """Snapshot portable; no conoce SQLite, Flask ni el formato local actual."""
@@ -43,10 +66,10 @@ class ProgresoSnapshot:
 
     def validar(self) -> "ProgresoSnapshot":
         _validar_profile_id(self.profile_id)
-        if self.schema_version != PROGRESS_CONTRACT_VERSION:
+        if type(self.schema_version) is not int or self.schema_version != PROGRESS_CONTRACT_VERSION:
             raise ProgresoContratoError("Versión de contrato de progreso no compatible.")
-        if not isinstance(self.data, dict):
-            raise ProgresoContratoError("data debe ser un objeto JSON.")
+        _validar_updated_at(self.updated_at)
+        _validar_data(self.data)
         return self
 
 
@@ -103,11 +126,12 @@ def importar_snapshot(documento: dict[str, Any]) -> ProgresoSnapshot:
     """Valida un documento recibido antes de entregarlo a otra capa."""
     if not isinstance(documento, dict):
         raise ProgresoContratoError("El documento de progreso no es válido.")
-    if documento.get("contract_version") != PROGRESS_CONTRACT_VERSION:
+    version = documento.get("contract_version")
+    if type(version) is not int or version != PROGRESS_CONTRACT_VERSION:
         raise ProgresoContratoError("Versión de contrato de progreso no compatible.")
     return ProgresoSnapshot(
         profile_id=_validar_profile_id(documento.get("profile_id")),
         schema_version=PROGRESS_CONTRACT_VERSION,
-        updated_at=str(documento.get("updated_at") or ""),
+        updated_at=documento.get("updated_at"),
         data=deepcopy(documento.get("data")),
     ).validar()

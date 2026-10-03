@@ -139,7 +139,11 @@ class TestElProyectoReal(unittest.TestCase):
                      "web/static/img/tortuscript.svg", "contenido/cursos/primeros-pasos.json", "contenido/referencia.json",
                      "tortuscript/leccion.py", "lanzadores/Iniciar TortuScript.bat", "docs/CONTENIDO.md"):
             self.assertIn(debe, hallados)
-        self.assertFalse([h for h in hallados if h.startswith(("tests/", "logs/", ".venv", ".git")) or "progreso_" in h])
+        self.assertFalse([
+            h for h in hallados
+            if h.startswith(("tests/", "logs/", ".venv", ".git"))
+            or (Path(h).name.startswith("progreso_") and Path(h).suffix != ".py")
+        ])
 
     def test_los_cursos_y_las_fuentes_viajan_completos(self):
         hallados = {p.as_posix() for p in crear_paquete.archivos_del_paquete(RAIZ)}

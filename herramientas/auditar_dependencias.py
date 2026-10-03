@@ -40,9 +40,19 @@ def hashes_de_pypi(paquete, version):
     return sorted({f["digests"]["sha256"] for f in datos["urls"]})
 
 
+def _nombre_canonico(paquete):
+    """Normaliza el nombre según PEP 503 para comparar guiones, puntos y guiones bajos."""
+    return re.sub(r"[-_.]+", "-", paquete).lower()
+
+
 def instalados():
     salida = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True, check=True).stdout
-    return leer_lock(salida)
+    # pip freeze puede escribir importlib_metadata, mientras PyPI/requirements usa
+    # importlib-metadata. Conservamos la grafía existente para que el lock sea estable.
+    existentes = {}
+    if LOCK.exists():
+        existentes = {_nombre_canonico(p): p for p, _ in leer_lock(LOCK.read_text(encoding="utf-8"))}
+    return [(existentes.get(_nombre_canonico(p), p), v) for p, v in leer_lock(salida)]
 
 
 def generar_lock():

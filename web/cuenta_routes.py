@@ -3,9 +3,11 @@
 La ruta de cuenta usa la infraestructura server-side de tortuscript.auth.
 No activa todavía el despliegue remoto: create_app mantiene el límite localhost.
 """
+import logging
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from flask import Blueprint, current_app, jsonify, make_response, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, jsonify, make_response, redirect, render_template, request, url_for
 
 from tortuscript.acceso import AccesoProducto
 from tortuscript.auth import AuthError, AuthRepository
@@ -13,11 +15,15 @@ from tortuscript.cuentas import CuentaError, CuentaRepository
 from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProgresoLocal
 from tortuscript.perfil_educativo import ContextoEducativoError, PerfilEducativoService
 from tortuscript.progreso_childprofile import ProgresoChildProfile
-from tortuscript.progreso_contrato import importar_snapshot
 from tortuscript.runtime_educativo import RuntimeEducativo
 from tortuscript.rate_limit import RateLimiter
 
-_RATE_LIMITER = RateLimiter()
+def _rate_limiter():
+    # Cada instancia Flask mantiene su propio limitador. Evita compartir estado
+    # entre aplicaciones de prueba o instancias WSGI distintas en el mismo proceso.
+    return current_app.extensions.setdefault("tortu_rate_limiter", RateLimiter())
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("cuenta", __name__, url_prefix="/cuenta")
 
@@ -40,17 +46,42 @@ def _educativo():
 
 
 def _limit_or_429(key, limit, window):
-    allowed, retry_after = _RATE_LIMITER.allow(key, limit, window)
+    allowed, retry_after = _rate_limiter().allow(key, limit, window)
     if allowed:
         return None
     respuesta = jsonify(ok=False, mensaje="Demasiados intentos. Probá nuevamente más tarde.")
     respuesta.headers["Retry-After"] = str(retry_after)
     return respuesta, 429
 
+def _email_sender_configurado():
+    return callable(current_app.config.get("ACCOUNT_EMAIL_SENDER"))
+
+
 def _emitir_email(tipo, email, token, expires):
     sender = current_app.config.get("ACCOUNT_EMAIL_SENDER")
-    if callable(sender):
-        sender(tipo=tipo, email=email, token=token, expires=expires)
+    if not callable(sender):
+        return False
+    sender(tipo=tipo, email=email, token=token, expires=expires)
+    return True
+
+def _intentar_emitir_email(tipo, email, token, expires):
+    """Aísla fallos del proveedor para no convertirlos en errores HTTP inesperados."""
+    try:
+        return _emitir_email(tipo, email, token, expires)
+    except Exception:
+        # No registrar token, dirección ni el texto arbitrario de la excepción del proveedor.
+        logger.error("Falló el envío de correo transaccional (tipo=%s)", tipo)
+        return False
+
+def _safe_next_url(value, default="/"):
+    """Acepta solo rutas locales para evitar redirecciones abiertas."""
+    if not isinstance(value, str) or not value.startswith("/") or value.startswith("//") or "\\" in value:
+        return default
+    parsed = urlsplit(value)
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith("/") or parsed.path.startswith("//"):
+        return default
+    return value
+
 
 def _cookie_config():
     return {
@@ -125,18 +156,28 @@ def seleccionar_perfil_pagina():
         perfiles=perfiles,
         csrf=request.cookies.get("tortu_csrf", ""),
         perfil_activo=row["active_profile_id"],
+        next_url=_safe_next_url(request.args.get("next", "/")),
     )
 
 
 @bp.post("/registrar")
 def registrar_post():
+    limit = _limit_or_429(f"register:{request.remote_addr or 'unknown'}", 5, 3600)
+    if limit:
+        return limit
     datos = request.form if request.form else (request.get_json(silent=True) or {})
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
         return render_template("cuenta/registrar.html", error="Correo y contraseña son obligatorios."), 400
+    if not _email_sender_configurado():
+        return render_template(
+            "cuenta/registrar.html",
+            error="El registro no está disponible porque el envío de correo no está configurado.",
+        ), 503
     cuentas, auth = _repos()
     try:
+        auth.validar_password(password)
         cuenta = cuentas.crear_account(email)
         auth.set_password(cuenta.id, password)
     except CuentaError as exc:
@@ -144,19 +185,34 @@ def registrar_post():
     except AuthError as exc:
         return render_template("cuenta/registrar.html", error=str(exc)), 400
     token, expires = auth.create_verification_token(cuenta.id)
-    _emitir_email("verification", cuenta.email, token, expires)
+    if not _intentar_emitir_email("verification", cuenta.email, token, expires):
+        return render_template(
+            "cuenta/pendiente.html",
+            email=cuenta.email,
+            mensaje="No pudimos confirmar el envío. Podés solicitar otro enlace desde esta página.",
+        ), 503
     return render_template("cuenta/pendiente.html", email=cuenta.email), 202
 
 
 @bp.post("/registro")
 def registro():
+    limit = _limit_or_429(f"register:{request.remote_addr or 'unknown'}", 5, 3600)
+    if limit:
+        return limit
     datos = request.get_json(silent=True) or {}
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
         return jsonify(ok=False, mensaje="Correo y contraseña son obligatorios."), 400
+    if not _email_sender_configurado():
+        return jsonify(
+            ok=False,
+            codigo="envio_email_no_configurado",
+            mensaje="El registro no está disponible porque el envío de correo no está configurado.",
+        ), 503
     cuentas, auth = _repos()
     try:
+        auth.validar_password(password)
         cuenta = cuentas.crear_account(email)
         auth.set_password(cuenta.id, password)
     except CuentaError as exc:
@@ -164,13 +220,36 @@ def registro():
     except AuthError as exc:
         return jsonify(ok=False, mensaje=str(exc)), 400
     token, expires = auth.create_verification_token(cuenta.id)
-    _emitir_email("verification", cuenta.email, token, expires)
+    if not _intentar_emitir_email("verification", cuenta.email, token, expires):
+        return jsonify(
+            ok=False,
+            codigo="envio_email_fallido",
+            mensaje="No pudimos confirmar el envío. Solicitá otro enlace de verificación.",
+        ), 503
     return jsonify(ok=True, estado="pendiente_verificacion", email=cuenta.email), 202
 
 
 @bp.get("/verificar-email")
 def verificar_email():
+    # GET no consume tokens: los escáneres de enlaces de correo pueden abrirlos
+    # automáticamente. La confirmación efectiva requiere un POST explícito.
     token = request.args.get("token", "")
+    if not token:
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify(ok=False, mensaje="El enlace no es válido o ya expiró."), 400
+        return render_template("cuenta/verificacion.html", ok=False), 400
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify(ok=True, estado="confirmacion_requerida")
+    return render_template("cuenta/verificacion.html", confirmar=True, token=token)
+
+
+@bp.post("/verificar-email")
+def confirmar_verificacion_email():
+    limit = _limit_or_429(f"verify-email:{request.remote_addr or 'unknown'}", 10, 900)
+    if limit:
+        return limit
+    datos = request.get_json(silent=True) or request.form
+    token = datos.get("token", "")
     try:
         _, auth = _repos()
         auth.verify_email_token(token)
@@ -183,21 +262,69 @@ def verificar_email():
     return render_template("cuenta/verificacion.html", ok=True)
 
 
+@bp.post("/reenviar-verificacion")
+def reenviar_verificacion():
+    """Reintenta el correo sin revelar si una cuenta existe o ya está verificada."""
+    limit = _limit_or_429(f"resend-verification:{request.remote_addr or 'unknown'}", 5, 3600)
+    if limit:
+        return limit
+    if not _email_sender_configurado():
+        if request.form:
+            return render_template(
+                "cuenta/pendiente.html",
+                email=request.form.get("email", ""),
+                mensaje="El envío de correo no está configurado en esta instalación.",
+            ), 503
+        return jsonify(
+            ok=False,
+            codigo="envio_email_no_configurado",
+            mensaje="El reenvío no está disponible porque el envío de correo no está configurado.",
+        ), 503
+    datos = request.form if request.form else (request.get_json(silent=True) or {})
+    email = datos.get("email")
+    if isinstance(email, str) and _email_sender_configurado():
+        _, auth = _repos()
+        token_info = auth.create_verification_token_for_email(email)
+        if token_info:
+            token, expires = token_info
+            _intentar_emitir_email("verification", email.strip().lower(), token, expires)
+    # Misma respuesta para correo inexistente, verificado o proveedor fallido.
+    if request.form:
+        return render_template(
+            "cuenta/pendiente.html",
+            email=email.strip() if isinstance(email, str) else "",
+            mensaje="Si la cuenta existe y todavía no está verificada, enviaremos un nuevo enlace.",
+        ), 202
+    return jsonify(
+        ok=True,
+        estado="solicitud_recibida",
+        mensaje="Si la cuenta existe y todavía no está verificada, enviaremos un nuevo enlace.",
+    ), 202
+
+
 @bp.post("/recuperar")
 def solicitar_recuperacion():
+    # La respuesta no depende de que la cuenta exista; solo indica si el canal
+    # global de correo está disponible en esta instalación.
+    if not _email_sender_configurado():
+        return jsonify(
+            ok=False,
+            codigo="envio_email_no_configurado",
+            mensaje="La recuperación no está disponible porque el envío de correo no está configurado.",
+        ), 503
+    limit = _limit_or_429(f"recovery:{request.remote_addr or 'unknown'}", 5, 3600)
+    if limit:
+        return limit
     datos = request.get_json(silent=True) or {}
     email = datos.get("email")
     if isinstance(email, str):
-        limit = _limit_or_429(f"recovery:{request.remote_addr}", 5, 3600)
-        if limit:
-            return limit
         _, auth = _repos()
         token_info = auth.create_recovery_token(email)
         if token_info:
             token, expires = token_info
             cuenta = _repos()[0].obtener_account_por_email(email)
             if cuenta:
-                _emitir_email("recovery", cuenta.email, token, expires)
+                _intentar_emitir_email("recovery", cuenta.email, token, expires)
     return jsonify(ok=True, estado="solicitud_recibida"), 202
 
 
@@ -208,6 +335,9 @@ def restablecer_password():
     password = datos.get("password")
     if not isinstance(token, str) or not isinstance(password, str):
         return jsonify(ok=False, mensaje="Token y contraseña son obligatorios."), 400
+    limit = _limit_or_429(f"reset-password:{request.remote_addr or 'unknown'}", 10, 900)
+    if limit:
+        return limit
     try:
         _, auth = _repos()
         auth.reset_password(token, password)
@@ -223,17 +353,24 @@ def login():
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
         return jsonify(ok=False, mensaje="Correo o contraseña incorrectos."), 401
-    limit = _limit_or_429(f"login:{request.remote_addr}:{(email or "").strip().lower()}", 10, 900)
-    if limit:
-        return limit
+    email_normalizado = email.strip().lower()
+    ip = request.remote_addr or "unknown"
+    limit_ip = _limit_or_429(f"login-ip:{ip}", 30, 900)
+    if limit_ip:
+        return limit_ip
+    limit_cuenta = _limit_or_429(f"login-account:{ip}:{email_normalizado}", 10, 900)
+    if limit_cuenta:
+        return limit_cuenta
     _, auth = _repos()
     try:
         cuenta = auth.verify_password(email, password)
         raw_session, csrf, expires = auth.create_session(cuenta["id"])
-    except AuthError as exc:
+    except AuthError:
+        # No distinguir cuenta inexistente, contraseña incorrecta o correo pendiente.
+        mensaje = "Correo o contraseña incorrectos, o cuenta sin verificar."
         if request.form:
-            return render_template("cuenta/ingresar.html", error=str(exc)), 401
-        return jsonify(ok=False, mensaje="Correo o contraseña incorrectos o cuenta sin verificar."), 401
+            return render_template("cuenta/ingresar.html", error=mensaje), 401
+        return jsonify(ok=False, mensaje=mensaje), 401
     if request.form:
         respuesta = make_response(redirect(url_for("cuenta.seleccionar_perfil_pagina")))
     else:
@@ -309,7 +446,7 @@ def crear_perfil():
         perfil = cuentas.crear_child_profile(row["account_id"], nombre)
     except CuentaError as exc:
         if request.form:
-            return render_template("cuenta/perfiles.html", perfiles=cuentas.listar_child_profiles(row["account_id"]), csrf=request.cookies.get("tortu_csrf", ""), perfil_activo=row["active_profile_id"], error=str(exc)), 400
+            return render_template("cuenta/perfiles.html", perfiles=cuentas.listar_child_profiles(row["account_id"]), csrf=request.cookies.get("tortu_csrf", ""), perfil_activo=row["active_profile_id"], next_url=_safe_next_url(request.args.get("next", "/")), error=str(exc)), 400
         return jsonify(ok=False, mensaje=str(exc)), 400
     if request.form:
         return redirect(url_for("cuenta.seleccionar_perfil_pagina"))
@@ -336,7 +473,7 @@ def seleccionar_perfil():
             return redirect(url_for("cuenta.seleccionar_perfil_pagina")), 403
         return jsonify(ok=False, mensaje=str(exc)), 403
     if request.form:
-        return redirect(request.form.get("next") or url_for("inicio"))
+        return redirect(_safe_next_url(request.form.get("next"), url_for("inicio")))
     return jsonify(ok=True, perfil_activo=profile_id)
 
 
@@ -363,6 +500,9 @@ def obtener_progreso():
 
 @bp.put("/progreso")
 def guardar_progreso():
+    # Un snapshot completo enviado por el navegador permite falsificar XP,
+    # ejercicios y finalización de lecciones. La persistencia se realiza desde
+    # operaciones evaluadas en el servidor; no se aceptan escrituras genéricas.
     raw = request.cookies.get("tortu_session")
     resultado = _require_session()
     if not resultado:
@@ -370,13 +510,11 @@ def guardar_progreso():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    documento = request.get_json(silent=True)
-    try:
-        snapshot = importar_snapshot(documento)
-        _educativo().guardar_progreso(raw, snapshot)
-    except (ContextoEducativoError, ValueError) as exc:
-        return jsonify(ok=False, mensaje=str(exc)), 400
-    return jsonify(ok=True, profile_id=snapshot.profile_id, updated_at=snapshot.updated_at)
+    return jsonify(
+        ok=False,
+        codigo="escritura_no_autoritativa",
+        mensaje="No se aceptan snapshots de progreso enviados por el cliente.",
+    ), 410
 
 
 @bp.get("/acceso")
@@ -399,6 +537,8 @@ def acceso_producto():
 
 @bp.get("/progreso/locales")
 def listar_progresos_locales():
+    if not current_app.config.get("ENABLE_LOCAL_PROGRESS_MIGRATION", False):
+        abort(404)
     raw = request.cookies.get("tortu_session")
     try:
         locales = MigracionProgresoLocal(_educativo()).listar_locales(raw)
@@ -409,6 +549,8 @@ def listar_progresos_locales():
 
 @bp.post("/progreso/importar-local")
 def importar_progreso_local():
+    if not current_app.config.get("ENABLE_LOCAL_PROGRESS_MIGRATION", False):
+        abort(404)
     raw = request.cookies.get("tortu_session")
     resultado = _require_session()
     if not resultado:
@@ -451,13 +593,14 @@ def runtime_registrar_ejercicio():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
-    try:
-        runtime = RuntimeEducativo(_educativo())
-        mejora = runtime.registrar_ejercicio(raw, int(datos["indice"]), int(datos["estrellas"]), int(datos["xp_ganado"]))
-    except (ContextoEducativoError, ValueError, KeyError) as exc:
-        return jsonify(ok=False, mensaje=str(exc)), 400
-    return jsonify(ok=True, mejora=mejora)
+    # No aceptar puntuación/XP declarados por el cliente: se pueden falsificar.
+    # La evaluación autoritativa vive en /api/ejercicios/<n>/evaluar.
+    return jsonify(
+        ok=False,
+        codigo="evaluacion_requerida",
+        mensaje="La puntuación debe obtenerse mediante la evaluación del ejercicio.",
+        evaluador="/api/ejercicios/<n>/evaluar",
+    ), 410
 
 
 @bp.post("/runtime/leccion/paso")
@@ -469,15 +612,14 @@ def runtime_registrar_paso():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
-    try:
-        runtime = RuntimeEducativo(_educativo())
-        info = runtime.registrar_paso_leccion(
-            raw, str(datos["leccion_id"]), int(datos["indice"]), int(datos["xp"]),
-            bool(datos["perfecto"]), int(datos["total_pasos"]), datos.get("estrellas"))
-    except (ContextoEducativoError, ValueError, KeyError) as exc:
-        return jsonify(ok=False, mensaje=str(exc)), 400
-    return jsonify(ok=True, resultado=info)
+    # El cliente no puede declarar un paso correcto ni decidir cuántos pasos tiene la lección.
+    # El endpoint canónico evalúa el contenido y deriva los metadatos del curso.
+    return jsonify(
+        ok=False,
+        codigo="evaluacion_requerida",
+        mensaje="El paso debe comprobarse mediante el evaluador de la lección.",
+        evaluador="/api/lecciones/<leccion_id>/pasos/<i>/evaluar",
+    ), 410
 
 
 @bp.post("/runtime/practica")
@@ -489,13 +631,14 @@ def runtime_registrar_practica():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
-    try:
-        runtime = RuntimeEducativo(_educativo())
-        ganado = runtime.registrar_practica(raw, str(datos["leccion_id"]), int(datos["paso"]), bool(datos["acierto"]))
-    except (ContextoEducativoError, ValueError, KeyError) as exc:
-        return jsonify(ok=False, mensaje=str(exc)), 400
-    return jsonify(ok=True, xp_ganado=ganado)
+    # "acierto" no es evidencia de una respuesta correcta. La práctica se acredita
+    # únicamente a través de /api/practica/comprobar, que valida la respuesta del alumno.
+    return jsonify(
+        ok=False,
+        codigo="comprobacion_requerida",
+        mensaje="La práctica debe comprobarse mediante el evaluador de respuestas.",
+        evaluador="/api/practica/comprobar",
+    ), 410
 
 
 @bp.get("/runtime/proyectos")

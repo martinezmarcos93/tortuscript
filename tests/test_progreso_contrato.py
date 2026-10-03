@@ -52,6 +52,24 @@ class ProgresoContratoTests(unittest.TestCase):
                 "data": {},
             })
 
+    def test_rechaza_fecha_invalida_o_sin_zona_horaria(self):
+        for fecha in ("no-es-fecha", "2026-09-30T12:00:00"):
+            documento = exportar_snapshot("child_a", {"xp": 10})
+            documento["updated_at"] = fecha
+            with self.subTest(fecha=fecha):
+                with self.assertRaises(ProgresoContratoError):
+                    importar_snapshot(documento)
+
+    def test_rechaza_version_boolean_aunque_true_equivalga_a_uno(self):
+        documento = exportar_snapshot("child_a", {"xp": 10})
+        documento["contract_version"] = True
+        with self.assertRaises(ProgresoContratoError):
+            importar_snapshot(documento)
+
+    def test_rechaza_datos_no_serializables_como_json(self):
+        with self.assertRaises(ProgresoContratoError):
+            nuevo_snapshot("child_a", {"objeto": object()})
+
 
 if __name__ == "__main__":
     unittest.main()

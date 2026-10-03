@@ -112,13 +112,36 @@ class TestWebProyectosIntegradores(unittest.TestCase):
         persistencia_local.DIRECTORIO = self._dir
         persistencia_local.PERFIL_ACTUAL = "default"
         from web.app import create_app
-        self.c = create_app(token="t").test_client()
+        self.app = create_app(token="t")
+        self.app.config.update(
+            TESTING=True,
+            ACCOUNT_DB=self._dir / "cuentas.sqlite3",
+            ACCOUNT_COOKIE_SECURE=False,
+            PROGRESS_DIR=self._dir / "progreso_perfiles",
+        )
+        self.c = self.app.test_client()
         self.h = {"X-Tortu-Token": "t"}
-        p = persistencia_local.cargar_progreso()
-        p["config"]["onboarding"] = True
+        from fixtures_cuenta import preparar_sesion_educativa
+        fixture = preparar_sesion_educativa(
+            self.app, self.c, email="integradores@example.com", nombre="Ana", token="t"
+        )
+        self.csrf = fixture["csrf"]
+        actual = self.c.get("/cuenta/progreso").json["progreso"]
+        datos = actual["data"]
         for i in ("py-print", "web-html-estructura"):
-            p["lecciones"][i] = {"pasos": {}, "completada": True, "perfecta": True}
-        persistencia_local.guardar_progreso(p)
+            datos["lecciones"][i] = {"pasos": {}, "completada": True, "perfecta": True}
+        # Estado inicial de la prueba: sembrar almacenamiento directamente,
+        # sin usar una API que ya no acepta snapshots arbitrarios del navegador.
+        from tortuscript.progreso_contrato import ProgresoSnapshot
+        from tortuscript.progreso_childprofile import ProgresoChildProfile
+
+        guardado = ProgresoSnapshot(
+            profile_id=actual["profile_id"],
+            schema_version=actual["contract_version"],
+            updated_at=actual["updated_at"],
+            data=datos,
+        )
+        ProgresoChildProfile(self._dir / "progreso_perfiles").guardar(guardado)
 
     def tearDown(self):
         persistencia_local.DIRECTORIO, persistencia_local.PERFIL_ACTUAL = self._orig

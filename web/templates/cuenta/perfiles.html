@@ -20,7 +20,7 @@
       <form method="post" action="{{ url_for('cuenta.seleccionar_perfil') }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="perfil_id" value="{{ perfil.id }}">
-        <input type="hidden" name="next" value="{{ request.args.get('next', '/') }}">
+        <input type="hidden" name="next" value="{{ next_url }}">
         <button class="boton grande" type="submit">{{ perfil.display_name }}</button>
       </form>
       {% else %}
@@ -56,7 +56,7 @@
       headers: {"Content-Type": "application/json", "X-Tortu-CSRF": csrf},
       body: JSON.stringify({perfil_id: id})
     });
-    if (r.ok) location.href = {{ request.args.get("next", "/")|tojson }};
+    if (r.ok) location.href = {{ next_url|tojson }};
     else {
       const d = await r.json().catch(() => ({}));
       mostrarError(d.mensaje || "No se pudo seleccionar el perfil.");

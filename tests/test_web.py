@@ -4,6 +4,7 @@ import re
 import shutil
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -21,11 +22,23 @@ class TestWeb(unittest.TestCase):
         self._dir = Path(tempfile.mkdtemp())
         self._orig = (persistencia_local.DIRECTORIO, persistencia_local.PERFIL_ACTUAL)
         persistencia_local.DIRECTORIO = self._dir
+        persistencia_local.PERFIL_ACTUAL = "default"
         from web.app import create_app
         self.app = create_app(token="secreto")
+        self.app.config.update(
+            TESTING=True,
+            ACCOUNT_DB=self._dir / "cuentas.sqlite3",
+            ACCOUNT_COOKIE_SECURE=False,
+            PROGRESS_DIR=self._dir / "progreso_perfiles",
+        )
+        self._rutas_que_explotan()
         self.c = self.app.test_client()
         self.h = {"X-Tortu-Token": "secreto"}
-        progreso.guardar_config(persistencia_local.cargar_progreso(), onboarding=True)   # sin pasar por la bienvenida
+        from fixtures_cuenta import preparar_sesion_educativa
+        fixture = preparar_sesion_educativa(
+            self.app, self.c, email="web@example.com", nombre="Marcos", token="secreto"
+        )
+        self.csrf = fixture["csrf"]
 
     def tearDown(self):
         persistencia_local.DIRECTORIO, persistencia_local.PERFIL_ACTUAL = self._orig
@@ -34,15 +47,45 @@ class TestWeb(unittest.TestCase):
     def post(self, ruta, datos=None, **kw):
         return self.c.post(ruta, json=datos or {}, headers=self.h, **kw)
 
+    def _snapshot_cuenta(self):
+        respuesta = self.c.get("/cuenta/progreso")
+        if respuesta.status_code != 200 or not respuesta.json.get("progreso"):
+            raise AssertionError(f"no se pudo leer el snapshot: {respuesta.status_code} {respuesta.get_data(as_text=True)}")
+        return respuesta.json["progreso"]
+
+    def _guardar_snapshot_cuenta(self, snapshot):
+        # Estos tests preparan estado inicial para probar páginas y recorridos.
+        # No deben usar la API HTTP de escritura genérica, que se rechaza porque
+        # permitiría al navegador acreditar XP o lecciones sin evaluación.
+        from tortuscript.progreso_contrato import ProgresoSnapshot
+        from tortuscript.progreso_childprofile import ProgresoChildProfile
+
+        actual = self.c.get("/cuenta/progreso")
+        if actual.status_code != 200:
+            raise AssertionError(
+                f"no se pudo resolver el perfil de prueba: "
+                f"{actual.status_code} {actual.get_data(as_text=True)}"
+            )
+        profile_id = actual.json["perfil"]["id"]
+        guardado = ProgresoSnapshot(
+            profile_id=profile_id,
+            schema_version=snapshot["contract_version"],
+            updated_at=datetime.now(timezone.utc).isoformat(),
+            data=snapshot["data"],
+        )
+        ProgresoChildProfile(self._dir / "progreso_perfiles").guardar(guardado)
+        return guardado
+
     # ── recorridos curriculares ──
     def _completar_curso(self, curso_id):
         from tortuscript import contenido
         curso = contenido.cargar_curso(curso_id)
-        p = persistencia_local.cargar_progreso()
+        snapshot = self._snapshot_cuenta()
+        p = snapshot["data"]
         for _, lec in contenido.lecciones(curso):
             for i in range(len(lec["pasos"])):
                 progreso.registrar_paso_leccion(p, lec["id"], i, 0, True, len(lec["pasos"]))
-        persistencia_local.guardar_progreso(p)
+        self._guardar_snapshot_cuenta(snapshot)
 
     def test_mapa_muestra_todos_los_recorridos_y_sql_bloqueado(self):
         html = self.c.get("/mapa").get_data(as_text=True)
@@ -67,7 +110,7 @@ class TestWeb(unittest.TestCase):
         r = self.c.post("/elegir-recorrido", data={"recorrido": "python"})
         self.assertEqual(r.status_code, 302)
         self.assertTrue(r.headers["Location"].endswith("/leccion/py-print"))
-        self.assertEqual(persistencia_local.cargar_progreso()["recorrido_inicial"], "python")
+        self.assertEqual(self._snapshot_cuenta()["data"]["recorrido_inicial"], "python")
 
     def test_sql_se_desbloquea_al_completar_web(self):
         self._completar_curso("alfabetizacion-digital")
@@ -146,6 +189,8 @@ class TestWeb(unittest.TestCase):
         self.assertEqual(self.c.post("/api/ejecutar", json={}).get_json()["error"], "Esto no se puede abrir desde acá")
 
     def _rutas_que_explotan(self):
+        if "explota" in self.app.view_functions:
+            return
         def explotar():
             raise RuntimeError("detalle interno /ruta/secreta")
         self.app.add_url_rule("/explota", "explota", explotar)
@@ -183,42 +228,60 @@ class TestWeb(unittest.TestCase):
         self.assertIn("Algo se rompió de nuestro lado", r.get_data(as_text=True))
 
     # ── exportar / importar ──
-    def test_exportar_pide_token_y_no_lleva_campos_internos(self):
-        self.assertEqual(self.c.get("/api/perfil/exportar").status_code, 403)
-        r = self.c.get("/api/perfil/exportar", headers=self.h).get_json()
-        self.assertRegex(r["archivo"], r"^tortuscript-default-\d{4}-\d{2}-\d{2}\.json$")
-        self.assertEqual(r["datos"]["formato"], "tortuscript-progreso")
-        self.assertNotIn("_perfil", r["datos"]["progreso"])
+    def test_snapshot_comercial_no_expone_campos_internos(self):
+        respuesta = self.c.get("/cuenta/progreso")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json["perfil"]["nombre"], "Marcos")
+        self.assertIsNotNone(respuesta.json["progreso"])
+        self.assertEqual(respuesta.json["progreso"]["contract_version"], 1)
+        self.assertNotIn("_perfil", respuesta.json["progreso"]["data"])
 
-    def test_importar_crea_un_perfil_nuevo_sin_pisar_y_cambia_a_ese(self):
+    def test_importar_progreso_local_exige_reemplazo_explicito(self):
+        self.app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = True
         p = persistencia_local.cargar_progreso()
         p["xp_total"] = 123
-        persistencia_local.guardar_progreso(p)
-        sobre = self.c.get("/api/perfil/exportar", headers=self.h).get_json()["datos"]
-        p["xp_total"] = 7                                                      # el perfil original sigue su vida
-        persistencia_local.guardar_progreso(p)
-        r = self.post("/api/perfil/importar", {"sobre": sobre}).get_json()
-        self.assertTrue(r["ok"])
-        self.assertEqual(r["actual"], "default_2")                              # "default" ya existía
-        self.assertEqual(persistencia_local.PERFIL_ACTUAL, "default_2")
-        self.assertEqual(persistencia_local.cargar_progreso("default_2")["xp_total"], 123)
-        self.assertEqual(persistencia_local.cargar_progreso("default")["xp_total"], 7)    # no se pisó
-        self.assertEqual(r["estado"]["xp"], 123)
+        self.assertTrue(persistencia_local.guardar_progreso(p))
+        locales = self.c.get("/cuenta/progreso/locales")
+        self.assertEqual(locales.status_code, 200)
+        self.assertIn("default", locales.json["perfiles"])
 
-    def test_importar_rechaza_archivos_invalidos_o_enormes(self):
-        r = self.post("/api/perfil/importar", {"sobre": {"formato": "otro"}})
-        self.assertEqual(r.status_code, 400)
-        self.assertIn("no es un progreso de TortuScript", r.get_json()["mensaje"])
-        enorme = self.post("/api/perfil/importar", {"sobre": {"relleno": "x" * 1_100_000}})
-        self.assertEqual(enorme.status_code, 400)
-        self.assertIn("demasiado grande", enorme.get_json()["mensaje"])
-        self.assertEqual(self.c.post("/api/perfil/importar", json={"sobre": {}}).status_code, 403)   # sin token
-        self.assertEqual(persistencia_local.obtener_perfiles(), ["default"])              # no se creó nada
+        rechazo = self.c.post(
+            "/cuenta/progreso/importar-local",
+            json={"perfil_local": "default", "reemplazar": False},
+            headers={"X-Tortu-CSRF": self.csrf},
+        )
+        self.assertEqual(rechazo.status_code, 400)
+        self.assertIn("reemplazo explícito", rechazo.json["mensaje"])
 
-    def test_el_modal_de_perfiles_ofrece_guardar_y_traer(self):
+        importado = self.c.post(
+            "/cuenta/progreso/importar-local",
+            json={"perfil_local": "default", "reemplazar": True},
+            headers={"X-Tortu-CSRF": self.csrf},
+        )
+        self.assertEqual(importado.status_code, 200)
+        self.assertEqual(importado.json["progreso"]["xp_total"], 123)
+        actual = self.c.get("/cuenta/progreso").json["progreso"]["data"]
+        self.assertEqual(actual["xp_total"], 123)
+
+    def test_importar_progreso_local_rechaza_nombre_invalido_y_sin_csrf(self):
+        self.app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = True
+        invalido = self.c.post(
+            "/cuenta/progreso/importar-local",
+            json={"perfil_local": "../../etc", "reemplazar": True},
+            headers={"X-Tortu-CSRF": self.csrf},
+        )
+        self.assertEqual(invalido.status_code, 400)
+        sin_csrf = self.c.post(
+            "/cuenta/progreso/importar-local",
+            json={"perfil_local": "default", "reemplazar": True},
+        )
+        self.assertEqual(sin_csrf.status_code, 403)
+
+    def test_modal_de_perfil_refleja_el_contrato_comercial(self):
         html = self.c.get("/").get_data(as_text=True)
-        for id_ in ("pf-exportar", "pf-importar", "pf-archivo"):
+        for id_ in ("btn-perfil", "modal-perfil", "pf-lista", "pf-campo", "pf-exportar", "pf-ok"):
             self.assertIn(f'id="{id_}"', html)
+        self.assertIn("El progreso pertenece a tu perfil familiar", html)
 
     # ── ayuda ──
     def test_pagina_de_ayuda_en_el_menu_y_con_sus_preguntas(self):
@@ -348,9 +411,11 @@ class TestWeb(unittest.TestCase):
 
     # ── mapa, resumen, referencia y repaso ──
     def _completar(self, *indices_estrellas):
-        p = persistencia_local.cargar_progreso()
+        snapshot = self._snapshot_cuenta()
+        p = snapshot["data"]
         for i, e in indices_estrellas:
             progreso.registrar_ejercicio(p, i, e, {1: 5, 2: 20, 3: 30}[e])
+        self._guardar_snapshot_cuenta(snapshot)
 
     def test_paginas_nuevas(self):
         for ruta in ("/mapa", "/resumen", "/referencia", "/repaso"):
@@ -450,7 +515,7 @@ class TestWeb(unittest.TestCase):
         self.assertTrue(self.comprobar(1, "pantalla").get_json()["puede_ver_respuesta"])
         r = self.post("/api/lecciones/hola-mundo/pasos/1/respuesta").get_json()
         self.assertEqual(r["respuesta"], "mostrar")
-        p = persistencia_local.cargar_progreso()
+        p = self._snapshot_cuenta()["data"]
         paso = p["lecciones"]["hola-mundo"]["pasos"]["1"]
         self.assertEqual((paso["xp"], paso["perfecto"]), (0, False))
         self.assertIn("fecha", paso)                                                        # desde acá parte la práctica del día
@@ -473,7 +538,7 @@ class TestWeb(unittest.TestCase):
         self.assertTrue(r["leccion"]["recien_completa"])
         self.assertFalse(r["leccion"]["perfecta"])                                 # hubo un reintento
         self.assertEqual(r["leccion"]["siguiente"], "texto-o-cuenta")
-        p = persistencia_local.cargar_progreso()
+        p = self._snapshot_cuenta()["data"]
         self.assertEqual(p["xp_total"], 5 + 2 + 2 + 5 + 30)                        # elegir, completar, ordenar, predecir + ejercicio
 
     def test_escribir_no_se_comprueba_por_la_api_de_pasos(self):
@@ -497,7 +562,7 @@ class TestWeb(unittest.TestCase):
         r = self.post("/api/lecciones/hola-mundo/pasos/5/evaluar", {"codigo": 'mostrar "Hola mundo"'}).get_json()
         self.assertEqual(r["evaluacion"]["estado"], "correcto")
         self.assertEqual((r["premio"]["estrellas"], r["premio"]["xp"], r["premio"]["mejora"]), (3, 30, True))
-        p = persistencia_local.cargar_progreso()
+        p = self._snapshot_cuenta()["data"]
         self.assertTrue(p["ejercicios"]["0"]["completado"])                    # clave histórica intacta
         self.assertIn("5", p["lecciones"]["hola-mundo"]["pasos"])
         self.assertEqual(self.post("/api/lecciones/hola-mundo/pasos/1/evaluar", {"codigo": "x"}).status_code, 400)
@@ -537,10 +602,22 @@ class TestWeb(unittest.TestCase):
         self.assertEqual(self.c.post("/api/tortuga", json={}).status_code, 403)
 
     def test_perfiles(self):
-        r = self.post("/api/perfil", {"nombre": "../../Lua"}).get_json()
-        self.assertEqual(r["actual"], "lua")
-        self.assertEqual(self.post("/api/perfil", {"nombre": "///"}).status_code, 400)
-        self.assertIn("lua", self.c.get("/api/perfiles", headers=self.h).get_json()["perfiles"])
+        inicial = self.c.get("/cuenta/me")
+        self.assertEqual(inicial.status_code, 200)
+        self.assertEqual([p["nombre"] for p in inicial.json["perfiles"]], ["Marcos"])
+
+        creado = self.c.post(
+            "/cuenta/perfiles",
+            json={"nombre": "Lua"},
+            headers={"X-Tortu-CSRF": self.csrf},
+        )
+        self.assertEqual(creado.status_code, 201)
+        me = self.c.get("/cuenta/me").json
+        self.assertEqual({p["nombre"] for p in me["perfiles"]}, {"Marcos", "Lua"})
+        perfiles_api = self.c.get("/api/perfiles", headers=self.h)
+        self.assertEqual(perfiles_api.status_code, 200)
+        self.assertEqual(perfiles_api.json["modo"], "cuenta")
+        self.assertEqual({p["nombre"] for p in perfiles_api.json["perfiles"]}, {"Marcos", "Lua"})
 
 
 if __name__ == "__main__":
