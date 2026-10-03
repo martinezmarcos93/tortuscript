@@ -72,30 +72,39 @@
   }
 
   async function pista() {
-    const r = await Tortu.api(`/api/ejercicios/${n}/pista`, {});
-    pistas = r.nivel;
-    const caja = document.getElementById("pista-caja");
-    caja.textContent = "";
-    const div = document.createElement("div");
-    div.className = "veredicto info pista-caja";
-    const h = document.createElement("h3");
-    h.textContent = `💡 Pista ${r.nivel}: ${r.titulo}`;
-    div.appendChild(h);
-    for (const [clave, tipo] of [["texto", "div"], ["codigo", "pre"], ["python", "pre"]]) {
-      if (!r[clave]) continue;
-      if (clave === "python") { const t = document.createElement("div"); t.textContent = "🐍 En Python:"; div.appendChild(t); }
-      const el = document.createElement(tipo);
-      el.textContent = r[clave];
-      div.appendChild(el);
+    const botonPista = document.getElementById("btn-pista");
+    botonPista.disabled = true;
+    try {
+      const r = await Tortu.api(`/api/ejercicios/${n}/pista`, {});
+      pistas = r.nivel;
+      const caja = document.getElementById("pista-caja");
+      caja.textContent = "";
+      const div = document.createElement("div");
+      div.className = "veredicto info pista-caja";
+      const h = document.createElement("h3");
+      h.textContent = `💡 Pista ${r.nivel}: ${r.titulo}`;
+      div.appendChild(h);
+      for (const [clave, tipo] of [["texto", "div"], ["codigo", "pre"], ["python", "pre"]]) {
+        if (!r[clave]) continue;
+        if (clave === "python") { const t = document.createElement("div"); t.textContent = "🐍 En Python:"; div.appendChild(t); }
+        const el = document.createElement(tipo);
+        el.textContent = r[clave];
+        div.appendChild(el);
+      }
+      const aviso = document.createElement("div");
+      aviso.className = "tenue";
+      aviso.textContent = r.nivel >= 3 ? "Con la solución a la vista, este ejercicio vale 1 estrella."
+                                       : "Cada pista que ves vale una estrella menos.";
+      div.appendChild(aviso);
+      caja.appendChild(div);
+      document.getElementById("pista-n").textContent = r.nivel >= 3 ? "(vista)" : `(${r.nivel + 1}/3)`;
+    } catch (e) {
+      Tortu.veredicto("error", "No se pudo cargar la pista", [[
+        "mensaje", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente."
+      ]]);
+    } finally {
+      botonPista.disabled = pistas >= 3;
     }
-    const aviso = document.createElement("div");
-    aviso.className = "tenue";
-    aviso.textContent = r.nivel >= 3 ? "Con la solución a la vista, este ejercicio vale 1 estrella."
-                                     : "Cada pista que ves vale una estrella menos.";
-    div.appendChild(aviso);
-    caja.appendChild(div);
-    document.getElementById("pista-n").textContent = r.nivel >= 3 ? "(vista)" : `(${r.nivel + 1}/3)`;
-    if (r.nivel >= 3) document.getElementById("btn-pista").disabled = true;
   }
 
   btnEjecutar.addEventListener("click", ejecutar);
