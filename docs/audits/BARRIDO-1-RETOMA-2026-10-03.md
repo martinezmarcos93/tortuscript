@@ -38,7 +38,7 @@ La revisión de JavaScript encontró fallos de bajo riesgo, pero visibles para e
 
 En las explicaciones con ejemplo ejecutable, los botones de juego, dibujo con tortuga y salida de consola siempre reactivaban el botón en `finally`, pero no capturaban fallos de la API. El rechazo podía quedar como promesa no manejada y la pantalla no explicaba qué pasó.
 
-**Corrección aplicada:** los tres caminos ahora capturan el error, muestran un mensaje visible y permiten volver a probar. No se modifica la lógica curricular ni se muestra información técnica interna al alumno. La verificación de CI correspondiente al nuevo head está en curso; todavía no se declara validado por CI.
+**Corrección aplicada:** los tres caminos ahora capturan el error, muestran un mensaje visible y permiten volver a probar. Además, las páginas de ejercicio, lección, laboratorio y tortuga dejan de mostrar la representación técnica cruda de excepciones de red y ofrecen un mensaje comprensible, usando el detalle validado por el servidor cuando existe. No se modifica la lógica curricular. La verificación de CI correspondiente al nuevo head está en curso; todavía no se declara validado por CI.
 
 ### B1-05 — Separar fallos actuales de resultados históricos
 Los informes de los primeros pases incluyen conteos de fallos anteriores al estado actual. Deben conservarse como historial, pero nunca presentarse como estado actual de CI. Usar el workflow del commit concreto como fuente para cada declaración de estado.
