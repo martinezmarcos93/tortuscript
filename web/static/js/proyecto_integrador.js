@@ -11,7 +11,7 @@
           location.href = r.url;
         } catch (e) {
           boton.disabled = false;
-          Tortu.avisos([{ tipo: "mensaje", titulo: "No se pudo empezar", detalle: (e.datos && e.datos.mensaje) || String(e) }]);
+          Tortu.avisos([{ tipo: "mensaje", titulo: "No se pudo empezar", detalle: e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente." }]);
         }
       });
     }
@@ -39,7 +39,7 @@
         });
         mensaje("✓ Guardé " + nombre + ".", "bien");
       } catch (e) {
-        mensaje((e.datos && e.datos.mensaje) || String(e), "error");
+        mensaje(e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.", "error");
       } finally { boton.disabled = false; }
     });
   }
@@ -52,7 +52,7 @@
         mensaje(r.completado ? "🎉 ¡Proyecto completado! Ya podés descargarlo." : "✓ Etapa completada. Seguimos con la siguiente.", "bien");
         setTimeout(() => location.reload(), 700);
       } catch (e) {
-        mensaje((e.datos && e.datos.mensaje) || "Todavía falta algo en esta etapa.", "error");
+        mensaje(e?.datos?.mensaje || "Todavía falta algo en esta etapa.", "error");
         boton.disabled = false;
       }
     });
@@ -67,7 +67,7 @@
         texto.textContent = r.texto;
         texto.hidden = false;
       } catch (e) {
-        mensaje((e.datos && e.datos.mensaje) || String(e), "error");
+        mensaje(e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.", "error");
       } finally { boton.disabled = false; }
     });
   }
@@ -84,7 +84,7 @@
         a.href = url; a.download = r.nombre; a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } catch (e) {
-        mensaje((e.datos && e.datos.mensaje) || String(e), "error");
+        mensaje(e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.", "error");
       } finally { exportar.disabled = false; }
     });
   }
