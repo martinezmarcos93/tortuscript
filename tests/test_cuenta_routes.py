@@ -301,6 +301,15 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 403)
         self.assertNotIn("Set-Cookie", respuesta.headers)
 
+    def test_login_rechaza_origin_malformado_sin_error_500(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={"Origin": "http://["},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
     def test_login_acepta_origen_propio_y_sigue_validando_credenciales(self):
         respuesta = self.client.post(
             "/cuenta/login",
