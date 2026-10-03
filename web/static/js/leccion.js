@@ -193,7 +193,7 @@
       mostrarPie("mal", ["🤔 Todavía no.", r.pista || ""].filter(Boolean), "Reintentar", reintentar, r.puede_ver_respuesta);
       return r;
     } catch (e) {
-      mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", String(e)], "Reintentar", reintentar, false);
+      mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente."], "Reintentar", reintentar, false);
       return { ok: false };
     }
   }
