@@ -236,9 +236,15 @@ a.nodo:hover { transform: translateY(-3px) scale(1.04); }
 /* ───────── tortuga ───────── */
 .ordenes { margin-top: .7rem; font-size: .9rem; }
 .ordenes code { color: var(--celeste); }
-.tortuga-grid { grid-template-columns: 1fr minmax(320px, 520px); align-items: start; }
+.tortuga-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
 .lienzo-caja { background: #fff; border: 2px solid var(--borde); border-radius: var(--radio-chico); overflow: hidden; }
 .lienzo-caja canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+/* La escena de TortuGame conserva su proporción lógica de 640 × 400. */
+.lienzo-caja canvas#escena { aspect-ratio: 8 / 5; }
+@media (min-width: 901px) {
+  /* En escritorio, el editor ocupa el mismo alto disponible que el lienzo/escena. */
+  .tortuga-grid > .panel-editor.tortu .CodeMirror { flex: 1 1 auto; height: auto; min-height: 300px; }
+}
 .lienzo-panel h3 { color: var(--celeste); }
 .opcion { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; max-width: 100%; font-weight: 800; color: var(--texto-suave); }
 .opcion input[type=checkbox] { width: 1.2rem; height: 1.2rem; accent-color: var(--violeta); flex: none; }
