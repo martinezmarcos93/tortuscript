@@ -369,7 +369,7 @@
             },
             {
               "tipo": "ordenar",
-              "consigna": "Ordená las líneas para mostrar a y después b.",
+              "consigna": "Ordená las líneas para mostrar a y después b. Las asignaciones pueden ir en cualquier orden; los mostrar deben quedar a y después b.",
               "lineas": [
                 "a es 1",
                 "b es 2",
@@ -1553,7 +1553,7 @@
             },
             {
               "tipo": "ordenar",
-              "consigna": "Ordená las líneas de la tabla del 2.",
+              "consigna": "Ordená las líneas de la tabla del 2. Podés inicializar n y contador en cualquier orden; adentro del repetir, mostrale el valor al contador antes de incrementarlo.",
               "lineas": [
                 "n es 2",
                 "contador es 1",
@@ -1735,10 +1735,10 @@
             },
             {
               "tipo": "ordenar",
-              "consigna": "Ordená las líneas del programa.",
+              "consigna": "Ordená las líneas para mostrar los pares del 1 al 5. En cada vuelta, comprobá si n es par antes de incrementarlo.",
               "lineas": [
                 "n es 1",
-                "repetir 4 veces:",
+                "repetir 5 veces:",
                 "    si n % 2 == 0:",
                 "        mostrar n",
                 "    n es n + 1"
