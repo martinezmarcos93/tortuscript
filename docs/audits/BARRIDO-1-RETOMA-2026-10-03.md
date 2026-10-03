@@ -40,6 +40,10 @@ En las explicaciones con ejemplo ejecutable, los botones de juego, dibujo con to
 
 **Corrección aplicada:** los tres caminos ahora capturan el error, muestran un mensaje visible y permiten volver a probar. Además, las páginas de ejercicio, lección, laboratorio y tortuga dejan de mostrar la representación técnica cruda de excepciones de red y ofrecen un mensaje comprensible, usando el detalle validado por el servidor cuando existe. No se modifica la lógica curricular. La verificación de CI del código terminó en verde en el commit `e5376a67ed1dc037c82a18250c10b57d65833b98`; la ejecución del nuevo head con ajustes de contenido está en curso.
 
+### B1-10 — Actions de CI apuntaban a versiones con runtime Node.js obsoleto
+
+La ejecución verde anterior avisaba que `actions/checkout@v4`, `setup-node@v4` y `setup-python@v5` estaban siendo forzadas al runtime Node 24 pese a declarar Node 20. Se actualizaron las acciones de ambos workflows a sus versiones mayores actuales (`checkout@v7`, `setup-node@v7`, `setup-python@v7`, y `upload-artifact@v7` en el workflow de instaladores). El workflow de instaladores es manual y no se ejecuta con cada push; la compatibilidad de CI se verificará en la ejecución actual. No se inició una construcción de instaladores porque no hace falta para este cambio de versión.
+
 ### B1-09 — Regresión de equivalencias quedó desactualizada al corregir el ejercicio
 
 La primera ejecución posterior al cambio de «Solo los pares» falló en `test_tres_ordenamientos_equivalentes_del_curso_se_aceptan`: el test seguía exigiendo aceptar la permutación antigua, precisamente la que el ajuste curricular buscaba dejar de aceptar. Se actualizó el test para conservar las dos equivalencias legítimas (asignaciones independientes) y añadir una regresión que exige rechazar incrementar antes de comprobar. La nueva ejecución CI debe confirmar la corrección; el fallo previo queda documentado y no se oculta.
