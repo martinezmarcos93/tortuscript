@@ -34,6 +34,12 @@ La revisión de JavaScript encontró fallos de bajo riesgo, pero visibles para e
 
 **Correcciones aplicadas en esta rama:** el resumen muestra un aviso de error cuando no se confirma el cambio y evita clics duplicados durante la petición; el botón de pista de ejercicios se deshabilita mientras carga, muestra un error comprensible si falla y vuelve a habilitarse para reintentar, salvo que ya se hayan agotado las tres pistas. La revisión de `leccion.js` detectó el mismo defecto en los tres tipos de ejercicio con editor (SQL, Web y código general); sus manejadores de pista ahora capturan el fallo, informan al alumno y permiten reintentar sin duplicar solicitudes simultáneas. El onboarding ahora muestra el mensaje de una respuesta negativa y reactiva el botón para corregir los datos. La vista Python ya no conserva una traducción anterior si falla la traducción en vivo, sino que muestra una nota explícita. El CI de estos cambios queda pendiente de la ejecución correspondiente al nuevo head.
 
+### B1-07 — Los ejemplos ejecutables de las lecciones no mostraban errores de red
+
+En las explicaciones con ejemplo ejecutable, los botones de juego, dibujo con tortuga y salida de consola siempre reactivaban el botón en `finally`, pero no capturaban fallos de la API. El rechazo podía quedar como promesa no manejada y la pantalla no explicaba qué pasó.
+
+**Corrección aplicada:** los tres caminos ahora capturan el error, muestran un mensaje visible y permiten volver a probar. No se modifica la lógica curricular ni se muestra información técnica interna al alumno. La verificación de CI correspondiente al nuevo head está en curso; todavía no se declara validado por CI.
+
 ### B1-05 — Separar fallos actuales de resultados históricos
 Los informes de los primeros pases incluyen conteos de fallos anteriores al estado actual. Deben conservarse como historial, pero nunca presentarse como estado actual de CI. Usar el workflow del commit concreto como fuente para cada declaración de estado.
 
