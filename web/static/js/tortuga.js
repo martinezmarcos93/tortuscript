@@ -255,7 +255,7 @@ const Lienzo = (() => {
       else if (r.error) { Tortu.veredicto("error", "🔧 Hay algo para arreglar", [["mensaje", r.mensaje]]); Tortu.tocar("error"); }
       else { Tortu.veredicto("bien", "✅ ¡Dibujo completado!", []); Tortu.tocar("success"); }
     } catch (e) {
-      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", String(e)]]);
+      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente."]]);
     } finally {
       ocupado(false);
     }
