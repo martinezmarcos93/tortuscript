@@ -127,7 +127,11 @@ def _proteger_login_csrf():
 
     origen = request.headers.get("Origin") or request.headers.get("Referer")
     if origen:
-        parsed = urlsplit(origen)
+        try:
+            parsed = urlsplit(origen)
+        except ValueError:
+            # Un Origin/Referer malformado nunca debe convertir una petición hostil en 500.
+            return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
         if (
             parsed.scheme.lower() != request.scheme.lower()
             or parsed.netloc.lower() != request.host.lower()
