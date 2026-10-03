@@ -425,9 +425,21 @@
     }
     run.addEventListener("click", ejecutar);
     pista.addEventListener("click", async () => {
-      const r=await Tortu.api(rutaPaso(paso.indice,"pista"),{}); cajaPista.textContent=""; const caja=el("div","veredicto info");
-      caja.appendChild(el("h3","","💡 Pista "+r.nivel+": "+r.titulo)); if(r.texto) caja.appendChild(el("div","",r.texto)); if(r.codigo) caja.appendChild(el("pre","",r.codigo));
-      pista.textContent=r.nivel>=3?"💡 Pista (vista)":"💡 Pista ("+(r.nivel+1)+"/3)"; if(r.nivel>=3) pista.disabled=true;
+      pista.disabled = true;
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.appendChild(el("h3", "", "💡 Pista " + r.nivel + ": " + r.titulo));
+        if (r.texto) caja.appendChild(el("div", "", r.texto));
+        if (r.codigo) caja.appendChild(el("pre", "", r.codigo));
+        pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : "💡 Pista (" + (r.nivel + 1) + "/3)";
+        if (r.nivel < 3) pista.disabled = false;
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("p", "veredicto mal", "No se pudo cargar la pista. Revisá tu conexión e intentá nuevamente."));
+        pista.disabled = false;
+      }
     });
   }
 
@@ -506,14 +518,21 @@
     }
     run.addEventListener("click", ejecutar);
     pista.addEventListener("click", async () => {
-      const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
-      cajaPista.textContent = "";
-      const caja = el("div", "veredicto info");
-      caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
-      if (r.texto) caja.appendChild(el("div", "", r.texto));
-      if (r.codigo) caja.appendChild(el("pre", "", r.codigo));
-      pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
-      if (r.nivel >= 3) pista.disabled = true;
+      pista.disabled = true;
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
+        if (r.texto) caja.appendChild(el("div", "", r.texto));
+        if (r.codigo) caja.appendChild(el("pre", "", r.codigo));
+        pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
+        if (r.nivel < 3) pista.disabled = false;
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("p", "veredicto mal", "No se pudo cargar la pista. Revisá tu conexión e intentá nuevamente."));
+        pista.disabled = false;
+      }
     });
     actualizarPreview();
   }
@@ -642,18 +661,25 @@
     }
     run.addEventListener("click", ejecutar);
     pista.addEventListener("click", async () => {
-      const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
-      cajaPista.textContent = "";
-      const caja = el("div", "veredicto info");
-      caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
-      for (const clave of ["texto", "codigo", "python"]) {
-        if (!r[clave]) continue;
-        if (clave === "python") caja.appendChild(el("div", "", "🐍 En Python:"));
-        caja.appendChild(el(clave === "texto" ? "div" : "pre", "", r[clave]));
+      pista.disabled = true;
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
+        for (const clave of ["texto", "codigo", "python"]) {
+          if (!r[clave]) continue;
+          if (clave === "python") caja.appendChild(el("div", "", "🐍 En Python:"));
+          caja.appendChild(el(clave === "texto" ? "div" : "pre", "", r[clave]));
+        }
+        cajaPista.appendChild(caja);
+        pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
+        if (r.nivel < 3) pista.disabled = false;
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("p", "veredicto mal", "No se pudo cargar la pista. Revisá tu conexión e intentá nuevamente."));
+        pista.disabled = false;
       }
-      cajaPista.appendChild(caja);
-      pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
-      if (r.nivel >= 3) pista.disabled = true;
     });
   }
 
