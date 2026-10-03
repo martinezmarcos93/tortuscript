@@ -82,7 +82,7 @@
       else if (fin) Tortu.veredicto("info", `💀 ${fin.texto}`, [["mensaje", "¡Probá otra vez o cambiá tu estrategia!"]]);
       else Tortu.veredicto("info", "✅ Tu juego terminó", [["mensaje", "Tip: usá ganar(\"…\") o perder(\"…\") para ponerle un final."]]);
     } catch (e) {
-      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", String(e)]]);
+      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", (e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")]]);
     } finally {
       btn.disabled = false; btnDetener.disabled = true;
     }
