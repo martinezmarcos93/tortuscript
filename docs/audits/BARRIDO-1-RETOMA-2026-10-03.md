@@ -40,6 +40,10 @@ En las explicaciones con ejemplo ejecutable, los botones de juego, dibujo con to
 
 **Corrección aplicada:** los tres caminos ahora capturan el error, muestran un mensaje visible y permiten volver a probar. Además, las páginas de ejercicio, lección, laboratorio y tortuga dejan de mostrar la representación técnica cruda de excepciones de red y ofrecen un mensaje comprensible, usando el detalle validado por el servidor cuando existe. No se modifica la lógica curricular. La verificación de CI del código terminó en verde en el commit `e5376a67ed1dc037c82a18250c10b57d65833b98`; la ejecución del nuevo head con ajustes de contenido está en curso.
 
+### B1-08 — Respuesta de CSS estático sin cerrar en una prueba
+
+El CI anterior emitía un `ResourceWarning` por una respuesta de Flask de `/static/css/tortu.css` que el test de certificado no cerraba. No era un fallo de producción, pero ensuciaba la salida y podía ocultar advertencias nuevas. La prueba ahora cierra la respuesta en un bloque `finally`, incluso si falla la aserción. La regresión queda pendiente de la ejecución CI del nuevo head.
+
 ### B1-05 — Separar fallos actuales de resultados históricos
 Los informes de los primeros pases incluyen conteos de fallos anteriores al estado actual. Deben conservarse como historial, pero nunca presentarse como estado actual de CI. Usar el workflow del commit concreto como fuente para cada declaración de estado.
 
