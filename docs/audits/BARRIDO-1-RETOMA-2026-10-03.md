@@ -28,7 +28,8 @@ La revisión confirmó que `POST /cuenta/login` acepta formularios HTML y crea s
 ### B1-06 — Fallos de UX silenciados en acciones cotidianas
 La revisión de JavaScript encontró dos fallos de bajo riesgo, pero visibles para el alumno:
 - En el resumen, cambiar la meta diaria solo recargaba si la API devolvía `ok`; una respuesta válida negativa quedaba silenciosa y las excepciones solo se escribían en consola.
-- En la página de ejercicio, el botón de pista no capturaba errores de red/servidor. La promesa podía rechazarse sin mensaje y el alumno no recibía una vía clara para reintentar.
+- En la página de ejercicio y en tres variantes de lección (SQL, Web y código general), el botón de pista no capturaba errores de red/servidor. La promesa podía rechazarse sin mensaje y el alumno no recibía una vía clara para reintentar.
+- En el onboarding, la respuesta JSON `ok: false` con HTTP 200 no mostraba error ni reactivaba el botón de envío. El backend actual devuelve HTTP 400 en sus validaciones conocidas, pero el frontend no manejaba el contrato negativo de forma defensiva.
 
 **Correcciones aplicadas en esta rama:** el resumen muestra un aviso de error cuando no se confirma el cambio y evita clics duplicados durante la petición; el botón de pista de ejercicios se deshabilita mientras carga, muestra un error comprensible si falla y vuelve a habilitarse para reintentar, salvo que ya se hayan agotado las tres pistas. La revisión de `leccion.js` detectó el mismo defecto en los tres tipos de ejercicio con editor (SQL, Web y código general); sus manejadores de pista ahora capturan el fallo, informan al alumno y permiten reintentar sin duplicar solicitudes simultáneas. El CI de estos cambios queda pendiente de la ejecución correspondiente al nuevo head.
 
