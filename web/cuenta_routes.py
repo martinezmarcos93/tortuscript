@@ -116,6 +116,26 @@ def _require_csrf(auth, raw_session):
     return True
 
 
+@bp.before_request
+def _proteger_login_csrf():
+    """Rechaza intentos de login desde otro origen en navegadores modernos."""
+    if request.endpoint != "cuenta.login" or request.method != "POST":
+        return None
+
+    if request.headers.get("Sec-Fetch-Site", "").lower() == "cross-site":
+        return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
+
+    origen = request.headers.get("Origin") or request.headers.get("Referer")
+    if origen:
+        parsed = urlsplit(origen)
+        if (
+            parsed.scheme.lower() != request.scheme.lower()
+            or parsed.netloc.lower() != request.host.lower()
+        ):
+            return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
+    return None
+
+
 @bp.get("/registrar")
 def registrar():
     return render_template("cuenta/registrar.html")
