@@ -56,8 +56,12 @@ const Tortu = (() => {
     if (python) editor.on("change", () => {
       clearTimeout(espera);
       espera = setTimeout(async () => {
-        try { python.setValue((await api("/api/traducir", { codigo: editor.getValue() })).python); }
-        catch (e) { console.warn(e); }
+        try {
+          python.setValue((await api("/api/traducir", { codigo: editor.getValue() })).python);
+        } catch (e) {
+          // No dejar una traducción anterior visible como si correspondiera al código actual.
+          python.setValue("# No se pudo actualizar la traducción. Revisá la conexión.");
+        }
       }, 250);
     });
     // ?codigo=... precarga el editor (lo usa "Probarlo" de la Referencia)
