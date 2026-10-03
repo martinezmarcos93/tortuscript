@@ -108,6 +108,9 @@
         try {
           const r = await Tortu.ejecutarConPreguntas("/api/juego/correr", { codigo: paso.codigo });
           await escena.escena.reproducir(r.eventos || [], rapidoSiHaceFalta());
+        } catch (e) {
+          const aviso = el("p", "veredicto error", "No pude ejecutar el juego. Revisá la conexión e intentá otra vez.");
+          caja.appendChild(aviso);
         } finally { probar.disabled = false; }
       });
     } else if (paso.lienzo) {
@@ -120,6 +123,9 @@
           const r = await Tortu.ejecutarConPreguntas("/api/tortuga", { codigo: paso.codigo });
           lienzo.usarVista(Lienzo.vistaPara(r.ordenes));
           await lienzo.reproducir(r.ordenes || [], { velocidad: 7 });
+        } catch (e) {
+          const aviso = el("p", "veredicto error", "No pude ejecutar el dibujo. Revisá la conexión e intentá otra vez.");
+          caja.appendChild(aviso);
         } finally { probar.disabled = false; }
       });
     } else {
@@ -131,6 +137,8 @@
         try {
           const r = await Tortu.ejecutarConPreguntas("/api/ejecutar", { codigo: paso.codigo });
           salida.textContent = r.error ? r.mensaje : (r.salida || "(no mostró nada)");
+        } catch (e) {
+          salida.textContent = "No pude ejecutar el ejemplo. Revisá la conexión e intentá otra vez.";
         } finally { probar.disabled = false; }
       });
     }
