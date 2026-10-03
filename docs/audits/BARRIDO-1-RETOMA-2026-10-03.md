@@ -21,8 +21,8 @@ La prueba `test_cuenta_perfil_activo_abre_onboarding_y_progreso_persiste` cubre 
 ### B1-03 — Revisar avisos editoriales del validador
 Persisten avisos no bloqueantes sobre ordenamientos alternativos equivalentes en tres ejercicios. Hay una regresión que acepta los órdenes equivalentes; falta decidir si las consignas deberían aclarar el objetivo pedagógico. No cambiar la evaluación hasta revisar el contenido concreto.
 
-### B1-04 — Revisar protección de formularios de autenticación
-Las mutaciones autenticadas de perfil/logout verifican CSRF y las APIs locales requieren token. Queda por revisar específicamente el riesgo de *login CSRF* en `POST /cuenta/login`, que acepta formularios HTML y crea sesión sin exigir un token CSRF previo. Antes de modificarlo, comprobar el flujo local-first, el comportamiento de formularios y el contrato de origen; no introducir un bloqueo que rompa el login legítimo.
+### B1-04 — Login CSRF: mitigación añadida, CI pendiente
+La revisión confirmó que `POST /cuenta/login` acepta formularios HTML y crea sesión sin token CSRF previo. Se añadió un control de origen en el blueprint: rechaza `Sec-Fetch-Site: cross-site` y un `Origin`/`Referer` que no coincida con esquema y host de la aplicación. La regresión `test_login_rechaza_post_de_origen_cruzado` comprueba HTTP 403, ausencia de `Set-Cookie` y que no se crea sesión. El CI de la rama sigue ejecutándose; no declarar la mitigación validada hasta ver los tres trabajos en verde. Las solicitudes de clientes no navegador que no envían Origin/Referer siguen admitidas, mientras que los navegadores modernos se cubren con Fetch Metadata.
 
 ### B1-05 — Separar fallos actuales de resultados históricos
 Los informes de los primeros pases incluyen conteos de fallos anteriores al estado actual. Deben conservarse como historial, pero nunca presentarse como estado actual de CI. Usar el workflow del commit concreto como fuente para cada declaración de estado.
