@@ -27,7 +27,7 @@
       Tortu.actualizarEstado(r.estado_juego);
       Tortu.avisos(r.avisos);
     } catch (e) {
-      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", String(e)]]);
+      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente."]]);
     } finally {
       btnEjecutar.disabled = false;
     }
