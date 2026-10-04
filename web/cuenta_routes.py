@@ -11,7 +11,7 @@ from flask import Blueprint, abort, current_app, jsonify, make_response, redirec
 
 from tortuscript.acceso import AccesoProducto
 from tortuscript.auth import AuthError, AuthRepository
-from tortuscript.cuentas import CuentaError, CuentaRepository
+from tortuscript.cuentas import MAX_CHILD_PROFILES, CuentaError, CuentaRepository
 from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProgresoLocal
 from tortuscript.perfil_educativo import ContextoEducativoError, PerfilEducativoService
 from tortuscript.progreso_childprofile import ProgresoChildProfile
@@ -99,6 +99,23 @@ def _safe_next_url(value, default="/"):
     return value
 
 
+def _next_pedido(default="/"):
+    """Destino local pedido por formulario o query string, ya validado."""
+    return _safe_next_url(request.form.get("next") or request.args.get("next"), default)
+
+
+def _pagina_perfiles(cuentas, row, estado=200, error=None):
+    return render_template(
+        "cuenta/perfiles.html",
+        perfiles=cuentas.listar_child_profiles(row["account_id"]),
+        csrf=request.cookies.get("tortu_csrf", ""),
+        perfil_activo=row["active_profile_id"],
+        next_url=_next_pedido(),
+        max_perfiles=MAX_CHILD_PROFILES,
+        error=error,
+    ), estado
+
+
 def _cookie_config():
     return {
         "httponly": True,
@@ -163,9 +180,10 @@ def registrar():
 
 @bp.get("/ingresar")
 def ingresar():
+    destino = _next_pedido()
     if _require_session():
-        return redirect(url_for("cuenta.seleccionar_perfil_pagina"))
-    return render_template("cuenta/ingresar.html")
+        return redirect(url_for("cuenta.seleccionar_perfil_pagina", next=destino))
+    return render_template("cuenta/ingresar.html", next_url=destino)
 
 
 @bp.get("/configuracion")
@@ -180,7 +198,7 @@ def configuracion():
         "cuenta/configuracion.html",
         cuenta=cuenta,
         perfiles=perfiles,
-        max_perfiles=3,
+        max_perfiles=MAX_CHILD_PROFILES,
     )
 
 
@@ -190,14 +208,7 @@ def seleccionar_perfil_pagina():
     if not resultado:
         return redirect(url_for("cuenta.ingresar"))
     cuentas, _, row = resultado
-    perfiles = cuentas.listar_child_profiles(row["account_id"])
-    return render_template(
-        "cuenta/perfiles.html",
-        perfiles=perfiles,
-        csrf=request.cookies.get("tortu_csrf", ""),
-        perfil_activo=row["active_profile_id"],
-        next_url=_safe_next_url(request.args.get("next", "/")),
-    )
+    return _pagina_perfiles(cuentas, row)
 
 
 @bp.post("/registrar")
@@ -291,6 +302,8 @@ def confirmar_verificacion_email():
     datos = _form_or_json_dict()
     token = datos.get("token", "")
     try:
+        if not isinstance(token, str):
+            raise AuthError("El enlace no es válido.")
         _, auth = _repos()
         auth.verify_email_token(token)
     except AuthError:
@@ -392,15 +405,25 @@ def login():
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
+        if request.form:
+            return render_template(
+                "cuenta/ingresar.html", error="Correo y contraseña son obligatorios.", next_url=_next_pedido()
+            ), 401
         return jsonify(ok=False, mensaje="Correo o contraseña incorrectos."), 401
     email_normalizado = email.strip().lower()
     ip = request.remote_addr or "unknown"
-    limit_ip = _limit_or_429(f"login-ip:{ip}", 30, 900)
-    if limit_ip:
-        return limit_ip
-    limit_cuenta = _limit_or_429(f"login-account:{ip}:{email_normalizado}", 10, 900)
-    if limit_cuenta:
-        return limit_cuenta
+    limite = _limit_or_429(f"login-ip:{ip}", 30, 900) or \
+        _limit_or_429(f"login-account:{ip}:{email_normalizado}", 10, 900)
+    if limite:
+        if request.form:
+            # El adulto que usa el formulario necesita una página, no un JSON crudo.
+            respuesta = make_response(render_template(
+                "cuenta/ingresar.html", next_url=_next_pedido(),
+                error="Demasiados intentos. Esperá unos minutos y probá de nuevo.",
+            ), 429)
+            respuesta.headers["Retry-After"] = limite[0].headers["Retry-After"]
+            return respuesta
+        return limite
     _, auth = _repos()
     try:
         cuenta = auth.verify_password(email, password)
@@ -409,10 +432,10 @@ def login():
         # No distinguir cuenta inexistente, contraseña incorrecta o correo pendiente.
         mensaje = "Correo o contraseña incorrectos, o cuenta sin verificar."
         if request.form:
-            return render_template("cuenta/ingresar.html", error=mensaje), 401
+            return render_template("cuenta/ingresar.html", error=mensaje, next_url=_next_pedido()), 401
         return jsonify(ok=False, mensaje=mensaje), 401
     if request.form:
-        respuesta = make_response(redirect(url_for("cuenta.seleccionar_perfil_pagina")))
+        respuesta = make_response(redirect(url_for("cuenta.seleccionar_perfil_pagina", next=_next_pedido())))
     else:
         respuesta = make_response(jsonify(ok=True, cuenta={"id": cuenta["id"], "email": cuenta["email"], "role": cuenta["role"]},
                                           csrf=csrf, expira=expires.isoformat()))
@@ -486,7 +509,7 @@ def crear_perfil():
         perfil = cuentas.crear_child_profile(row["account_id"], nombre)
     except CuentaError as exc:
         if request.form:
-            return render_template("cuenta/perfiles.html", perfiles=cuentas.listar_child_profiles(row["account_id"]), csrf=request.cookies.get("tortu_csrf", ""), perfil_activo=row["active_profile_id"], next_url=_safe_next_url(request.args.get("next", "/")), error=str(exc)), 400
+            return _pagina_perfiles(cuentas, row, 400, str(exc))
         return jsonify(ok=False, mensaje=str(exc)), 400
     if request.form:
         # La acción del formulario promete crear y entrar al perfil; no dejar al
@@ -494,9 +517,8 @@ def crear_perfil():
         try:
             auth.select_profile(raw, perfil.id)
         except AuthError:
-            return redirect(url_for("cuenta.seleccionar_perfil_pagina")), 403
-        destino = _safe_next_url(request.form.get("next"), url_for("inicio"))
-        return redirect(destino)
+            return _pagina_perfiles(cuentas, row, 403, "No se pudo entrar al perfil nuevo. Elegilo de la lista.")
+        return redirect(_next_pedido(url_for("inicio")))
     return jsonify(ok=True, perfil={"id": perfil.id, "nombre": perfil.display_name}), 201
 
 
@@ -506,18 +528,21 @@ def seleccionar_perfil():
     resultado = _require_session()
     if not resultado:
         return jsonify(ok=False, mensaje="Sesión requerida."), 401
-    _, auth, row = resultado
+    cuentas, auth, row = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
     datos = _form_or_json_dict()
     profile_id = datos.get("perfil_id")
-    if not profile_id:
+    if not isinstance(profile_id, str) or not profile_id:
+        if request.form:
+            return _pagina_perfiles(cuentas, row, 400, "Elegí un perfil de la lista.")
         return jsonify(ok=False, mensaje="Falta perfil_id."), 400
     try:
         auth.select_profile(raw, profile_id)
     except AuthError as exc:
         if request.form:
-            return redirect(url_for("cuenta.seleccionar_perfil_pagina")), 403
+            # Un 403 con cabecera Location no se sigue: el adulto veía una página en blanco.
+            return _pagina_perfiles(cuentas, row, 403, "Ese perfil no está disponible en esta cuenta.")
         return jsonify(ok=False, mensaje=str(exc)), 403
     if request.form:
         return redirect(_safe_next_url(request.form.get("next"), url_for("inicio")))

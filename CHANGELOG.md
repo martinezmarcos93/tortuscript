@@ -12,6 +12,12 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   ilegible (JSON roto, raíz que no es objeto, `ejercicios` mal tipado) se rechaza sin apartarlo ni reescribirlo; antes
   se convertía en un progreso vacío que, con reemplazo explícito, podía pisar el progreso comercial. Los campos
   anidados mal tipados de un JSON válido se normalizan y se conserva lo válido.
+- **Navegación de cuenta:** el destino pedido (`next`) se conserva al ingresar, al elegir perfil y al crear el
+  primer perfil; antes se perdía y siempre se caía en el inicio. Los formularios HTML de login y perfiles responden
+  con una página y un mensaje (límite de intentos, perfil inválido) en vez de JSON crudo o un 403 en blanco.
+- **Selector de perfiles:** se quitó un `<script>` en línea que la CSP bloqueaba (código muerto y error de consola)
+  y el límite de perfiles sale de `MAX_CHILD_PROFILES` en vez de estar repetido a mano en plantillas y rutas.
+- **Validación HTTP:** `perfil_id` y el token de verificación que no son texto se rechazan con 4xx.
 
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 

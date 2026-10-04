@@ -17,6 +17,7 @@
     </div>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="{{ url_for('cuenta.login') }}">
+      <input type="hidden" name="next" value="{{ next_url or '/' }}">
       <label class="etiqueta" for="email">Correo</label>
       <input class="campo" id="email" name="email" type="email" autocomplete="email" required>
       <label class="etiqueta" for="password">Contraseña</label>
