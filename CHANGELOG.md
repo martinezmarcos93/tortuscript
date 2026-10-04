@@ -40,6 +40,10 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   Se configura por entorno o `.env` (`TORTU_EMAIL_MODO`, ver `.env.example`); sin configuración el registro sigue
   fallando cerrado, y una configuración a medias impide arrancar con un mensaje claro. Antes ningún enviador estaba
   conectado al arranque: no se podía crear una cuenta fuera de `crear_admin.py`.
+- **Prueba de ciclo completo del alumno (Barrido 3):** `tests/test_ciclo_alumno.py` recorre por HTTP, sin sembrar
+  datos por fuera de la API, el registro con enlace de correo, la verificación, el ingreso, el perfil, la
+  bienvenida, una lección con error → pista → reintento, XP y cierre, mapa, abandono, reinicio del servidor y
+  regreso, un segundo perfil aislado, proyectos y exportación; y que otra familia no puede elegir un perfil ajeno.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
