@@ -18,6 +18,11 @@ on:
 permissions:
   contents: read
 
+# Evita ejecutar en paralelo varios barridos obsoletos al actualizar una rama.
+concurrency:
+  group: tortuscript-verificacion-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verificar:
     runs-on: ubuntu-latest
