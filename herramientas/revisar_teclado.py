@@ -56,7 +56,7 @@ RUTAS_DE_CUENTA = [
     "/cuenta/ingresar", "/cuenta/registrar", "/cuenta/recuperar", "/cuenta/restablecer-password?token=x",
     "/cuenta/verificar-email?token=x",
 ]
-RUTAS_DE_CUENTA_CON_SESION = ["/cuenta/seleccionar-perfil", "/cuenta/configuracion"]
+RUTAS_DE_CUENTA_CON_SESION = ["/cuenta/seleccionar-perfil", "/cuenta/configuracion", "/cuenta/suscripcion"]
 
 FOCO = r"""
 () => {

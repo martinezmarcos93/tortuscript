@@ -191,6 +191,13 @@ class AuthRepository:
             db.execute("UPDATE account_tokens SET consumed_at=? WHERE account_id=? AND kind='recovery' AND consumed_at IS NULL",
                        (_iso(_now()), account_id))
 
+    def password_correcta(self, account_id, password):
+        """Reconfirmación de identidad con la sesión ya iniciada (antes de una operación irreversible)."""
+        with self._db() as db:
+            row = db.execute("SELECT password_hash FROM accounts WHERE id=?", (account_id,)).fetchone()
+        return bool(row and row["password_hash"] and isinstance(password, str)
+                    and check_password_hash(row["password_hash"], password))
+
     def listar_sesiones(self, account_id):
         """Metadatos de las sesiones vigentes (sin identificadores ni hashes) para la exportación de datos."""
         ahora = _iso(_now())

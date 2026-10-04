@@ -37,7 +37,7 @@ from tortuscript import web_evaluacion, sql_evaluacion  # noqa: E402
 from tortuscript import practica as espaciado  # noqa: E402
 from tortuscript import proyectos as mis_proyectos  # noqa: E402
 from tortuscript import proyectos_integradores, catalogo_producto  # noqa: E402
-from tortuscript import diagnostico, intereses, respaldo, tutor as tortu_llm  # noqa: E402
+from tortuscript import diagnostico, intereses, pagos, respaldo, tutor as tortu_llm  # noqa: E402
 from tortuscript.en_curso import EnCurso  # noqa: E402
 from tortuscript.juego_ast import arbol_del_juego  # noqa: E402
 from tortuscript.executor import CodigoNoPermitido  # noqa: E402
@@ -150,6 +150,8 @@ def create_app(token=None):
     app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = False
     # Secretos de webhook por proveedor de pagos. Vacío: no se acepta ningún evento (ADR-032).
     app.config["PAYMENT_WEBHOOK_SECRETS"] = {}
+    # Oferta de suscripción (ADR-047): alias, importe y duración. Vacía: la página existe pero no se puede contratar.
+    app.config["PAGOS"] = pagos.ConfiguracionPagos()
     # Tortu-LLM (ADR-035): invocable (instrucciones, pedido) -> texto. None: el tutor no existe para nadie.
     app.config["TUTOR_PROVEEDOR"] = None
     # Otros productos del ecosistema (ADR-037): {"croco-script": {"url": …, "clave": …, "kid": …}}. Vacío: sin transición.

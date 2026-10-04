@@ -40,7 +40,7 @@ def _hosts(valor):
 
 def crear_aplicacion_servidor(entorno=None):
     """La aplicación lista para un servidor WSGI. Lanza ConfiguracionInvalida si algo obligatorio falta."""
-    from tortuscript import correo, rutas, sandbox_docker, tutor
+    from tortuscript import correo, pagos, rutas, sandbox_docker, tutor
     from web.app import create_app
 
     entorno = os.environ if entorno is None else entorno
@@ -60,6 +60,10 @@ def crear_aplicacion_servidor(entorno=None):
         raise ConfiguracionInvalida(f"Correo mal configurado: {e}") from e
     if not isinstance(enviador, correo.EnviadorSMTP):
         raise ConfiguracionInvalida("TORTU_EMAIL_MODO=smtp es obligatorio (el modo consola es solo para uso local).")
+    try:
+        oferta = pagos.configuracion_desde_entorno(entorno)
+    except pagos.PagoError as e:
+        raise ConfiguracionInvalida(f"Pagos mal configurados: {e}") from e
     token = entorno.get("TORTU_TOKEN") or None
     if token is not None and len(token) < 32:
         raise ConfiguracionInvalida("TORTU_TOKEN debe tener al menos 32 caracteres.")
@@ -84,9 +88,12 @@ def crear_aplicacion_servidor(entorno=None):
         ACCOUNT_COOKIE_SAMESITE="Lax",
         ACCOUNT_EMAIL_SENDER=enviador,
         TUTOR_PROVEEDOR=tutor.proveedor_desde_entorno(entorno),
+        PAGOS=oferta,
         HSTS=HSTS,
         PREFERRED_URL_SCHEME="https",
     )
+    from iniciar_web import purgar_cuentas_vencidas
+    purgar_cuentas_vencidas(app)                                   # ADR-046: plazo de eliminación vencido
     if proxies:
         # Detrás del proxy, la IP del cliente (límites de intentos), el esquema y el host vienen en X-Forwarded-*.
         # Solo se confía en la cantidad de proxies propios declarada: más sería dejar que el cliente mienta su IP.

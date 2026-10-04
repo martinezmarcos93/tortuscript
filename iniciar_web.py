@@ -79,9 +79,20 @@ def cargar_env(archivo):
     return agregadas
 
 
+def purgar_cuentas_vencidas(app):
+    """Al arrancar se borran las cuentas cuyo plazo de eliminación venció (ADR-046). Un fallo no impide arrancar."""
+    from web.cuenta_routes import purgar_cuentas_vencidas as purgar
+    try:
+        with app.app_context():
+            return purgar()
+    except Exception as e:
+        logging.getLogger(__name__).error("No se pudo correr la purga de cuentas eliminadas: %s", e, exc_info=True)
+        return 0
+
+
 def crear_aplicacion(datos, url):
     """La app real: cuentas y progreso en la carpeta de datos, y correo según el entorno (o deshabilitado)."""
-    from tortuscript import correo, rutas, tutor
+    from tortuscript import correo, pagos, rutas, tutor
     from web.app import create_app
     app = create_app()
     cuentas = rutas.carpeta_de_cuentas(datos)
@@ -89,6 +100,11 @@ def crear_aplicacion(datos, url):
     app.config["PROGRESS_DIR"] = cuentas / "progreso_perfiles"
     app.config["ACCOUNT_EMAIL_SENDER"] = correo.desde_entorno(url_base=url)
     app.config["TUTOR_PROVEEDOR"] = tutor.proveedor_desde_entorno()      # None salvo TORTU_TUTOR=claude
+    try:
+        app.config["PAGOS"] = pagos.configuracion_desde_entorno()        # vacía salvo TORTU_PAGO_ALIAS e IMPORTE
+    except pagos.PagoError as e:
+        print(f"⚠️  Suscripción deshabilitada: {e}")
+    purgar_cuentas_vencidas(app)
     return app
 
 

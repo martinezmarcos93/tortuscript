@@ -19,7 +19,7 @@ sys.path.insert(0, str(RAIZ / "herramientas"))
 VIEWPORTS = ((320, 800), (375, 812), (390, 844), (768, 1024))
 RUTAS = ["/", "/bienvenida", "/aprender", "/leccion/hola-mundo", "/ejercicios/1", "/referencia", "/mapa", "/resumen", "/logros", "/liga", "/experimentar", "/tortuga",
          "/proyectos", "/proyectos-integradores", "/repaso", "/practica", "/ayuda", "/leccion/laberinto-1", "/leccion/rpg-heroe",
-         "/juego", "/leccion/juego-ganar", "/cuenta/configuracion", "/cuenta/seleccionar-perfil", "/no-existe"]   # la última: página de error 404
+         "/juego", "/leccion/juego-ganar", "/cuenta/configuracion", "/cuenta/suscripcion", "/cuenta/seleccionar-perfil", "/no-existe"]   # la última: página de error 404
 
 # Qué elementos se salen del ancho de la ventana (ignora los que se desplazan por dentro a propósito)
 JS_DESBORDE = r"""

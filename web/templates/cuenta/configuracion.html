@@ -25,19 +25,20 @@
       <p><b>Rol:</b> {{ "Administrador" if cuenta.role == "admin" else "Adulto" }}</p>
     </div>
 
-    {% if suscripciones %}
     <div class="tarjeta">
       <h2>Suscripción</h2>
+      {% if suscripciones %}
       {% set estados = {"incomplete": "pago pendiente", "active": "activa", "past_due": "con un pago rechazado", "canceled": "cancelada", "refunded": "reembolsada"} %}
       {% set productos = {"tortuscript-premium": "TortuScript Premium", "croco-script": "Croco-Script"} %}
       <ul>
         {% for sub in suscripciones %}
-        <li><b>{{ productos.get(sub.producto, sub.producto) }}:</b> {{ estados.get(sub.estado, sub.estado) }}{% if sub.periodo_hasta %} · período hasta el {{ sub.periodo_hasta[:10] }}{% endif %}</li>
+        <li><b>{{ productos.get(sub.producto, sub.producto) }}:</b> {% if sub.vencida %}período vencido el {{ sub.periodo_hasta[:10] }}{% else %}{{ estados.get(sub.estado, sub.estado) }}{% if sub.periodo_hasta %} · período hasta el {{ sub.periodo_hasta[:10] }}{% endif %}{% endif %}</li>
         {% endfor %}
       </ul>
+      {% endif %}
       <p class="tenue">Una suscripción cubre todos los perfiles de la cuenta. Cancelarla no borra el progreso de nadie.</p>
+      <p><a class="boton chico" href="{{ url_for('cuenta.suscripcion') }}">Suscripción y medios de pago</a></p>
     </div>
-    {% endif %}
 
     <div class="tarjeta">
       <h2>Perfiles educativos</h2>
@@ -65,12 +66,21 @@
       {% if archivados %}
       <h3>Perfiles archivados</h3>
       {% for perfil in archivados %}
-      <form method="post" action="{{ url_for('cuenta.restaurar_perfil', profile_id=perfil.id) }}" class="fila-perfil">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <span>{{ perfil.display_name }}</span>
-        <button class="boton chico" type="submit" aria-label="Restaurar el perfil {{ perfil.display_name }}">Restaurar</button>
-      </form>
+      <div class="fila-perfil">
+        <form method="post" action="{{ url_for('cuenta.restaurar_perfil', profile_id=perfil.id) }}" class="fila-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <span>{{ perfil.display_name }}</span>
+          <button class="boton chico" type="submit" aria-label="Restaurar el perfil {{ perfil.display_name }}">Restaurar</button>
+        </form>
+        <form method="post" action="{{ url_for('cuenta.eliminar_perfil', profile_id=perfil.id) }}" class="fila-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="etiqueta" for="eliminar-{{ loop.index }}">Para eliminarlo, escribí «{{ perfil.display_name }}»</label>
+          <input class="campo" id="eliminar-{{ loop.index }}" name="nombre" maxlength="30" required autocomplete="off">
+          <button class="boton chico" type="submit" aria-label="Eliminar para siempre el perfil {{ perfil.display_name }}">Eliminar para siempre</button>
+        </form>
+      </div>
       {% endfor %}
+      <p class="tenue">Eliminar un perfil borra su progreso y no se puede deshacer. Antes podés descargar los datos de la cuenta, más abajo.</p>
       {% endif %}
     </div>
 
@@ -125,6 +135,19 @@
         {% endfor %}
       </ul>
       {% endif %}
+    </div>
+
+    <div class="tarjeta">
+      <h2>Eliminar la cuenta</h2>
+      <p>Al pedirlo se cierran todas las sesiones y la cuenta queda sin uso durante {{ dias_de_gracia }} días. Si en ese
+        plazo volvés a ingresar, el pedido se cancela y no se borra nada. Pasado el plazo se eliminan para siempre la
+        cuenta, los perfiles y todo su progreso. Lo ya pagado no se reembolsa por eliminar la cuenta.</p>
+      <form method="post" action="{{ url_for('cuenta.eliminar_cuenta') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="etiqueta" for="password-eliminar">Tu contraseña, para confirmar</label>
+        <input class="campo" id="password-eliminar" name="password" type="password" autocomplete="current-password" required>
+        <p><button class="boton chico" type="submit">Pedir la eliminación de la cuenta</button></p>
+      </form>
     </div>
 
     <div class="pie">

@@ -109,8 +109,10 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(self.entregar(b"{no json").status_code, 400)
         self.assertEqual(self.entregar(b"x" * (pagos.MAX_CUERPO_WEBHOOK + 1)).status_code, 413)
 
-    def test_cuenta_sin_suscripcion_no_muestra_la_seccion(self):
-        self.assertNotIn("Suscripción</h2>", self.c.get("/cuenta/configuracion").get_data(as_text=True))
+    def test_cuenta_sin_suscripcion_solo_ve_el_enlace_a_la_pagina_de_pagos(self):
+        pagina = self.c.get("/cuenta/configuracion").get_data(as_text=True)
+        self.assertIn('href="/cuenta/suscripcion"', pagina)
+        self.assertNotIn("TortuScript Premium", pagina)             # sin suscripción no se lista ninguna
 
     def test_el_retorno_de_un_checkout_no_concede_nada(self):
         self.entregar(self.cuerpo("checkout_completed"))

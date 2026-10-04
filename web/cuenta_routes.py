@@ -4,15 +4,16 @@ La ruta de cuenta usa la infraestructura server-side de tortuscript.auth.
 No activa todavía el despliegue remoto: create_app mantiene el límite localhost.
 """
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, jsonify, make_response, redirect, render_template, request, url_for
 
-from tortuscript import federacion
+from tortuscript import federacion, pagos
 from tortuscript.acceso import AccesoProducto
 from tortuscript.auth import AuthError, AuthRepository
-from tortuscript.cuentas import MAX_CHILD_PROFILES, CuentaError, CuentaRepository
+from tortuscript.cuentas import DIAS_DE_GRACIA_ELIMINACION, MAX_CHILD_PROFILES, CuentaError, CuentaRepository
 from tortuscript.progreso_childprofile import ProgresoPerfilError
 from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProgresoLocal
 from tortuscript.perfil_educativo import ContextoEducativoError, PerfilEducativoService
@@ -187,7 +188,14 @@ AVISOS_CONFIGURACION = {
     "restaurado": "El perfil volvió a estar disponible.",
     "password": "La contraseña se cambió. Cerramos las demás sesiones abiertas.",
     "consentimiento": "Guardamos tu decisión.",
+    "eliminado": "El perfil y su progreso se eliminaron de forma definitiva.",
+    "reactivada": "Cancelamos el pedido de eliminación: la cuenta sigue activa y no se borró nada.",
 }
+AVISOS_SUSCRIPCION = {
+    "informada": "Recibimos tu aviso. Cuando confirmemos la transferencia, el acceso se activa solo.",
+    "cancelada": "Cancelaste la orden de pago.",
+}
+NOMBRES_PRODUCTO = {"tortuscript-premium": "TortuScript Premium", "croco-script": "Croco-Script"}
 # Finalidades que el adulto puede aceptar o revocar desde la configuración, con la versión de su aviso.
 AVISOS_DE_CONSENTIMIENTO = {"tutor_ia": "2026-10-04"}
 # Versión del texto que acepta el adulto al registrarse (web/templates/cuenta/registrar.html).
@@ -195,8 +203,7 @@ VERSION_AVISO_RESPONSABLE = "2026-10-04"
 
 
 def _suscripciones(account_id):
-    from web.pagos_routes import servicio_de_pagos
-    return servicio_de_pagos().listar_suscripciones(account_id)
+    return _servicio_pagos().listar_suscripciones(account_id)
 
 
 def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
@@ -207,6 +214,7 @@ def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
         perfiles=[p for p in perfiles if p.active],
         archivados=[p for p in perfiles if not p.active],
         max_perfiles=MAX_CHILD_PROFILES,
+        dias_de_gracia=DIAS_DE_GRACIA_ELIMINACION,
         csrf=request.cookies.get("tortu_csrf", ""),
         consentimientos=cuentas.listar_consentimientos(row["account_id"]),
         suscripciones=_suscripciones(row["account_id"]),
@@ -215,6 +223,87 @@ def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
         aviso=AVISOS_CONFIGURACION.get(request.args.get("ok", "")),
         error=error,
     ), estado
+
+
+def _servicio_pagos():
+    from web.pagos_routes import servicio_de_pagos
+    return servicio_de_pagos()
+
+
+def _pagina_suscripcion(cuentas, row, estado=200, error=None):
+    oferta = current_app.config.get("PAGOS") or pagos.ConfiguracionPagos()
+    servicio = _servicio_pagos()
+    ordenes = servicio.listar_ordenes(row["account_id"])
+    return render_template(
+        "cuenta/suscripcion.html",
+        oferta=oferta,
+        producto=NOMBRES_PRODUCTO.get(oferta.producto, oferta.producto),
+        con_acceso=cuentas.tiene_entitlement(row["account_id"], oferta.producto),
+        suscripciones=servicio.listar_suscripciones(row["account_id"]),
+        orden_abierta=next((o for o in ordenes if o["estado"] in pagos.ORDENES_ABIERTAS), None),
+        ordenes_cerradas=[o for o in ordenes if o["estado"] not in pagos.ORDENES_ABIERTAS][:5],
+        medios=pagos.MEDIOS_DE_PAGO,
+        nombres_producto=NOMBRES_PRODUCTO,
+        max_nota=pagos.MAX_NOTA,
+        csrf=request.cookies.get("tortu_csrf", ""),
+        aviso=AVISOS_SUSCRIPCION.get(request.args.get("ok", "")),
+        error=error,
+    ), estado
+
+
+@bp.get("/suscripcion")
+def suscripcion():
+    """Ventana de pagos del adulto: estado del acceso, medios de pago y orden en curso."""
+    resultado = _require_session()
+    if not resultado:
+        return redirect(url_for("cuenta.ingresar", next=url_for("cuenta.suscripcion")))
+    cuentas, _, row = resultado
+    return _pagina_suscripcion(cuentas, row)
+
+
+def _operar_orden(operacion, aviso=None):
+    """Aplica una operación del adulto sobre una orden de SU cuenta y responde según formulario o JSON."""
+    sesion, rechazo = _adulto_con_csrf()
+    if rechazo:
+        return rechazo
+    cuentas, _, row, _ = sesion
+    limite = _limit_or_429(f"orden-pago:{row['account_id']}", 20, 3600)
+    if limite:
+        return limite
+    try:
+        orden = operacion(_servicio_pagos(), row["account_id"], _form_or_json_dict())
+    except pagos.PagoError as exc:
+        if request.form:
+            return _pagina_suscripcion(cuentas, row, 400, str(exc))
+        return jsonify(ok=False, mensaje=str(exc)), 400
+    if request.form:
+        return redirect(url_for("cuenta.suscripcion", ok=aviso) if aviso else url_for("cuenta.suscripcion"))
+    publica = {k: orden[k] for k in ("id", "producto", "medio", "importe_centavos", "moneda", "dias", "referencia", "estado")}
+    return jsonify(ok=True, orden=publica)
+
+
+@bp.post("/suscripcion/orden")
+def crear_orden_de_pago():
+    """Arma la orden: el importe y la duración salen de la configuración del servidor, nunca del pedido."""
+    def crear(servicio, cuenta_id, datos):
+        oferta = current_app.config.get("PAGOS") or pagos.ConfiguracionPagos()
+        if not oferta.habilitado:
+            raise pagos.PagoError("La suscripción todavía no está disponible en esta instalación.")
+        return servicio.crear_orden(cuenta_id, oferta.producto, datos.get("medio"), oferta.importe_centavos,
+                                    oferta.moneda, oferta.dias)
+    return _operar_orden(crear)
+
+
+@bp.post("/suscripcion/orden/<orden_id>/informar")
+def informar_orden_de_pago(orden_id):
+    return _operar_orden(
+        lambda servicio, cuenta_id, datos: servicio.informar_orden(cuenta_id, orden_id, datos.get("nota") or ""),
+        "informada")
+
+
+@bp.post("/suscripcion/orden/<orden_id>/cancelar")
+def cancelar_orden_de_pago(orden_id):
+    return _operar_orden(lambda servicio, cuenta_id, datos: servicio.cancelar_orden(cuenta_id, orden_id), "cancelada")
 
 
 @bp.get("/configuracion")
@@ -270,6 +359,74 @@ def archivar_perfil(profile_id):
 @bp.post("/perfiles/<profile_id>/restaurar")
 def restaurar_perfil(profile_id):
     return _gestionar_perfil(lambda cuentas, cuenta_id: cuentas.restaurar_child_profile(cuenta_id, profile_id), "restaurado")
+
+
+@bp.post("/perfiles/<profile_id>/eliminar")
+def eliminar_perfil(profile_id):
+    """Supresión definitiva de un perfil archivado (ADR-046): la fila y todos sus archivos de progreso."""
+    confirmacion = _form_or_json_dict().get("nombre")
+
+    def eliminar(cuentas, cuenta_id):
+        cuentas.eliminar_child_profile(cuenta_id, profile_id, confirmacion)   # rechaza un perfil ajeno o inexistente
+        try:
+            _educativo().progreso.eliminar(profile_id)
+        except ProgresoPerfilError:
+            # La fila ya no existe: el archivo quedó huérfano y lo informa el log del almacén. No se le miente al adulto.
+            raise CuentaError("El perfil se eliminó, pero no pudimos borrar todos sus archivos. Avisá a quien "
+                              "administra esta instalación.")
+    return _gestionar_perfil(eliminar, "eliminado")
+
+
+def purgar_cuentas_vencidas(ahora=None):
+    """Borra de forma definitiva las cuentas cuyo plazo de gracia venció (ADR-046). Se llama al arrancar la
+    aplicación y al intentar ingresar a una de ellas; necesita contexto de aplicación. Devuelve cuántas borró."""
+    cuentas, _ = _repos()
+    store = _educativo().progreso
+    borradas = 0
+    for cuenta_id in cuentas.cuentas_con_plazo_vencido(ahora):
+        try:
+            perfiles = cuentas.purgar_account(cuenta_id, ahora)
+        except CuentaError:
+            continue                                                   # otro proceso la borró o la reactivaron
+        for perfil_id in perfiles:
+            try:
+                store.eliminar(perfil_id)
+            except ProgresoPerfilError:
+                logger.error("Cuenta eliminada: quedaron archivos del perfil %s sin borrar", perfil_id)
+        borradas += 1
+        logger.info("Cuenta eliminada de forma definitiva tras el plazo de gracia (%d perfiles)", len(perfiles))
+    return borradas
+
+
+@bp.post("/eliminar")
+def eliminar_cuenta():
+    """Pedido de eliminación de la cuenta (ADR-046): exige la contraseña, cierra las sesiones y deja la cuenta
+    pendiente durante el plazo de gracia. Volver a ingresar dentro del plazo lo cancela."""
+    sesion, rechazo = _adulto_con_csrf()
+    if rechazo:
+        return rechazo
+    cuentas, auth, row, _ = sesion
+    limite = _limit_or_429(f"eliminar-cuenta:{row['account_id']}", 10, 900)
+    if limite:
+        return limite
+    datos = _form_or_json_dict()
+    error = None
+    if not auth.password_correcta(row["account_id"], datos.get("password")):
+        error = "La contraseña no es correcta."
+    elif _servicio_pagos().tiene_suscripcion_que_se_renueva(row["account_id"]):
+        error = "Esta cuenta tiene una suscripción que se renueva sola. Cancelala antes de eliminar la cuenta."
+    if error:
+        if request.form:
+            return _pagina_configuracion(cuentas, auth, row, 400, error)
+        return jsonify(ok=False, mensaje=error), 400
+    fecha = cuentas.solicitar_eliminacion(row["account_id"])
+    if request.form:
+        respuesta = make_response(render_template("cuenta/eliminacion.html", fecha=fecha.date().isoformat()))
+    else:
+        respuesta = make_response(jsonify(ok=True, estado="pendiente_de_eliminacion", se_elimina=fecha.isoformat()))
+    respuesta.delete_cookie("tortu_session", path="/")
+    respuesta.delete_cookie("tortu_csrf", path="/")
+    return respuesta
 
 
 @bp.post("/consentimiento")
@@ -375,6 +532,11 @@ def exportar_datos():
         ],
         "sesiones_abiertas": auth.listar_sesiones(cuenta.id),
         "suscripciones": [{k: v for k, v in sub.items() if k != "proveedor"} for sub in _suscripciones(cuenta.id)],
+        "ordenes_de_pago": [
+            {k: o[k] for k in ("producto", "medio", "importe_centavos", "moneda", "dias", "referencia", "estado",
+                               "creada", "informada", "resuelta", "nota")}
+            for o in _servicio_pagos().listar_ordenes(cuenta.id, limite=200)
+        ],
         "accesos": [{"producto": p, "activo": a} for p, a in cuentas.listar_entitlements(cuenta.id)],
     }
     respuesta = jsonify(documento)
@@ -660,9 +822,18 @@ def login():
             respuesta.headers["Retry-After"] = limite[0].headers["Retry-After"]
             return respuesta
         return limite
-    _, auth = _repos()
+    cuentas, auth = _repos()
+    reactivada = False
     try:
         cuenta = auth.verify_password(email, password)
+        se_elimina = cuentas.eliminacion_pendiente(cuenta["id"])
+        if se_elimina is not None:
+            if se_elimina <= datetime.now(timezone.utc):
+                # El plazo venció: la cuenta ya no existe para nadie, aunque la purga del arranque no haya corrido.
+                purgar_cuentas_vencidas()
+                raise AuthError("La cuenta fue eliminada.")
+            cuentas.cancelar_eliminacion(cuenta["id"])                # ingresar dentro del plazo la reactiva
+            reactivada = True
         raw_session, csrf, expires = auth.create_session(cuenta["id"])
     except AuthError:
         # No distinguir cuenta inexistente, contraseña incorrecta o correo pendiente.
@@ -671,10 +842,12 @@ def login():
             return render_template("cuenta/ingresar.html", error=mensaje, next_url=_next_pedido()), 401
         return jsonify(ok=False, mensaje=mensaje), 401
     if request.form:
-        respuesta = make_response(redirect(url_for("cuenta.seleccionar_perfil_pagina", next=_next_pedido())))
+        destino = url_for("cuenta.configuracion", ok="reactivada") if reactivada \
+            else url_for("cuenta.seleccionar_perfil_pagina", next=_next_pedido())
+        respuesta = make_response(redirect(destino))
     else:
         respuesta = make_response(jsonify(ok=True, cuenta={"id": cuenta["id"], "email": cuenta["email"], "role": cuenta["role"]},
-                                          csrf=csrf, expira=expires.isoformat()))
+                                          csrf=csrf, expira=expires.isoformat(), reactivada=reactivada))
     respuesta.set_cookie("tortu_session", raw_session, **_cookie_config())
     respuesta.set_cookie(
         "tortu_csrf", csrf,

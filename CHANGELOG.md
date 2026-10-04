@@ -47,6 +47,18 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   y corre en CI.
 
 ### Agregado
+- **Suscripción por transferencia (Barrido 7, ADR-047):** página «Suscripción» (`/cuenta/suscripcion`) con el
+  estado del acceso y los medios de pago. El adulto arma una orden, ve el alias y una referencia para el concepto,
+  transfiere y avisa; quien opera confirma con `herramientas/gestionar_pagos.py` y recién ahí se activa el acceso
+  (por el mismo circuito de eventos de ADR-032: idempotente, con vencimiento y días de gracia). Renovar antes de
+  vencer extiende el período. El alias y el importe se configuran en el `.env` (`TORTU_PAGO_*`), nunca en el
+  repositorio; sin ellos la página existe pero no se puede contratar. La tarjeta figura como «próximamente»:
+  `pagos.MEDIOS_DE_PAGO` deja lista la ventana para sumar medios automáticos.
+- **Supresión definitiva (Barrido 4, ADR-046 aceptada):** el adulto puede eliminar para siempre un perfil
+  archivado (escribiendo su nombre; se borran la fila, el progreso, el respaldo, las copias apartadas y el estado en
+  curso) y pedir la eliminación de la cuenta con su contraseña. La cuenta queda 14 días pendiente con las sesiones
+  cerradas; ingresar en ese plazo cancela el pedido. Vencido, se borra todo al arrancar o al intentar ingresar, y
+  queda solo una constancia con la fecha y un hash. Una suscripción que se renueva sola bloquea el pedido.
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
   pedir el enlace y formulario para elegir la clave nueva. Abrir el enlace no consume el token; una clave corta o
   mal repetida se corrige sin pedir otro enlace; al cambiarla se cierran las sesiones abiertas. La respuesta es la

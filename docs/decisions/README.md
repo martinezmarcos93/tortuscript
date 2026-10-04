@@ -67,4 +67,5 @@ ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evoluci�
 | [ADR-043](ADR-043-contexto-educativo-autenticado.md) | Contexto educativo autenticado por ChildProfile | **Aceptada** |
 | [ADR-044](ADR-044-migracion-progreso-local.md) | Migración explícita de progreso local | **Aceptada** |
 | [ADR-045](ADR-045-runtime-educativo-childprofile.md) | Adaptador del runtime educativo para ChildProfile | **Aceptada** |
-| [ADR-046](ADR-046-supresion-de-cuenta-y-perfiles.md) | Supresión de cuenta y de perfiles | Propuesta |
+| [ADR-046](ADR-046-supresion-de-cuenta-y-perfiles.md) | Supresión de cuenta y de perfiles | **Aceptada** |
+| [ADR-047](ADR-047-transferencia-como-primer-medio-de-pago.md) | Transferencia como primer medio de pago | **Aceptada** |
