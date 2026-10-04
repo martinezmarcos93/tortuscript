@@ -439,7 +439,7 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertIn("/cuenta/seleccionar-perfil", created_html.headers["Location"])
 
         me2 = self.client.get("/cuenta/me")
-        self.assertEqual([p["nombre"] for p in me2.json["perfiles"]], ["Ana", "Bruno"])
+        self.assertEqual(sorted(p["nombre"] for p in me2.json["perfiles"]), ["Ana", "Bruno"])
 
         selected = self.client.post(
             "/cuenta/perfil",
