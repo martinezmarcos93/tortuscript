@@ -53,9 +53,13 @@ def crear_respaldo(origen: str | Path, destino: str | Path) -> Path:
         with sqlite3.connect(src) as origen_con, sqlite3.connect(temporal) as destino_con:
             origen_con.backup(destino_con)
         _validar_sqlite(temporal)
-        if dst.exists():
-            raise ErrorRespaldo("El destino apareció durante la operación; no se sobrescribió.")
-        os.replace(temporal, dst)
+        # link() publica el archivo completo de forma atómica y falla si dst ya existe,
+        # a diferencia de os.replace(), que podría sobrescribir una carrera concurrente.
+        try:
+            os.link(temporal, dst)
+        except FileExistsError as exc:
+            raise ErrorRespaldo("El destino apareció durante la operación; no se sobrescribió.") from exc
+        temporal.unlink()
         return dst
     except ErrorRespaldo:
         raise
