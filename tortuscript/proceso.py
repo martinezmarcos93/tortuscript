@@ -10,9 +10,10 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
-from . import sandbox_docker
+from . import cupos, sandbox_docker
 from .error_handler import _explicacion
 
 logger = logging.getLogger("tortuscript.proceso")
@@ -110,12 +111,34 @@ def comando_worker():
     return [sys.executable, "-m", "tortuscript.worker"]
 
 
+_CUPOS = None
+_CUPOS_GUARDIA = threading.Lock()
+
+
+def cupos_de_ejecucion():
+    """Los cupos de esta máquina (se crean una vez por proceso; ver `cupos.py` y `TORTU_EJECUCIONES_MAX`)."""
+    global _CUPOS
+    with _CUPOS_GUARDIA:
+        if _CUPOS is None:
+            _CUPOS = cupos.Cupos(cupos.cupos_desde_entorno())
+        return _CUPOS
+
+
 def correr(pedido):
     """Ejecuta el pedido en un proceso hijo y devuelve el dict de respuesta."""
     try:
         pedido = normalizar_pedido(pedido)
     except TrabajoInvalido as e:
         return _falla("CodigoNoPermitido", str(e))             # sin lanzar ningún proceso
+    try:
+        with cupos_de_ejecucion().tomar():
+            return _correr_con_cupo(pedido)
+    except cupos.Ocupado as e:
+        logger.warning("Ejecución rechazada por falta de cupo: %s", e)
+        return _falla("Ocupado")
+
+
+def _correr_con_cupo(pedido):
     entrada = json.dumps(pedido, ensure_ascii=False)
     try:
         if sandbox_docker.activo():

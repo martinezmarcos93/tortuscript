@@ -32,8 +32,9 @@ Se saltean si no hay Docker o falta la imagen; en CI la imagen se construye ante
 
 ## Lo que falta antes de producción
 
-- **Cola y concurrencia.** Hoy los pedidos se atienden de a uno (un candado en la app web). Con varios procesos web
-  hace falta una cola acotada y un tope de contenedores simultáneos.
+- **Cola entre máquinas.** En una máquina ya hay tope de ejecuciones simultáneas y cola acotada, compartidos entre
+  los procesos web (`tortuscript/cupos.py`, `TORTU_EJECUCIONES_MAX`; quien no consigue cupo a tiempo recibe «hay
+  muchos programas corriendo, probá de nuevo»). Con varias máquinas hace falta una cola de trabajos común.
 - **El servidor web tiene acceso a Docker.** Quien puede hablar con el daemon de Docker es, en la práctica, root en
   esa máquina: en producción el web debe pedir trabajos a un servicio aparte (API → cola → worker), no lanzar
   contenedores él mismo. Es el flujo de ADR-033; esta implementación es el «worker» de ese flujo.
