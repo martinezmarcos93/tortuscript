@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import sandbox_docker
 from .error_handler import _explicacion
 
 logger = logging.getLogger("tortuscript.proceso")
@@ -115,23 +116,36 @@ def correr(pedido):
         pedido = normalizar_pedido(pedido)
     except TrabajoInvalido as e:
         return _falla("CodigoNoPermitido", str(e))             # sin lanzar ningún proceso
-    opciones = {}
-    if sys.platform != "win32":
-        opciones["preexec_fn"] = _limitar
+    entrada = json.dumps(pedido, ensure_ascii=False)
     try:
-        r = subprocess.run(
-            comando_worker(),
-            input=json.dumps(pedido, ensure_ascii=False), capture_output=True,
-            text=True, encoding="utf-8", timeout=TIEMPO_MAX, cwd=str(RAIZ), env=entorno_del_worker(),
-            **opciones)
+        if sandbox_docker.activo():
+            # ADR-033: contenedor efímero sin red. Si falla, no se recurre al subproceso local.
+            r = sandbox_docker.ejecutar(entrada, TIEMPO_MAX)
+            if r.returncode in (125, 126, 127):                # docker no pudo crear o iniciar el contenedor
+                logger.error("El sandbox no pudo iniciar (código %s): %s", r.returncode, r.stderr[-300:])
+                return _falla("Interno")
+            if r.returncode == 137 and not r.stdout.strip():   # eliminado por el tope de memoria del contenedor
+                return _falla("SinMemoria")
+        else:
+            opciones = {}
+            if sys.platform != "win32":
+                opciones["preexec_fn"] = _limitar
+            r = subprocess.run(
+                comando_worker(), input=entrada, capture_output=True,
+                text=True, encoding="utf-8", timeout=TIEMPO_MAX, cwd=str(RAIZ), env=entorno_del_worker(),
+                **opciones)
     except subprocess.TimeoutExpired:
         return _falla("TardoDemasiado")
+    except OSError as e:
+        logger.error("No se pudo lanzar el proceso del alumno: %s", e, exc_info=True)
+        return _falla("Interno")
     if r.returncode != 0 or not r.stdout.strip():
         # Muerto por límite de CPU (SIGXCPU) o de memoria, o un error interno
         logger.warning("worker terminó con código %s: %s", r.returncode, r.stderr[-500:])
         if "MemoryError" in r.stderr:
             return _falla("SinMemoria")
-        return _falla("TardoDemasiado" if r.returncode < 0 else "Interno")
+        # Señal en el proceso local (negativo) o en el contenedor (128 + señal).
+        return _falla("TardoDemasiado" if r.returncode < 0 or r.returncode > 128 else "Interno")
     try:
         return json.loads(r.stdout)
     except ValueError:

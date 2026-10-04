@@ -79,6 +79,12 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 - **Contrato del trabajo del worker (ADR-033):** antes de lanzar un proceso se valida y acota lo que manda el
   navegador (operación conocida, código de hasta 20.000 caracteres sin nulos, hasta 100 respuestas de 1.000
   caracteres, semilla en rango). Un pedido fuera de contrato se rechaza sin crear ningún proceso.
+- **Sandbox de contenedores efímeros (Barrido 8, ADR-033), opcional:** con `TORTU_SANDBOX=docker` cada ejecución del
+  código de un chico corre en un contenedor nuevo sin red, sin secretos ni datos, con sistema de archivos de solo
+  lectura, sin privilegios, con topes de memoria, CPU, procesos y tiempo, y destruido al terminar. Si el contenedor
+  no puede arrancar la ejecución falla (nunca vuelve al subproceso local). `tests/test_sandbox_docker.py` prueba el
+  aislamiento con código hostil real; ver `despliegue/sandbox/README.md` para lo que falta antes de producción. Por
+  defecto sigue el subproceso local.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

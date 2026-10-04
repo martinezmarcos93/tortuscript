@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-      - audit/ux-v1-2026-09-30
-      - sweep/consolidacion-ux-v1
       - 'plan/**'
       - 'work/**'
   pull_request:
@@ -47,6 +45,10 @@ jobs:
           git diff --exit-code -- requirements.lock
       - name: Compilar módulos Python
         run: python -m compileall -q tortuscript web herramientas
+      - name: Imagen del sandbox (ADR-033)
+        # Con la imagen construida, tests/test_sandbox_docker.py deja de saltearse y prueba el aislamiento real.
+        if: matrix.python-version == '3.12'
+        run: docker build -f despliegue/sandbox/Dockerfile -t tortuscript-sandbox:1 .
       - name: Contrato comercial y educativo
         run: python -m unittest discover -s tests -p 'test_cuenta_routes.py'
       - name: Tests Python y JavaScript
