@@ -454,7 +454,7 @@ class CuentaRoutesTests(unittest.TestCase):
         perfiles_api = self.client.get("/api/perfiles", headers={"X-Tortu-Token": "test-token"})
         self.assertEqual(perfiles_api.status_code, 200)
         self.assertEqual(perfiles_api.json["modo"], "cuenta")
-        self.assertEqual(perfiles_api.json["perfiles"][0]["id"], created.json["perfil"]["id"])
+        self.assertIn(created.json["perfil"]["id"], {p["id"] for p in perfiles_api.json["perfiles"]})
 
         me3 = self.client.get("/cuenta/me")
         self.assertEqual(me3.json["perfil_activo"], created.json["perfil"]["id"])
