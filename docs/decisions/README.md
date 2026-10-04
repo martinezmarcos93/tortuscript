@@ -63,6 +63,8 @@ Las medidas de endurecimiento que no condicionan el modelo de producto, por ejem
 ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evolución de producto. Las ADR anteriores siguen vigentes salvo contradicción explícita. La implementación comercial debe respetar las separaciones entre núcleo educativo, identidad adulta, perfiles infantiles, acceso comercial, ejecución remota y producto avanzado Croco-Script.
 
 | [ADR-041](ADR-041-progreso-por-childprofile.md) | Contrato de progreso asociado a ChildProfile | **Aceptada** |
-| [ADR-042](ADR-042-adaptador-progreso-childprofile.md) | Adaptador de progreso por ChildProfile | **Aceptada** |\n| [ADR-043](ADR-043-contexto-educativo-autenticado.md) | Contexto educativo autenticado por ChildProfile | **Aceptada** |
+| [ADR-042](ADR-042-adaptador-progreso-childprofile.md) | Adaptador de progreso por ChildProfile | **Aceptada** |
+| [ADR-043](ADR-043-contexto-educativo-autenticado.md) | Contexto educativo autenticado por ChildProfile | **Aceptada** |
 | [ADR-044](ADR-044-migracion-progreso-local.md) | Migración explícita de progreso local | **Aceptada** |
 | [ADR-045](ADR-045-runtime-educativo-childprofile.md) | Adaptador del runtime educativo para ChildProfile | **Aceptada** |
+| [ADR-046](ADR-046-supresion-de-cuenta-y-perfiles.md) | Supresión de cuenta y de perfiles | Propuesta |
