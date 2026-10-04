@@ -23,7 +23,7 @@ ver `web/servidor.py` y `tests/test_servidor.py`.
 docker build -f despliegue/sandbox/Dockerfile -t tortuscript-sandbox:1 .
 python -m pip install --require-hashes -r requirements.lock
 # un servidor WSGI a elección (no está en requirements.txt: auditarlo antes de instalarlo), por ejemplo:
-#   gunicorn --workers 1 --threads 8 --bind 127.0.0.1:8000 wsgi:app
+#   gunicorn --workers 2 --threads 8 --bind 127.0.0.1:8000 wsgi:app
 ```
 
 Delante, un proxy (Caddy, nginx) que termine HTTPS, pase `X-Forwarded-For/Proto/Host` y **no** deje entrar
@@ -31,9 +31,9 @@ esas cabeceras desde afuera.
 
 ## Restricciones que hoy son parte del diseño
 
-- **Un solo proceso** (con hilos). Las pistas vistas en cada ejercicio, la sesión de práctica del día y las colas de
-  repaso viven en memoria del proceso; con varios procesos se perderían entre pedidos. Para escalar hay que
-  llevarlas al progreso guardado o a un almacén compartido.
+- **Varios procesos, una sola máquina.** El progreso, el estado en curso (pistas, intentos, práctica) y el límite
+  de intentos se guardan en disco con candado de archivo por perfil, así que se puede correr más de un proceso;
+  en ese caso `TORTU_TOKEN` es obligatorio para que todos compartan el token de la API.
 - **Un solo servidor.** El progreso son archivos JSON y la base es SQLite en disco local.
 - **El proceso web habla con Docker.** Quien puede lanzar contenedores es, en la práctica, root en esa máquina.
   Antes de exponerlo a internet conviene separar el worker (ver `despliegue/sandbox/README.md`).

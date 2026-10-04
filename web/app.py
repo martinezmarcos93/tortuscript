@@ -9,7 +9,9 @@ Seguridad de una app local:
 """
 import base64
 import copy
+import json
 import logging
+import re
 import secrets
 import sys
 import threading
@@ -20,7 +22,13 @@ from urllib.parse import urlsplit
 from flask import Flask, abort, g, jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import HTTPException
 
+try:
+    import fcntl
+except ImportError:                      # Windows
+    fcntl = None
+
 RAIZ = Path(__file__).resolve().parent.parent
+_PERFIL_RE = re.compile(r"^child_[a-f0-9]{24}$")
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
@@ -30,6 +38,7 @@ from tortuscript import practica as espaciado  # noqa: E402
 from tortuscript import proyectos as mis_proyectos  # noqa: E402
 from tortuscript import proyectos_integradores, catalogo_producto  # noqa: E402
 from tortuscript import diagnostico, intereses, respaldo, tutor as tortu_llm  # noqa: E402
+from tortuscript.en_curso import EnCurso  # noqa: E402
 from tortuscript.juego_ast import arbol_del_juego  # noqa: E402
 from tortuscript.executor import CodigoNoPermitido  # noqa: E402
 from tortuscript.error_handler import armar_mensaje_error  # noqa: E402
@@ -147,14 +156,74 @@ def create_app(token=None):
     app.config["FEDERACION"] = {}
     app.register_blueprint(cuenta_bp)
     app.register_blueprint(pagos_bp)
-    # Pistas vistas por (perfil, lección, paso): se reinician al abrir el ejercicio o la lección.
-    pistas_vistas = {}
     INDICES_POR_LECCION = {}
     for i, e in enumerate(EJERCICIOS):
         INDICES_POR_LECCION.setdefault(e["leccion_id"], []).append(i)
-    intentos = {}    # errores y respuesta vista por (perfil, lección, paso); se reinicia al abrir la lección
-    practicas = {}   # sesión de práctica del día por perfil: {"dia", "pasos": [(lección, paso)]}
-    colas = {}       # colas de repaso fijadas al empezar: (perfil, modo, semilla) -> [índices]
+
+    # ─────────────── estado «en curso» (pistas, intentos, práctica, colas de repaso) ───────────────
+    # Vive en un archivo por perfil (tortuscript/en_curso.py), no en memoria del proceso: sobrevive a un
+    # reinicio, no crece sin límite y no depende de que haya un solo proceso web.
+    def _carpeta_de_progreso():
+        return Path(app.config.get("PROGRESS_DIR", Path(app.instance_path) / "progreso_perfiles"))
+
+    def _en_curso():
+        if "en_curso" not in g:
+            g.en_curso = EnCurso(_carpeta_de_progreso()).cargar(_perfil_contexto())
+            g.en_curso_antes = json.dumps(g.en_curso, sort_keys=True)
+        return g.en_curso
+
+    class _Mapa:
+        """Vista tipo diccionario de una sección del estado en curso. Las claves son tuplas que empiezan por el
+        perfil (como cuando esto era un dict en memoria); el perfil ya lo determina el archivo."""
+
+        def __init__(self, seccion):
+            self.seccion = seccion
+
+        @staticmethod
+        def _k(clave):
+            return "|".join(str(parte) for parte in clave[1:])
+
+        def get(self, clave, defecto=None):
+            return _en_curso()[self.seccion].get(self._k(clave), defecto)
+
+        def setdefault(self, clave, defecto):
+            return _en_curso()[self.seccion].setdefault(self._k(clave), defecto)
+
+        def pop(self, clave, defecto=None):
+            return _en_curso()[self.seccion].pop(self._k(clave), defecto)
+
+        def __contains__(self, clave):
+            return self._k(clave) in _en_curso()[self.seccion]
+
+        def __getitem__(self, clave):
+            return _en_curso()[self.seccion][self._k(clave)]
+
+        def __setitem__(self, clave, valor):
+            seccion = _en_curso()[self.seccion]
+            seccion.pop(self._k(clave), None)            # lo más nuevo queda al final: al acotar se va lo viejo
+            seccion[self._k(clave)] = valor
+
+    class _Practicas:
+        """La sesión de práctica del día del perfil activo: {"dia", "pasos": [(lección, paso)]}."""
+
+        @staticmethod
+        def get(_perfil):
+            return _en_curso()["practica"]
+
+        def __setitem__(self, _perfil, valor):
+            _en_curso()["practica"] = {"dia": valor["dia"], "pasos": [tuple(paso) for paso in valor["pasos"]]}
+
+    pistas_vistas = _Mapa("pistas")   # pistas vistas por (perfil, lección, paso); se reinician al abrir el ejercicio o la lección
+    intentos = _Mapa("intentos")      # errores y respuesta vista por (perfil, lección, paso); se reinicia al abrir la lección
+    practicas = _Practicas()
+    colas = _Mapa("colas")            # colas de repaso fijadas al empezar: (perfil, modo, semilla) -> [índices]
+
+    @app.after_request
+    def _guardar_en_curso(respuesta):
+        if "en_curso" in g and json.dumps(g.en_curso, sort_keys=True) != g.en_curso_antes:
+            EnCurso(_carpeta_de_progreso()).guardar(g.tortu_contexto.perfil.id, g.en_curso)
+        return respuesta
+
     # Un candado por perfil: cargar → modificar → guardar el progreso de un chico no se pisa entre pestañas,
     # y una familia no espera a otra. (Antes había un único candado para todo el servidor.)
     turnos, turnos_guardia = {}, threading.Lock()
@@ -336,10 +405,29 @@ def create_app(token=None):
             turno = turnos.setdefault(perfil, threading.RLock())
         turno.acquire()
         g.con_turno = turno
+        g.candado_archivo = _candado_entre_procesos(perfil)
         return None
+
+    def _candado_entre_procesos(perfil):
+        """Con varios procesos web, el candado en memoria no alcanza: se toma además uno de archivo por perfil.
+        (En Windows no hay `fcntl`; ahí la app es local y de un solo proceso.)"""
+        if fcntl is None or not _PERFIL_RE.fullmatch(str(perfil)):
+            return None
+        try:
+            carpeta = _carpeta_de_progreso()
+            carpeta.mkdir(parents=True, exist_ok=True)
+            archivo = open(carpeta / f".candado_{perfil}", "a")
+            fcntl.flock(archivo, fcntl.LOCK_EX)
+            return archivo
+        except OSError as e:
+            logger.error("No se pudo tomar el candado de archivo del perfil %s: %s", perfil, e)
+            return None
 
     @app.teardown_request
     def _soltar_turno(_error):
+        archivo = g.pop("candado_archivo", None)
+        if archivo is not None:
+            archivo.close()                                    # cerrar el archivo suelta el candado
         turno = g.pop("con_turno", None)
         if turno is not None:
             turno.release()

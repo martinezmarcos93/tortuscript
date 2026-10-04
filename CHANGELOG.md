@@ -127,6 +127,10 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   cliente de pruebas).
 - **Candado por perfil:** los pedidos de un mismo perfil siguen yendo de a uno, pero una familia ya no espera a otra
   (antes había un único candado para todo el servidor).
+- **Estado en curso en disco:** las pistas vistas, los errores del intento, la sesión de práctica y las colas de
+  repaso dejaron de vivir en memoria del proceso web. Ahora son un archivo chico y acotado por perfil
+  (`tortuscript/en_curso.py`): sobreviven a un reinicio, no crecen sin límite y, con un candado de archivo por
+  perfil, permiten correr más de un proceso web. No forman parte del progreso, los respaldos ni las exportaciones.
 
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 
