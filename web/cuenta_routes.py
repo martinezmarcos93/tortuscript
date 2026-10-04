@@ -34,6 +34,16 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("cuenta", __name__, url_prefix="/cuenta")
 
 
+def _json_dict():
+    """Devuelve un objeto JSON o un diccionario vacío para cuerpos inválidos/no objeto."""
+    datos = request.get_json(silent=True)
+    return datos if isinstance(datos, dict) else {}
+
+
+def _form_or_json_dict():
+    """Normaliza los cuerpos de formularios y JSON sin asumir que JSON sea un objeto."""
+    return request.form if request.form else _json_dict()
+
 def _repos():
     path = Path(current_app.config["ACCOUNT_DB"])
     cuentas = CuentaRepository(path)
@@ -195,7 +205,7 @@ def registrar_post():
     limit = _limit_or_429(f"register:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
         return limit
-    datos = request.form if request.form else (request.get_json(silent=True) or {})
+    datos = _form_or_json_dict()
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
@@ -229,7 +239,7 @@ def registro():
     limit = _limit_or_429(f"register:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
         return limit
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
@@ -278,7 +288,7 @@ def confirmar_verificacion_email():
     limit = _limit_or_429(f"verify-email:{request.remote_addr or 'unknown'}", 10, 900)
     if limit:
         return limit
-    datos = request.get_json(silent=True) or request.form
+    datos = _form_or_json_dict()
     token = datos.get("token", "")
     try:
         _, auth = _repos()
@@ -310,7 +320,7 @@ def reenviar_verificacion():
             codigo="envio_email_no_configurado",
             mensaje="El reenvío no está disponible porque el envío de correo no está configurado.",
         ), 503
-    datos = request.form if request.form else (request.get_json(silent=True) or {})
+    datos = _form_or_json_dict()
     email = datos.get("email")
     if isinstance(email, str) and _email_sender_configurado():
         _, auth = _repos()
@@ -345,7 +355,7 @@ def solicitar_recuperacion():
     limit = _limit_or_429(f"recovery:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
         return limit
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     email = datos.get("email")
     if isinstance(email, str):
         _, auth = _repos()
@@ -360,7 +370,7 @@ def solicitar_recuperacion():
 
 @bp.post("/restablecer-password")
 def restablecer_password():
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     token = datos.get("token")
     password = datos.get("password")
     if not isinstance(token, str) or not isinstance(password, str):
@@ -378,7 +388,7 @@ def restablecer_password():
 
 @bp.post("/login")
 def login():
-    datos = request.get_json(silent=True) or request.form
+    datos = _form_or_json_dict()
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
@@ -471,7 +481,7 @@ def crear_perfil():
     cuentas, auth, row = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    nombre = (request.get_json(silent=True) or {}).get("nombre")
+    nombre = (_json_dict()).get("nombre")
     try:
         perfil = cuentas.crear_child_profile(row["account_id"], nombre)
     except CuentaError as exc:
@@ -492,7 +502,7 @@ def seleccionar_perfil():
     _, auth, row = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or request.form
+    datos = _form_or_json_dict()
     profile_id = datos.get("perfil_id")
     if not profile_id:
         return jsonify(ok=False, mensaje="Falta perfil_id."), 400
@@ -588,7 +598,7 @@ def importar_progreso_local():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     nombre = datos.get("perfil_local")
     reemplazar = datos.get("reemplazar") is True
     try:
@@ -690,7 +700,7 @@ def runtime_guardar_proyecto():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     try:
         proyecto_id = RuntimeEducativo(_educativo()).guardar_proyecto(
             raw, datos.get("nombre"), datos.get("tipo"), datos.get("codigo"), datos.get("proyecto_id"))
