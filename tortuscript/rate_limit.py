@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from contextlib import closing
 from collections import defaultdict, deque
 from math import ceil
 from pathlib import Path
@@ -68,17 +69,18 @@ class SQLiteRateLimiter:
         return con
 
     def _ensure_schema(self):
-        with self._conexion() as con:
-            con.execute(
-                """CREATE TABLE IF NOT EXISTS rate_limit_events (
-                    bucket TEXT NOT NULL,
-                    occurred_at REAL NOT NULL
-                )"""
-            )
-            con.execute(
-                "CREATE INDEX IF NOT EXISTS idx_rate_limit_bucket_time "
-                "ON rate_limit_events(bucket, occurred_at)"
-            )
+        with closing(self._conexion()) as con:
+            with con:
+                con.execute(
+                    """CREATE TABLE IF NOT EXISTS rate_limit_events (
+                        bucket TEXT NOT NULL,
+                        occurred_at REAL NOT NULL
+                    )"""
+                )
+                con.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_rate_limit_bucket_time "
+                    "ON rate_limit_events(bucket, occurred_at)"
+                )
 
     def allow(self, key: str, limit: int, window_seconds: int) -> tuple[bool, int]:
         if limit < 1 or window_seconds < 1:
@@ -86,27 +88,28 @@ class SQLiteRateLimiter:
         now = time()
         cutoff = now - window_seconds
         bucket = hashlib.sha256(key.encode("utf-8")).hexdigest()
-        with self._conexion() as con:
-            con.execute("BEGIN IMMEDIATE")
-            con.execute(
-                "DELETE FROM rate_limit_events WHERE bucket=? AND occurred_at<=?",
-                (bucket, cutoff),
-            )
-            self._calls += 1
-            if self._calls % 256 == 0:
+        with closing(self._conexion()) as con:
+            with con:
+                con.execute("BEGIN IMMEDIATE")
                 con.execute(
-                    "DELETE FROM rate_limit_events WHERE occurred_at<=?",
-                    (now - 86400,),
+                    "DELETE FROM rate_limit_events WHERE bucket=? AND occurred_at<=?",
+                    (bucket, cutoff),
                 )
-            rows = con.execute(
-                "SELECT occurred_at FROM rate_limit_events "
-                "WHERE bucket=? AND occurred_at>? ORDER BY occurred_at",
-                (bucket, cutoff),
-            ).fetchall()
-            if len(rows) >= limit:
-                return False, max(1, ceil(rows[0][0] + window_seconds - now))
-            con.execute(
-                "INSERT INTO rate_limit_events(bucket, occurred_at) VALUES (?, ?)",
-                (bucket, now),
-            )
-            return True, 0
+                self._calls += 1
+                if self._calls % 256 == 0:
+                    con.execute(
+                        "DELETE FROM rate_limit_events WHERE occurred_at<=?",
+                        (now - 86400,),
+                    )
+                rows = con.execute(
+                    "SELECT occurred_at FROM rate_limit_events "
+                    "WHERE bucket=? AND occurred_at>? ORDER BY occurred_at",
+                    (bucket, cutoff),
+                ).fetchall()
+                if len(rows) >= limit:
+                    return False, max(1, ceil(rows[0][0] + window_seconds - now))
+                con.execute(
+                    "INSERT INTO rate_limit_events(bucket, occurred_at) VALUES (?, ?)",
+                    (bucket, now),
+                )
+                return True, 0
