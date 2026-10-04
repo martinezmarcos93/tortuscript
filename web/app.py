@@ -757,6 +757,10 @@ def create_app(token=None):
             return jsonify(ok=False, mensaje=f"🚫 Eso no se puede usar en un juego\n\n{e}{linea}", linea=e.linea)
         except SyntaxError as e:
             return jsonify(ok=False, mensaje=armar_mensaje_error(e), linea=e.lineno)
+        except ValueError:
+            # Python 3.9 rechaza con ValueError (no SyntaxError) el código con caracteres nulos.
+            return jsonify(ok=False, mensaje="Tu juego tiene un carácter que no se puede usar. Borralo y probá de nuevo.",
+                           linea=None)
 
     @app.get("/tortuga")
     def tortuga():

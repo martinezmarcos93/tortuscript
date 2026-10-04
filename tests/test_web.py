@@ -366,6 +366,12 @@ class TestWeb(unittest.TestCase):
         self.assertFalse(sintaxis["ok"])
         self.assertEqual(sintaxis["linea"], 1)
         self.assertEqual(self.post("/api/juego/arbol", {"codigo": "x" * 6000}).status_code, 400)
+        # Python 3.9 lanza ValueError (no SyntaxError) ante caracteres nulos: tampoco puede ser un error interno.
+        from unittest import mock
+        with mock.patch("web.app.arbol_del_juego", side_effect=ValueError("source code string cannot contain null bytes")):
+            nulo = self.post("/api/juego/arbol", {"codigo": "mostrar 1"})
+        self.assertEqual(nulo.status_code, 200)
+        self.assertFalse(nulo.get_json()["ok"])
         self.assertEqual(self.c.post("/api/juego/arbol", json={"codigo": "mostrar 1"}).status_code, 403)   # sin token
 
     def test_un_juego_se_guarda_en_mis_proyectos(self):
