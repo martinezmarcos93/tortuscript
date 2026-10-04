@@ -24,6 +24,9 @@
       {% set estados = {"incomplete": "pago pendiente", "active": "activa", "past_due": "con un pago rechazado", "canceled": "cancelada", "refunded": "reembolsada"} %}
       {% if con_acceso %}
       <p role="status"><b>Esta cuenta tiene acceso a {{ producto }}.</b></p>
+      {% elif es_admin %}
+      <p role="status"><b>Esta es una cuenta administradora: tiene acceso a todo sin suscripción.</b></p>
+      <p class="tenue">Podés armar una orden igual, para probar el circuito de pago.</p>
       {% else %}
       <p role="status">Esta cuenta todavía no tiene acceso a {{ producto }}.</p>
       {% endif %}

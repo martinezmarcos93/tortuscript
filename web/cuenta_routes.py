@@ -239,6 +239,7 @@ def _pagina_suscripcion(cuentas, row, estado=200, error=None):
         oferta=oferta,
         producto=NOMBRES_PRODUCTO.get(oferta.producto, oferta.producto),
         con_acceso=cuentas.tiene_entitlement(row["account_id"], oferta.producto),
+        es_admin=cuentas.es_admin(row["account_id"]),
         suscripciones=servicio.listar_suscripciones(row["account_id"]),
         orden_abierta=next((o for o in ordenes if o["estado"] in pagos.ORDENES_ABIERTAS), None),
         ordenes_cerradas=[o for o in ordenes if o["estado"] not in pagos.ORDENES_ABIERTAS][:5],

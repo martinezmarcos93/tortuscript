@@ -288,6 +288,14 @@ class TestHTTP(unittest.TestCase):
         self.assertEqual(r.status_code, 302)
         self.assertEqual(self.servicio.listar_ordenes(self.cuenta)[0]["estado"], "cancelada")
 
+    def test_la_cuenta_administradora_ve_que_ya_tiene_acceso(self):
+        self.assertIn("todavía no tiene acceso", self.c.get("/cuenta/suscripcion").get_data(as_text=True))
+        CuentaRepository(self.db).establecer_role(self.cuenta, "admin")
+        pagina = self.c.get("/cuenta/suscripcion").get_data(as_text=True)
+        self.assertIn("cuenta administradora", pagina)
+        self.assertNotIn("todavía no tiene acceso", pagina)
+        self.assertIn("Continuar", pagina)                           # igual puede probar el circuito
+
     def test_sin_oferta_configurada_no_se_puede_contratar(self):
         self.app.config["PAGOS"] = pagos.ConfiguracionPagos()
         pagina = self.c.get("/cuenta/suscripcion").get_data(as_text=True)
