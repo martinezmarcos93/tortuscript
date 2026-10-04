@@ -436,10 +436,12 @@ class CuentaRoutesTests(unittest.TestCase):
             follow_redirects=False,
         )
         self.assertEqual(created_html.status_code, 302)
-        self.assertIn("/cuenta/seleccionar-perfil", created_html.headers["Location"])
+        self.assertEqual(created_html.headers["Location"], "/")
 
         me2 = self.client.get("/cuenta/me")
         self.assertEqual(sorted(p["nombre"] for p in me2.json["perfiles"]), ["Ana", "Bruno"])
+        bruno = next(p for p in me2.json["perfiles"] if p["nombre"] == "Bruno")
+        self.assertEqual(me2.json["perfil_activo"], bruno["id"])
 
         selected = self.client.post(
             "/cuenta/perfil",
