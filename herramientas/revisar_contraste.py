@@ -14,7 +14,7 @@ import sys
 
 RUTAS = ["/", "/bienvenida", "/aprender", "/leccion/hola-mundo", "/ejercicios/1", "/referencia", "/mapa", "/resumen", "/logros", "/liga", "/experimentar",
          "/tortuga", "/proyectos", "/proyectos-integradores", "/repaso", "/practica", "/ayuda", "/leccion/laberinto-1",
-         "/leccion/rpg-heroe", "/juego", "/leccion/juego-ganar", "/no-existe"]   # la última: página de error 404
+         "/leccion/rpg-heroe", "/juego", "/leccion/juego-ganar", "/cuenta/configuracion", "/cuenta/seleccionar-perfil", "/no-existe"]   # la última: página de error 404
 
 JS = r"""
 () => {

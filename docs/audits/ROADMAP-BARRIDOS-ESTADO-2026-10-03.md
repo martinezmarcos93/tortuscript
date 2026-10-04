@@ -102,3 +102,33 @@ A diferencia de las tandas remotas, esta sesión corrió en la máquina de Marco
 Ramas: se eliminaron `plan/…`, `work/barridos-maximo-…`, `sweep/consolidacion-ux-v1` y `mobile/validation-v1`
 (su único commit propio, `44d0205`, quedó superado por el bootstrap de pruebas ya integrado). El backup pasó a
 `backup/main-2026-10-03` (`1312dc0`).
+
+
+## Avance del 04/10/2026 (rama `work/barridos-2026-10-04`, PR #7 en borrador)
+
+CI verde en `e5ea6e9` (run `37179861520`: Python 3.9, 3.12 con la imagen del sandbox, y navegador). 832 tests locales.
+Todo lo nuevo que toca a terceros (correo, pagos, sandbox, federación, tutor) está **apagado por defecto** y se
+enciende por configuración.
+
+| Barrido | Qué se implementó | Qué falta para cerrarlo |
+|---|---|---|
+| 2 | Objetivos táctiles de 24 px; la auditoría de teclado, foco y táctil es bloqueante en CI; las páginas de cuenta entran en las auditorías responsive y de contraste. | Prueba manual con lector de pantalla y dispositivos físicos. |
+| 4 | Rectificación (renombrar perfil, cambiar contraseña), archivo reversible de perfiles, descarga de todos los datos, bitácora de consentimientos y declaración del adulto al registrarse. | **Supresión definitiva**: propuesta en ADR-046 (estado Propuesta, la decide Marcos). Revisión jurídica de textos y plazos. |
+| 7 | `tortuscript/pagos.py`: eventos idempotentes y ordenados → suscripción → acceso con vencimiento; webhook firmado; estado visible en la cuenta. | Elegir proveedor y escribir su adaptador; checkout; reconciliación periódica; pruebas en el sandbox del proveedor; qué unidades son premium (hoy ninguna). |
+| 8 | Cerrada una fuga real (el código del alumno leía el entorno del servidor); límites de procesos y archivos; contrato del trabajo; sandbox opcional de contenedores efímeros sin red con pruebas de aislamiento reales. | Cola y tope de concurrencia, separar el web del daemon de Docker, refuerzo del runtime (gVisor o microVM) y revisión independiente. Ver `despliegue/sandbox/README.md`. |
+| 9 | Nada: el progreso ya vive en el servidor por perfil, y la sincronización Desktop↔Cloud necesita un servidor desplegado y un protocolo decidido. | Definir el modelo de conflictos por tipo de dato antes de escribir código. |
+| 10 | `tortuscript/tutor.py`: cuatro niveles, contexto mínimo con datos tachados, control de revelación, cupo diario, consentimiento del adulto revocable, fallback a la pista escrita. | Auditar e instalar el SDK `anthropic`; probar contra el modelo real (calidad, alucinación, respuestas que resuelven de más, costo). |
+| 11 | Contratos v1 y token `Authorization.v1` con 16 vectores de prueba publicados; transición `GET /cuenta/ir/<producto>`. | Repositorio de Croco-Script que los implemente; dominios; `Curriculum.v1`. |
+| 12 | — | Todo lo anterior. |
+
+### Decisiones tomadas por contexto (para revisar)
+
+- El registro por formulario exige la declaración «soy la persona adulta responsable»; el registro por API JSON la
+  acepta pero no la exige (lo usan fixtures y herramientas).
+- Archivar un perfil libera su lugar; restaurarlo respeta el máximo de perfiles.
+- Un acceso concedido a mano no lo recorta un evento de pago.
+- Tras un pago rechazado hay 7 días de gracia; al cancelar el acceso dura hasta el fin del período pagado; un
+  reembolso lo corta de inmediato.
+- Pedir ayuda al tutor cuenta como la primera pista (baja una estrella) y no aprueba nada.
+- Ante un rechazo del modelo se muestra la pista escrita del curso, en vez de reintentar con otro modelo.
+- `.format` y `.format_map` quedan prohibidos en el código del alumno (eran la vía de la fuga).

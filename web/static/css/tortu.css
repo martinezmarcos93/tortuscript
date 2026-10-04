@@ -733,3 +733,8 @@ html[data-contraste="alto"] .opcion-ajuste[aria-checked="true"] { background: #f
 .fila-perfil .etiqueta { flex-basis: 100%; }
 .aviso-ok { border: 2px solid var(--verde); border-radius: 12px; padding: .7rem 1rem; }
 p.error, div.error { border: 2px solid var(--rojo); border-radius: 12px; padding: .7rem 1rem; }
+.pagina-error .tarjeta .tarjeta { margin: 1rem 0; }
+.pagina-error .tarjeta form .campo { margin-bottom: .8rem; }
+.pagina-error .pie { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.fila-perfil .etiqueta { flex-basis: auto; align-self: flex-start; }
+.fila-perfil .campo { flex-basis: 100%; margin-bottom: 0; }

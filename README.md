@@ -36,6 +36,21 @@ la primera cuenta, según `TORTU_EMAIL_MODO` (se configura en un archivo `.env` 
 que además saltea los bloqueos comerciales para pruebas. Detalles en [docs/ADMIN_LOCAL.md](docs/ADMIN_LOCAL.md).
 «Olvidé mi contraseña» necesita el modo `consola` o `smtp`.
 
+### Lo que está construido pero apagado
+
+Estas piezas existen en el código y se encienden por configuración (`.env.example`); en la compu de una familia no
+hacen falta:
+
+| Pieza | Para qué | Cómo se enciende | Documento |
+|---|---|---|---|
+| Pagos y acceso | Suscripción familiar y acceso con vencimiento | secreto de webhook del proveedor | ADR-032, `tortuscript/pagos.py` |
+| Sandbox de contenedores | Ejecutar el código de los chicos aislado, sin red | `TORTU_SANDBOX=docker` | `despliegue/sandbox/README.md` |
+| Paso a Croco-Script | Entrar al producto avanzado sin otra cuenta | configuración `FEDERACION` | `docs/contratos/README.md` |
+| Tortu-LLM | Pistas con IA que ayudan a pensar | `TORTU_TUTOR=claude` + aceptación del adulto | ADR-035, `tortuscript/tutor.py` |
+
+En «Configuración de cuenta» el adulto puede cambiar nombres de perfiles, archivarlos, cambiar la contraseña y
+descargar todos los datos de la familia.
+
 ## Cómo se usa
 
 ### Para una familia (sin instalar Python)
