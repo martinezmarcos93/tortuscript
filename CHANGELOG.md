@@ -85,6 +85,11 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   no puede arrancar la ejecución falla (nunca vuelve al subproceso local). `tests/test_sandbox_docker.py` prueba el
   aislamiento con código hostil real; ver `despliegue/sandbox/README.md` para lo que falta antes de producción. Por
   defecto sigue el subproceso local.
+- **Contratos con Croco-Script (Barrido 11, ADR-037):** `tortuscript/federacion.py` define `Identity.v1`,
+  `Entitlement.v1`, `Progress.v1` y `Authorization.v1`, un token firmado (HS256) de 60 segundos y un solo uso, con
+  emisor, destinatario y solo identificadores opacos. `GET /cuenta/ir/<producto>` comprueba el acceso en servidor y
+  redirige con el token; sin configuración la ruta no existe. `docs/contratos/` documenta lo que el receptor debe
+  validar e incluye 16 vectores de prueba que el código de TortuScript verifica en cada corrida.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

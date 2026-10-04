@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, jsonify, make_response, redirect, render_template, request, url_for
 
+from tortuscript import federacion
 from tortuscript.acceso import AccesoProducto
 from tortuscript.auth import AuthError, AuthRepository
 from tortuscript.cuentas import MAX_CHILD_PROFILES, CuentaError, CuentaRepository
@@ -314,6 +315,34 @@ def cambiar_password():
     if request.form:
         return redirect(url_for("cuenta.configuracion", ok="password"))
     return jsonify(ok=True)
+
+
+@bp.get("/ir/<producto>")
+def ir_a_producto(producto):
+    """Transición autenticada hacia otro producto del ecosistema (ADR-037). El acceso se decide acá, en servidor:
+    el navegador solo transporta un token firmado de un solo uso que vence en un minuto."""
+    destino = (current_app.config.get("FEDERACION") or {}).get(producto)
+    if not destino:
+        abort(404)
+    raw = request.cookies.get("tortu_session")
+    try:
+        service = _educativo()
+        contexto = service.contexto(raw)
+        permitido = service.resumen_acceso(raw, [producto]).get(producto, False)
+    except ContextoEducativoError:
+        return redirect(url_for("cuenta.ingresar", next=url_for("cuenta.ir_a_producto", producto=producto)))
+    if not permitido:
+        return render_template("cuenta/sin_acceso.html", producto=producto), 403
+    try:
+        token = federacion.emitir_autorizacion(
+            destino["clave"], destino["kid"], producto, contexto.cuenta.id, contexto.perfil.id)
+    except (federacion.FederacionError, KeyError):
+        logger.error("Federación mal configurada para %s", producto)
+        abort(503)
+    separador = "&" if "?" in destino["url"] else "?"
+    respuesta = redirect(f"{destino['url']}{separador}autorizacion={token}")
+    respuesta.headers["Referrer-Policy"] = "no-referrer"
+    return respuesta
 
 
 @bp.get("/datos/exportar")

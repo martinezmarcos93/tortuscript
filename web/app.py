@@ -113,6 +113,8 @@ def create_app(token=None):
     app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = False
     # Secretos de webhook por proveedor de pagos. Vacío: no se acepta ningún evento (ADR-032).
     app.config["PAYMENT_WEBHOOK_SECRETS"] = {}
+    # Otros productos del ecosistema (ADR-037): {"croco-script": {"url": …, "clave": …, "kid": …}}. Vacío: sin transición.
+    app.config["FEDERACION"] = {}
     app.register_blueprint(cuenta_bp)
     app.register_blueprint(pagos_bp)
     # Pistas vistas por (perfil, lección, paso): se reinician al abrir el ejercicio o la lección.
