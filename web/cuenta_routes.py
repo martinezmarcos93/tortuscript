@@ -173,6 +173,13 @@ def _proteger_login_csrf():
     return None
 
 
+@bp.after_request
+def _sin_cache(respuesta):
+    """Las páginas de cuenta llevan tokens, correos y perfiles: no deben quedar en caché compartida ni en el historial."""
+    respuesta.headers.setdefault("Cache-Control", "no-store")
+    return respuesta
+
+
 @bp.get("/registrar")
 def registrar():
     return render_template("cuenta/registrar.html")
@@ -355,47 +362,95 @@ def reenviar_verificacion():
     ), 202
 
 
+@bp.get("/recuperar")
+def recuperar():
+    return render_template("cuenta/recuperar.html")
+
+
 @bp.post("/recuperar")
 def solicitar_recuperacion():
     # La respuesta no depende de que la cuenta exista; solo indica si el canal
     # global de correo está disponible en esta instalación.
+    por_formulario = bool(request.form)
     if not _email_sender_configurado():
-        return jsonify(
-            ok=False,
-            codigo="envio_email_no_configurado",
-            mensaje="La recuperación no está disponible porque el envío de correo no está configurado.",
-        ), 503
+        mensaje = "La recuperación no está disponible porque el envío de correo no está configurado."
+        if por_formulario:
+            return render_template("cuenta/recuperar.html", error=mensaje), 503
+        return jsonify(ok=False, codigo="envio_email_no_configurado", mensaje=mensaje), 503
     limit = _limit_or_429(f"recovery:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
+        if por_formulario:
+            respuesta = make_response(render_template(
+                "cuenta/recuperar.html", error="Demasiados intentos. Probá nuevamente más tarde."), 429)
+            respuesta.headers["Retry-After"] = limit[0].headers["Retry-After"]
+            return respuesta
         return limit
-    datos = _json_dict()
+    datos = _form_or_json_dict()
     email = datos.get("email")
     if isinstance(email, str):
-        _, auth = _repos()
+        cuentas, auth = _repos()
         token_info = auth.create_recovery_token(email)
         if token_info:
             token, expires = token_info
-            cuenta = _repos()[0].obtener_account_por_email(email)
+            try:
+                cuenta = cuentas.obtener_account_por_email(email)
+            except CuentaError:
+                cuenta = None
             if cuenta:
                 _intentar_emitir_email("recovery", cuenta.email, token, expires)
+    if por_formulario:
+        # Misma página para cuenta existente, inexistente o proveedor fallido.
+        return render_template("cuenta/recuperar.html", enviado=True), 202
     return jsonify(ok=True, estado="solicitud_recibida"), 202
+
+
+@bp.get("/restablecer-password")
+def restablecer_password_pagina():
+    # GET no consume el token: solo muestra el formulario para elegir la clave nueva.
+    token = request.args.get("token", "")
+    if not token:
+        return render_template("cuenta/restablecer.html", invalido=True), 400
+    return render_template("cuenta/restablecer.html", token=token)
 
 
 @bp.post("/restablecer-password")
 def restablecer_password():
-    datos = _json_dict()
+    por_formulario = bool(request.form)
+    datos = _form_or_json_dict()
     token = datos.get("token")
     password = datos.get("password")
     if not isinstance(token, str) or not isinstance(password, str):
+        if por_formulario:
+            return render_template("cuenta/restablecer.html", invalido=True), 400
         return jsonify(ok=False, mensaje="Token y contraseña son obligatorios."), 400
     limit = _limit_or_429(f"reset-password:{request.remote_addr or 'unknown'}", 10, 900)
     if limit:
+        if por_formulario:
+            respuesta = make_response(render_template(
+                "cuenta/restablecer.html", token=token,
+                error="Demasiados intentos. Probá nuevamente más tarde."), 429)
+            respuesta.headers["Retry-After"] = limit[0].headers["Retry-After"]
+            return respuesta
         return limit
+    if por_formulario and password != datos.get("password2", password):
+        return render_template("cuenta/restablecer.html", token=token,
+                               error="Las dos contraseñas no coinciden."), 400
+    try:
+        AuthRepository.validar_password(password)
+    except AuthError as exc:
+        # La política se comprueba antes de tocar el token: el enlace sigue sirviendo.
+        if por_formulario:
+            return render_template("cuenta/restablecer.html", token=token, error=str(exc)), 400
+        return jsonify(ok=False, mensaje=str(exc)), 400
     try:
         _, auth = _repos()
         auth.reset_password(token, password)
     except AuthError as exc:
+        if por_formulario:
+            return render_template("cuenta/restablecer.html", invalido=True), 400
         return jsonify(ok=False, mensaje=str(exc)), 400
+    if por_formulario:
+        return render_template("cuenta/restablecer.html", listo=True)
     return jsonify(ok=True, estado="password_restablecida")
 
 

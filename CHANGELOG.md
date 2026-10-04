@@ -19,6 +19,15 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   y el límite de perfiles sale de `MAX_CHILD_PROFILES` en vez de estar repetido a mano en plantillas y rutas.
 - **Validación HTTP:** `perfil_id` y el token de verificación que no son texto se rechazan con 4xx.
 
+### Agregado
+- **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
+  pedir el enlace y formulario para elegir la clave nueva. Abrir el enlace no consume el token; una clave corta o
+  mal repetida se corrige sin pedir otro enlace; al cambiarla se cierran las sesiones abiertas. La respuesta es la
+  misma exista o no la cuenta.
+
+### Seguridad
+- Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
+
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 
 Rama `feat/tortugame`. Fase 3 del roadmap; implementa ADR-006, 007 y 008 (aceptadas).

@@ -20,8 +20,9 @@ class CuentaNavegacionTests(unittest.TestCase):
             TESTING=True,
             ACCOUNT_DB=self.tmp / "cuentas.sqlite3",
             PROGRESS_DIR=self.tmp / "progreso_perfiles",
-            ACCOUNT_EMAIL_SENDER=lambda **payload: None,
         )
+        self.emails = []
+        self.app.config["ACCOUNT_EMAIL_SENDER"] = lambda **payload: self.emails.append(payload)
         self.client = self.app.test_client()
         self.email = f"nav-{self.tmp.name.lower()}@example.com"
         registro = self.client.post("/cuenta/registro", json={"email": self.email, "password": CLAVE})
@@ -128,7 +129,8 @@ class CuentaNavegacionTests(unittest.TestCase):
         self._login_form()
         self.client.post("/cuenta/perfiles", data={"nombre": "Ana", "csrf": self._csrf()})
         for ruta in ("/cuenta/registrar", "/cuenta/seleccionar-perfil", "/cuenta/configuracion",
-                     "/cuenta/verificar-email?token=x"):
+                     "/cuenta/verificar-email?token=x", "/cuenta/recuperar",
+                     "/cuenta/restablecer-password?token=x", "/cuenta/ingresar"):
             with self.subTest(ruta=ruta):
                 html = self.client.get(ruta).get_data(as_text=True)
                 self.assertFalse(re.search(r"<script(?![^>]*\bsrc=)", html), ruta)
@@ -143,6 +145,74 @@ class CuentaNavegacionTests(unittest.TestCase):
             r = self.client.post("/cuenta/perfiles", json={"nombre": f"Perfil {i}"}, headers={"X-Tortu-CSRF": csrf})
             self.assertEqual(r.status_code, 201)
         self.assertNotIn('id="nombre"', self.client.get("/cuenta/seleccionar-perfil").get_data(as_text=True))
+
+    # ── recuperación de contraseña por formulario ──
+    def _token_de_recuperacion(self):
+        pedido = self.client.post("/cuenta/recuperar", data={"email": self.email})
+        self.assertEqual(pedido.status_code, 202)
+        return [m for m in self.emails if m["tipo"] == "recovery"][-1]["token"]
+
+    def test_ingresar_enlaza_la_recuperacion(self):
+        html = self.client.get("/cuenta/ingresar").get_data(as_text=True)
+        self.assertIn('href="/cuenta/recuperar"', html)
+        self.assertEqual(self.client.get("/cuenta/recuperar").status_code, 200)
+
+    def test_recuperacion_por_formulario_no_revela_si_la_cuenta_existe(self):
+        existente = self.client.post("/cuenta/recuperar", data={"email": self.email})
+        ausente = self.client.post("/cuenta/recuperar", data={"email": "nadie@example.com"})
+        self.assertEqual((existente.status_code, ausente.status_code), (202, 202))
+        self.assertEqual(existente.get_data(as_text=True), ausente.get_data(as_text=True))
+        self.assertEqual(len([m for m in self.emails if m["tipo"] == "recovery"]), 1)
+
+    def test_recuperacion_completa_por_formulario(self):
+        self._login_form()
+        self.assertEqual(self.client.get("/cuenta/me").status_code, 200)
+        token = self._token_de_recuperacion()
+
+        # Abrir el enlace no consume el token.
+        for _ in range(2):
+            pagina = self.client.get("/cuenta/restablecer-password?token=" + token)
+            self.assertEqual(pagina.status_code, 200)
+            self.assertIn(token, pagina.get_data(as_text=True))
+            self.assertEqual(pagina.headers["Cache-Control"], "no-store")
+
+        # Errores corregibles: el enlace sigue sirviendo.
+        corta = self.client.post("/cuenta/restablecer-password",
+                                 data={"token": token, "password": "corta", "password2": "corta"})
+        self.assertEqual(corta.status_code, 400)
+        self.assertIn("12 caracteres", corta.get_data(as_text=True))
+        distintas = self.client.post("/cuenta/restablecer-password", data={
+            "token": token, "password": "otra-clave-larga-456", "password2": "otra-clave-larga-457"})
+        self.assertEqual(distintas.status_code, 400)
+        self.assertIn("no coinciden", distintas.get_data(as_text=True))
+
+        nueva = "otra-clave-larga-456"
+        ok = self.client.post("/cuenta/restablecer-password",
+                              data={"token": token, "password": nueva, "password2": nueva})
+        self.assertEqual(ok.status_code, 200)
+        self.assertIn("Contraseña cambiada", ok.get_data(as_text=True))
+
+        # Las sesiones previas se revocan, la clave vieja deja de servir y el token no se reutiliza.
+        self.assertEqual(self.client.get("/cuenta/me").status_code, 401)
+        self.assertEqual(self._login_form().status_code, 401)
+        self.assertEqual(self.client.post("/cuenta/login", data={"email": self.email, "password": nueva}).status_code, 302)
+        reuso = self.client.post("/cuenta/restablecer-password",
+                                 data={"token": token, "password": nueva, "password2": nueva})
+        self.assertEqual(reuso.status_code, 400)
+        self.assertIn("Enlace no válido", reuso.get_data(as_text=True))
+
+    def test_restablecer_sin_token_o_con_token_falso_muestra_enlace_invalido(self):
+        self.assertEqual(self.client.get("/cuenta/restablecer-password").status_code, 400)
+        falso = self.client.post("/cuenta/restablecer-password", data={
+            "token": "no-existe", "password": "otra-clave-larga-456", "password2": "otra-clave-larga-456"})
+        self.assertEqual(falso.status_code, 400)
+        self.assertIn("Pedir otro enlace", falso.get_data(as_text=True))
+
+    def test_recuperacion_sin_proveedor_de_correo_falla_cerrada_con_pagina(self):
+        self.app.config["ACCOUNT_EMAIL_SENDER"] = None
+        r = self.client.post("/cuenta/recuperar", data={"email": self.email})
+        self.assertEqual(r.status_code, 503)
+        self.assertIn("no está configurado", r.get_data(as_text=True))
 
 
 if __name__ == "__main__":
