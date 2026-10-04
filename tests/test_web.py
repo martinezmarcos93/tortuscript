@@ -124,6 +124,33 @@ class TestWeb(unittest.TestCase):
         self.assertEqual(self.c.post("/api/ejecutar", json={"codigo": "mostrar 1"}).status_code, 403)
         self.assertEqual(self.c.post("/api/ejecutar", json={}, headers={"X-Tortu-Token": "otro"}).status_code, 403)
 
+    def test_endpoints_api_normalizan_json_que_no_es_objeto(self):
+        # Un cliente defectuoso no debe convertir una lista o un escalar JSON en HTTP 500.
+        rutas = (
+            "/api/juego/correr",
+            "/api/juego/arbol",
+            "/api/traducir",
+            "/api/ejecutar",
+            "/api/tortuga",
+            "/api/lecciones/hola-mundo/pasos/1/comprobar",
+            "/api/lecciones/hola-mundo/pasos/5/evaluar",
+            "/api/ejercicios/1/evaluar",
+            "/api/practica/comprobar",
+            "/api/practica/respuesta",
+            "/api/proyectos",
+            "/api/proyectos-integradores/demo/archivo",
+            "/api/onboarding",
+            "/api/config",
+            "/api/ajustes",
+            "/api/diagnostico",
+            "/api/intereses/demo",
+        )
+        for ruta in rutas:
+            with self.subTest(ruta=ruta):
+                respuesta = self.post(ruta, ["esto no es un objeto"])
+                self.assertNotEqual(respuesta.status_code, 500, respuesta.get_data(as_text=True))
+
+
     def test_host_ajeno_rechazado(self):
         r = self.c.get("/", headers={"Host": "malicioso.com"})
         self.assertEqual(r.status_code, 403)
