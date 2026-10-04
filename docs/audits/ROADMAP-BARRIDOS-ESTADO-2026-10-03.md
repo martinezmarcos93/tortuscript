@@ -62,3 +62,16 @@ Esta secuencia operativa conserva la hoja de ruta general acordada (0–12). Los
 - Mantener separados los cambios funcionales, las decisiones arquitectónicas y las tareas de despliegue.
 - No marcar una tarea como terminada por existir código o documentación: exigir evidencia de pruebas y anotar las limitaciones restantes.
 - No desplegar, ejecutar migraciones sobre datos reales ni activar cobros sin autorización explícita.
+
+## Avance remoto posterior al corte
+
+**Rama de implementación:** `work/barridos-maximo-2026-10-03`  
+**PR de trabajo:** [#6 — Barridos: respaldo SQLite y migración sin mutaciones parciales](https://github.com/martinezmarcos93/tortuscript/pull/6), en borrador y basada en la rama de planificación para mantener la PR #5 separada.
+
+- **Barrido 4 — diseño:** creado `docs/architecture/CONTRATOS-DOMINIO-PRIVACIDAD-Y-ROADMAP.md` con límites Account / Authentication / Consent / Subscription / Entitlement / ChildProfile, propiedad de datos, consentimiento de menores, contratos de pagos, sandbox, sync, tutor IA y Croco-Script. Es una decisión de diseño, no una declaración de implementación terminada.
+- **Barrido 5 — respaldo/restauración:** agregado `tortuscript/respaldo_sqlite.py` con backup de SQLite, comprobación `integrity_check`, publicación atómica, rechazo de destino existente y restauración con confirmación explícita para sobrescribir. Las utilidades no se invocan automáticamente ni se ejecutaron contra bases reales.
+- **Barrido 5 — migración:** el repositorio ahora valida alias históricos equivalentes antes de crear tablas comerciales; los cambios de columnas, índice y versión se ejecutan dentro de una transacción. Se amplió la regresión para exigir que una migración rechazada no deje tablas `subscriptions` o `entitlements`.
+- **Regresiones añadidas:** `tests/test_respaldo_sqlite.py` cubre copia consistente, destino existente, origen ausente, archivo corrupto, confirmación de sobrescritura, restauración y rutas iguales.
+- **CI:** se amplió el filtro de `pull_request` del workflow para aceptar ramas `plan/**` y `work/**`, permitiendo que las PR de trabajo intermedias reciban verificación automatizada. La evidencia de CI para esta tanda debe confirmarse desde la ejecución asociada al head actual antes de declarar estos cambios validados.
+- **Estado:** los cambios están comprometidos en la rama remota. No se marca cerrado el Barrido 5 hasta que CI confirme las nuevas pruebas; backup/restore de datos reales, migración sobre copia local y cualquier validación dependiente de la PC siguen expresamente diferidos por instrucción del usuario.
+
