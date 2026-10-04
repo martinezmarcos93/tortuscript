@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Todavía no hay una
 versión publicada de la app web: los cambios de versión se consultan antes de fijarlos.
 
+## Sin publicar — barridos de consolidación (desde 03/10/2026)
+
+Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
+
+### Corregido
+- **Migración de progreso local (ADR-044):** la importación lee el archivo de origen de forma estricta. Un archivo
+  ilegible (JSON roto, raíz que no es objeto, `ejercicios` mal tipado) se rechaza sin apartarlo ni reescribirlo; antes
+  se convertía en un progreso vacío que, con reemplazo explícito, podía pisar el progreso comercial. Los campos
+  anidados mal tipados de un JSON válido se normalizan y se conserva lo válido.
+
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 
 Rama `feat/tortugame`. Fase 3 del roadmap; implementa ADR-006, 007 y 008 (aceptadas).

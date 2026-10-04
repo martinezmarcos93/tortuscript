@@ -9,7 +9,8 @@ from copy import deepcopy
 from pathlib import Path
 
 from tortuscript.perfil_educativo import PerfilEducativoService, ContextoEducativoError
-from tortuscript.persistencia_local import cargar_progreso, obtener_perfiles, sanitizar_perfil
+from tortuscript import persistencia_local
+from tortuscript.persistencia_local import obtener_perfiles, sanitizar_perfil
 from tortuscript.progreso_contrato import nuevo_snapshot
 
 
@@ -38,12 +39,16 @@ class MigracionProgresoLocal:
         actual = self.educativo.cargar_progreso(raw_session)
         if actual is not None and not reemplazar:
             raise MigracionProgresoError("El perfil comercial ya tiene progreso; se requiere reemplazo explícito.")
+        # Lectura estricta: cargar_progreso() aparta el archivo dañado y devuelve un
+        # progreso vacío, lo que aquí reemplazaría datos comerciales por nada. Un
+        # archivo ilegible se rechaza sin tocarlo; los campos anidados mal tipados
+        # de un JSON válido sí se normalizan, igual que en la carga local.
         try:
-            datos = cargar_progreso(nombre)
+            datos = persistencia_local._migrar(
+                persistencia_local._leer(persistencia_local.get_archivo_progreso(nombre))
+            )
         except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
             raise MigracionProgresoError("El progreso local no tiene un formato válido.") from exc
-        if not isinstance(datos, dict):
-            raise MigracionProgresoError("El progreso local no tiene un formato válido.")
         datos.pop("_perfil", None)
         snapshot = nuevo_snapshot(contexto.perfil.id, deepcopy(datos))
         self.educativo.guardar_progreso(raw_session, snapshot)
