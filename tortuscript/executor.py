@@ -23,6 +23,9 @@ MAX_PASOS = 50_000
 MAX_CARAS = 1000             # dado(caras): de 2 a 1000 caras
 MAX_SALIDA = 20_000          # caracteres
 ARCHIVO_ALUMNO = "<tu código>"
+# str.format recorre atributos e índices escritos DENTRO del texto ("{0.__globals__[sys]}"), donde la
+# validación del árbol no los ve: con eso se llegaba a los módulos del intérprete y a su entorno.
+ATRIBUTOS_PROHIBIDOS = frozenset({"format", "format_map"})
 
 
 # Las señales internas heredan de BaseException para que un `try/except Exception`
@@ -79,6 +82,10 @@ def validar_codigo(codigo_python):
         if isinstance(nodo, ast.Attribute) and nodo.attr.startswith("_"):
             raise CodigoNoPermitido(
                 f"No se puede usar «.{nodo.attr}»: los nombres que empiezan con _ son internos de Python.",
+                linea)
+        if isinstance(nodo, ast.Attribute) and nodo.attr in ATRIBUTOS_PROHIBIDOS:
+            raise CodigoNoPermitido(
+                f"No se puede usar «.{nodo.attr}». Para armar un texto, uní las partes con + o usá mostrar con comas.",
                 linea)
         if isinstance(nodo, ast.Name) and nodo.id.startswith("__"):
             raise CodigoNoPermitido(

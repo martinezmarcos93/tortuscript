@@ -79,6 +79,13 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
+- **Fuga del entorno del servidor desde el código del alumno (Barrido 8):**
+  `"{0.__globals__[sys].modules[os].environ}".format(dado)` mostraba todas las variables de entorno del servidor
+  (con `.env`, también la clave SMTP). Ahora el proceso del alumno arranca solo con un entorno mínimo permitido, lo
+  borra antes de ejecutar y `.format`/`.format_map` se rechazan con un mensaje para chicos.
+- El proceso del alumno tampoco puede crear procesos ni hilos (`RLIMIT_NPROC`), abrir más de 64 archivos ni dejar
+  volcados de memoria. `tests/test_sandbox_abuso.py` fija 17 pruebas de abuso (escapes clásicos, memoria, CPU,
+  salida, procesos, archivos).
 
 ### Cambiado
 - **Costo por pedido (Barrido 5):** el esquema de cuentas se asegura una vez por archivo y proceso, y cada pedido

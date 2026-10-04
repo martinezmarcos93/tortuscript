@@ -105,6 +105,8 @@ def atender(pedido):
 
 def main():
     limitar_memoria_windows()               # en Linux/macOS lo pone el padre (proceso.py)
+    import os
+    os.environ.clear()                      # el padre ya lo recorta; acá no queda nada que leer
     for flujo in (sys.stdin, sys.stdout):   # Windows abre los pipes en cp1252
         flujo.reconfigure(encoding="utf-8")
     salida_real = sys.stdout            # el código del alumno escribe en otro buffer
