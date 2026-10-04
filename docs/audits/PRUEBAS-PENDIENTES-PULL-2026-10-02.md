@@ -4,6 +4,15 @@
 **Rama:** `sweep/consolidacion-ux-v1`  
 **Objetivo:** ejecutar estas comprobaciones en el entorno local de Marcos después de hacer pull. No hacer merge a `main` hasta revisar resultados.
 
+> **Actualización del 04/10/2026.** Esta lista se escribió para la rama `sweep/consolidacion-ux-v1`, que ya no
+> existe (se integró a `main`). Desde entonces buena parte quedó cubierta por pruebas automáticas que corren en
+> cada cambio: el recorrido de una familia con dos perfiles, reinicio del servidor, aislamiento y exportación
+> (`tests/test_ciclo_alumno.py`: M02 a M12, M16, M20 y M23), el arranque y el apagado (`tests/test_lanzador.py`:
+> M01), los alias equivalentes y la migración de esquema (`tests/test_cuentas.py`: M21 y M22), la importación de
+> progreso local (`tests/test_migracion_progreso.py`: M18) y el ancho angosto (`herramientas/revisar_responsive.py`
+> en CI: M19). La tabla se conserva como guion para una pasada manual antes de un lanzamiento; no bloquea el
+> trabajo diario.
+
 ## Antes de probar
 
 - [ ] Confirmar rama: `git branch --show-current` → `sweep/consolidacion-ux-v1`.

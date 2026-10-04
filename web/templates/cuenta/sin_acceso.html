@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sin acceso · TortuScript</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/tortuscript.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tortu.css') }}">
+</head>
+<body>
+<main id="contenido" class="columna-ancha pagina-error">
+  <section class="tarjeta centrado">
+    <div class="mascota gran" aria-hidden="true">🔒</div>
+    <h1>Esta cuenta todavía no tiene acceso</h1>
+    <p class="texto-grande">Un adulto de la familia puede revisarlo en la configuración de la cuenta.</p>
+    <p><a class="boton" href="{{ url_for('cuenta.suscripcion') }}">Ver la suscripción</a></p>
+    <p><a class="boton verde grande" href="{{ url_for('inicio') }}">Volver a TortuScript</a></p>
+  </section>
+</main>
+</body>
+</html>

@@ -41,7 +41,7 @@ El perfil infantil no podrá modificar email, contraseña, pagos, cuenta familia
 - Esquema de Account, ChildProfile y ConsentRecord.
 - Relaciones y claves.
 - Autorización por cuenta.
-- Límite de 5 perfiles.
+- Límite de 3 perfiles en uso (decisión de Marcos del 04/10/2026; el plan original decía 5).
 
 ### 20/10–02/11
 - API de creación/selección/edición de perfiles.

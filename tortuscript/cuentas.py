@@ -14,18 +14,24 @@ Reglas:
 """
 from __future__ import annotations
 
+import hashlib
 import re
 import secrets
 import sqlite3
 import unicodedata
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 
 SCHEMA_VERSION = 3
 MAX_CHILD_PROFILES = 3
+# Plazo entre el pedido de eliminación de una cuenta y su borrado definitivo (ADR-046).
+DIAS_DE_GRACIA_ELIMINACION = 14
+# Finalidades para las que se registra una decisión del adulto (docs/architecture/CONTRATOS-DOMINIO-…).
+# El consentimiento de una finalidad nunca habilita otra.
+FINALIDADES_CONSENTIMIENTO = ("responsable_adulto", "analitica", "tutor_ia", "sincronizacion")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -51,6 +57,15 @@ class ChildProfile:
 
 
 @dataclass(frozen=True)
+class Consentimiento:
+    account_id: str
+    finalidad: str
+    version: str
+    otorgado: bool
+    created_at: str
+
+
+@dataclass(frozen=True)
 class Entitlement:
     account_id: str
     product: str
@@ -63,7 +78,6 @@ def _ahora() -> str:
 
 
 def _id(prefijo: str, valor: str) -> str:
-    import hashlib
     return f"{prefijo}_{hashlib.sha256(valor.encode('utf-8')).hexdigest()[:24]}"
 
 
@@ -88,6 +102,14 @@ def _normalizar_nombre(nombre: str) -> str:
 def _clave_nombre(nombre: str) -> str:
     """Clave estable para unicidad: compatibilidad Unicode + comparación sin caso."""
     return unicodedata.normalize("NFKC", _normalizar_nombre(nombre)).casefold()
+
+
+def _vigente(row) -> bool:
+    """Un entitlement vale si está activo y no venció. El vencimiento se evalúa al consultar:
+    no depende de que corra ningún proceso periódico."""
+    if not row or not row["active"]:
+        return False
+    return row["expires_at"] is None or row["expires_at"] > _ahora()
 
 
 class CuentaRepository:
@@ -176,12 +198,26 @@ class CuentaRepository:
                 CREATE INDEX IF NOT EXISTS idx_subscriptions_account
                     ON subscriptions(account_id);
 
+                -- Bitácora de decisiones del adulto: solo se agregan filas, nunca se editan.
+                CREATE TABLE IF NOT EXISTS consents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    purpose TEXT NOT NULL,
+                    policy_version TEXT NOT NULL,
+                    granted INTEGER NOT NULL CHECK (granted IN (0, 1)),
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_consents_account_purpose
+                    ON consents(account_id, purpose, id);
+
                 CREATE TABLE IF NOT EXISTS entitlements (
                     account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                     product TEXT NOT NULL,
                     active INTEGER NOT NULL DEFAULT 0 CHECK (active IN (0, 1)),
                     source TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
+                    expires_at TEXT,
                     PRIMARY KEY(account_id, product)
                 );
                 """
@@ -210,6 +246,17 @@ class CuentaRepository:
             # No alterar ninguna tabla existente hasta validar todo el historial.
             if "role" not in cols:
                 con.execute("ALTER TABLE accounts ADD COLUMN role TEXT NOT NULL DEFAULT 'adult'")
+            # Vencimiento del acceso pago (ADR-032): NULL significa sin vencimiento (concesión manual).
+            if "expires_at" not in {r["name"] for r in con.execute("PRAGMA table_info(entitlements)")}:
+                con.execute("ALTER TABLE entitlements ADD COLUMN expires_at TEXT")
+            # Supresión (ADR-046): cuándo pidió el adulto eliminar la cuenta (NULL: no lo pidió) y la constancia
+            # de las eliminaciones ya hechas, sin datos personales.
+            if "deletion_requested_at" not in cols:
+                con.execute("ALTER TABLE accounts ADD COLUMN deletion_requested_at TEXT")
+            con.execute("""CREATE TABLE IF NOT EXISTS account_deletions (
+                               deleted_at TEXT NOT NULL,
+                               account_hash TEXT NOT NULL
+                           )""")
             if "display_name_key" not in profile_cols:
                 con.execute("ALTER TABLE child_profiles ADD COLUMN display_name_key TEXT")
             for perfil_id, clave in claves_por_id.items():
@@ -321,7 +368,7 @@ class CuentaRepository:
                 raise CuentaError("Ya existe un perfil con ese nombre.") from exc
         return ChildProfile(profile_id, account_id, display_name, now)
 
-    def listar_child_profiles(self, account_id: str) -> list[ChildProfile]:
+    def listar_child_profiles(self, account_id: str, solo_activos: bool = False) -> list[ChildProfile]:
         with self._conexion() as con:
             rows = con.execute(
                 """SELECT id,account_id,display_name,created_at,active
@@ -330,8 +377,172 @@ class CuentaRepository:
             ).fetchall()
         return [
             ChildProfile(r["id"], r["account_id"], r["display_name"], r["created_at"], bool(r["active"]))
-            for r in rows
+            for r in rows if r["active"] or not solo_activos
         ]
+
+    def _perfil_de_la_cuenta(self, con, account_id: str, profile_id: str):
+        """La fila del perfil solo si pertenece a la cuenta: nunca se opera sobre un perfil ajeno."""
+        if not isinstance(profile_id, str) or not isinstance(account_id, str):
+            raise CuentaError("El perfil no pertenece a la cuenta.")
+        row = con.execute(
+            "SELECT id,account_id,display_name,created_at,active FROM child_profiles WHERE id=? AND account_id=?",
+            (profile_id, account_id),
+        ).fetchone()
+        if not row:
+            raise CuentaError("El perfil no pertenece a la cuenta.")
+        return row
+
+    def actualizar_nombre_child_profile(self, account_id: str, profile_id: str, display_name: str) -> ChildProfile:
+        """Rectificación del alias. El identificador y el progreso no cambian."""
+        display_name = _normalizar_nombre(display_name)
+        clave = _clave_nombre(display_name)
+        with self._conexion() as con:
+            row = self._perfil_de_la_cuenta(con, account_id, profile_id)
+            duplicado = con.execute(
+                "SELECT 1 FROM child_profiles WHERE account_id=? AND display_name_key=? AND id<>?",
+                (account_id, clave, profile_id),
+            ).fetchone()
+            if duplicado:
+                raise CuentaError("Ya existe un perfil con ese nombre.")
+            try:
+                con.execute("UPDATE child_profiles SET display_name=?, display_name_key=? WHERE id=?",
+                            (display_name, clave, profile_id))
+            except sqlite3.IntegrityError as exc:
+                raise CuentaError("Ya existe un perfil con ese nombre.") from exc
+        return ChildProfile(row["id"], row["account_id"], display_name, row["created_at"], bool(row["active"]))
+
+    def archivar_child_profile(self, account_id: str, profile_id: str) -> None:
+        """Saca el perfil de uso sin borrar nada: su progreso queda guardado y se puede restaurar.
+        Las sesiones que lo tenían elegido vuelven al selector."""
+        with self._conexion() as con:
+            self._perfil_de_la_cuenta(con, account_id, profile_id)
+            con.execute("UPDATE child_profiles SET active=0 WHERE id=?", (profile_id,))
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'").fetchone():
+                con.execute("UPDATE sessions SET active_profile_id=NULL WHERE active_profile_id=?", (profile_id,))
+
+    def restaurar_child_profile(self, account_id: str, profile_id: str) -> None:
+        with self._conexion() as con:
+            row = self._perfil_de_la_cuenta(con, account_id, profile_id)
+            if row["active"]:
+                return
+            cantidad = con.execute(
+                "SELECT COUNT(*) AS n FROM child_profiles WHERE account_id=? AND active=1", (account_id,)
+            ).fetchone()["n"]
+            if cantidad >= MAX_CHILD_PROFILES:
+                raise CuentaError(f"Una cuenta admite como máximo {MAX_CHILD_PROFILES} perfiles en uso.")
+            con.execute("UPDATE child_profiles SET active=1 WHERE id=?", (profile_id,))
+
+    def eliminar_child_profile(self, account_id: str, profile_id: str, confirmacion: str) -> str:
+        """Supresión definitiva de un perfil (ADR-046). Solo si ya está archivado y `confirmacion` es su nombre.
+        Borra la fila; los archivos de progreso los borra quien llama, con el identificador que se devuelve."""
+        with self._conexion() as con:
+            row = self._perfil_de_la_cuenta(con, account_id, profile_id)
+            if row["active"]:
+                raise CuentaError("Para eliminar un perfil primero hay que archivarlo.")
+            try:
+                coincide = _clave_nombre(confirmacion) == _clave_nombre(row["display_name"])
+            except CuentaError:
+                coincide = False
+            if not coincide:
+                raise CuentaError("Para eliminar el perfil escribí su nombre tal como figura.")
+            con.execute("DELETE FROM child_profiles WHERE id=?", (profile_id,))
+        return profile_id
+
+    # ── eliminación de la cuenta (ADR-046) ──
+    def solicitar_eliminacion(self, account_id: str, ahora: Optional[datetime] = None) -> datetime:
+        """Deja la cuenta pendiente de eliminación y cierra sus sesiones. Devuelve cuándo se borra de forma definitiva.
+        Pedirlo de nuevo no reinicia el plazo."""
+        ahora = ahora or datetime.now(timezone.utc)
+        with self._conexion() as con:
+            row = con.execute("SELECT deletion_requested_at FROM accounts WHERE id=?", (account_id,)).fetchone()
+            if not row:
+                raise CuentaError("La cuenta no existe.")
+            pedido = row["deletion_requested_at"] or ahora.isoformat(timespec="seconds")
+            con.execute("UPDATE accounts SET deletion_requested_at=? WHERE id=?", (pedido, account_id))
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'").fetchone():
+                con.execute("UPDATE sessions SET revoked_at=? WHERE account_id=? AND revoked_at IS NULL",
+                            (ahora.isoformat(timespec="seconds"), account_id))
+        return datetime.fromisoformat(pedido) + timedelta(days=DIAS_DE_GRACIA_ELIMINACION)
+
+    def eliminacion_pendiente(self, account_id: str) -> Optional[datetime]:
+        """Cuándo se borra la cuenta, o None si no hay un pedido de eliminación."""
+        with self._conexion() as con:
+            row = con.execute("SELECT deletion_requested_at FROM accounts WHERE id=?", (account_id,)).fetchone()
+        if not row or not row["deletion_requested_at"]:
+            return None
+        return datetime.fromisoformat(row["deletion_requested_at"]) + timedelta(days=DIAS_DE_GRACIA_ELIMINACION)
+
+    def cancelar_eliminacion(self, account_id: str) -> None:
+        with self._conexion() as con:
+            con.execute("UPDATE accounts SET deletion_requested_at=NULL WHERE id=?", (account_id,))
+
+    def cuentas_con_plazo_vencido(self, ahora: Optional[datetime] = None) -> list[str]:
+        limite = ((ahora or datetime.now(timezone.utc)) - timedelta(days=DIAS_DE_GRACIA_ELIMINACION))
+        with self._conexion() as con:
+            rows = con.execute("SELECT id, deletion_requested_at FROM accounts WHERE deletion_requested_at IS NOT NULL").fetchall()
+        return [r["id"] for r in rows if datetime.fromisoformat(r["deletion_requested_at"]) <= limite]
+
+    def purgar_account(self, account_id: str, ahora: Optional[datetime] = None) -> list[str]:
+        """Borrado definitivo: cuenta, perfiles, sesiones, tokens, consentimientos, suscripciones, accesos y órdenes
+        (por las claves foráneas). Solo actúa sobre una cuenta con el plazo de gracia vencido. Devuelve los
+        identificadores de los perfiles borrados, para que quien llama elimine sus archivos de progreso.
+
+        Queda una constancia sin datos personales: la fecha y un hash irreversible del identificador."""
+        ahora = ahora or datetime.now(timezone.utc)
+        with self._conexion() as con:
+            row = con.execute("SELECT deletion_requested_at FROM accounts WHERE id=?", (account_id,)).fetchone()
+            if not row or not row["deletion_requested_at"]:
+                raise CuentaError("La cuenta no tiene un pedido de eliminación.")
+            if datetime.fromisoformat(row["deletion_requested_at"]) + timedelta(days=DIAS_DE_GRACIA_ELIMINACION) > ahora:
+                raise CuentaError("Todavía no venció el plazo para eliminar la cuenta.")
+            perfiles = [r["id"] for r in con.execute("SELECT id FROM child_profiles WHERE account_id=?", (account_id,))]
+            # Los eventos de pago se conservan (idempotencia y reconciliación) pero dejan de apuntar a la cuenta.
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='payment_events'").fetchone():
+                con.execute("UPDATE payment_events SET account_id=NULL, subscription_reference=NULL WHERE account_id=?",
+                            (account_id,))
+            con.execute("DELETE FROM accounts WHERE id=?", (account_id,))
+            con.execute("INSERT INTO account_deletions(deleted_at, account_hash) VALUES (?,?)",
+                        (ahora.isoformat(timespec="seconds"),
+                         hashlib.sha256(f"tortuscript-eliminada:{account_id}".encode("utf-8")).hexdigest()))
+        return perfiles
+
+    # ── consentimiento ──
+    def registrar_consentimiento(self, account_id: str, finalidad: str, version: str, otorgado: bool) -> Consentimiento:
+        """Agrega una decisión a la bitácora. Revocar es registrar `otorgado=False`: nada se edita ni se borra."""
+        if finalidad not in FINALIDADES_CONSENTIMIENTO:
+            raise CuentaError("Finalidad de consentimiento desconocida.")
+        if not isinstance(version, str) or not version.strip() or len(version) > 40:
+            raise CuentaError("La versión del aviso no es válida.")
+        if not isinstance(otorgado, bool):
+            raise CuentaError("La decisión debe ser explícita.")
+        now = _ahora()
+        with self._conexion() as con:
+            if not con.execute("SELECT 1 FROM accounts WHERE id=?", (account_id,)).fetchone():
+                raise CuentaError("La cuenta no existe.")
+            con.execute(
+                "INSERT INTO consents(account_id,purpose,policy_version,granted,created_at) VALUES (?,?,?,?,?)",
+                (account_id, finalidad, version.strip(), int(otorgado), now),
+            )
+        return Consentimiento(account_id, finalidad, version.strip(), otorgado, now)
+
+    def listar_consentimientos(self, account_id: str) -> list[Consentimiento]:
+        """El historial completo, del más viejo al más nuevo."""
+        with self._conexion() as con:
+            rows = con.execute(
+                "SELECT account_id,purpose,policy_version,granted,created_at FROM consents WHERE account_id=? ORDER BY id",
+                (account_id,),
+            ).fetchall()
+        return [Consentimiento(r["account_id"], r["purpose"], r["policy_version"], bool(r["granted"]), r["created_at"])
+                for r in rows]
+
+    def tiene_consentimiento(self, account_id: str, finalidad: str) -> bool:
+        """True solo si la ÚLTIMA decisión registrada para esa finalidad fue otorgarlo. Sin registro, no hay consentimiento."""
+        with self._conexion() as con:
+            row = con.execute(
+                "SELECT granted FROM consents WHERE account_id=? AND purpose=? ORDER BY id DESC LIMIT 1",
+                (account_id, finalidad),
+            ).fetchone()
+        return bool(row and row["granted"])
 
     def establecer_entitlement(self, account_id: str, product: str, active: bool, source: str) -> Entitlement:
         if not product.strip() or not source.strip():
@@ -344,26 +555,34 @@ class CuentaRepository:
                 """INSERT INTO entitlements(account_id,product,active,source,updated_at)
                    VALUES (?,?,?,?,?)
                    ON CONFLICT(account_id,product) DO UPDATE SET
-                     active=excluded.active, source=excluded.source, updated_at=excluded.updated_at""",
+                     active=excluded.active, source=excluded.source, updated_at=excluded.updated_at,
+                     expires_at=NULL""",
                 (account_id, product.strip(), int(active), source.strip(), now),
             )
         return Entitlement(account_id, product.strip(), active, source.strip())
 
+    def listar_entitlements(self, account_id: str) -> list[tuple[str, bool]]:
+        with self._conexion() as con:
+            rows = con.execute(
+                "SELECT product,active,expires_at FROM entitlements WHERE account_id=? ORDER BY product", (account_id,)
+            ).fetchall()
+        return [(r["product"], _vigente(r)) for r in rows]
+
     def tiene_entitlement(self, account_id: str, product: str) -> bool:
         with self._conexion() as con:
             row = con.execute(
-                "SELECT active FROM entitlements WHERE account_id=? AND product=?",
+                "SELECT active,expires_at FROM entitlements WHERE account_id=? AND product=?",
                 (account_id, product),
             ).fetchone()
-        return bool(row and row["active"])
+        return _vigente(row)
 
     def tiene_entitlement_por_perfil(self, profile_id: str, product: str) -> bool:
         with self._conexion() as con:
             row = con.execute(
-                """SELECT e.active
+                """SELECT e.active, e.expires_at
                    FROM child_profiles p
                    JOIN entitlements e ON e.account_id=p.account_id
                    WHERE p.id=? AND e.product=? AND p.active=1""",
                 (profile_id, product),
             ).fetchone()
-        return bool(row and row["active"])
+        return _vigente(row)

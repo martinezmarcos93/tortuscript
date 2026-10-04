@@ -1,0 +1,69 @@
+{
+  "contrato": "Curriculum.v1",
+  "producto": "tortuscript",
+  "version_curricular": "1",
+  "itinerarios": [
+    {
+      "id": "alfabetizacion-tecnologica",
+      "unidades": [
+        "nivel0-programa",
+        "nivel0-lenguaje",
+        "nivel0-codigo",
+        "nivel0-navegador",
+        "nivel0-internet",
+        "nivel0-servidor",
+        "nivel0-frontend",
+        "nivel0-backend",
+        "nivel0-datos",
+        "nivel0-base-datos",
+        "nivel0-api",
+        "nivel0-seguridad",
+        "nivel0-integracion",
+        "nivel0-json",
+        "nivel0-git",
+        "nivel0-github"
+      ]
+    },
+    {
+      "id": "python-fundamentos",
+      "unidades": [
+        "python-puente",
+        "python-control",
+        "python-funciones",
+        "python-programa",
+        "python-datos",
+        "python-listas",
+        "python-problemas"
+      ]
+    },
+    {
+      "id": "web-esencial",
+      "unidades": [
+        "web-html-estructura",
+        "web-css-apariencia",
+        "web-js-comportamiento",
+        "web-mini-productos"
+      ]
+    },
+    {
+      "id": "sql-fundamentos",
+      "unidades": [
+        "sql-tablas",
+        "sql-select",
+        "sql-where",
+        "sql-order",
+        "sql-agregaciones",
+        "sql-group",
+        "sql-join",
+        "sql-seguridad"
+      ]
+    },
+    {
+      "id": "proyecto-integrador",
+      "unidades": [
+        "integrador-ficha-criatura",
+        "integrador-inventario-fantasia"
+      ]
+    }
+  ]
+}

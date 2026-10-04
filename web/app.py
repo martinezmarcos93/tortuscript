@@ -9,17 +9,26 @@ Seguridad de una app local:
 """
 import base64
 import copy
+import json
 import logging
+import re
 import secrets
 import sys
 import threading
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from flask import Flask, abort, g, jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import HTTPException
 
+try:
+    import fcntl
+except ImportError:                      # Windows
+    fcntl = None
+
 RAIZ = Path(__file__).resolve().parent.parent
+_PERFIL_RE = re.compile(r"^child_[a-f0-9]{24}$")
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
@@ -28,7 +37,8 @@ from tortuscript import web_evaluacion, sql_evaluacion  # noqa: E402
 from tortuscript import practica as espaciado  # noqa: E402
 from tortuscript import proyectos as mis_proyectos  # noqa: E402
 from tortuscript import proyectos_integradores, catalogo_producto  # noqa: E402
-from tortuscript import diagnostico, intereses, respaldo  # noqa: E402
+from tortuscript import diagnostico, intereses, pagos, respaldo, tutor as tortu_llm  # noqa: E402
+from tortuscript.en_curso import EnCurso  # noqa: E402
 from tortuscript.juego_ast import arbol_del_juego  # noqa: E402
 from tortuscript.executor import CodigoNoPermitido  # noqa: E402
 from tortuscript.error_handler import armar_mensaje_error  # noqa: E402
@@ -39,9 +49,12 @@ from tortuscript.runtime_educativo import RuntimeEducativo, ContextoEducativoErr
 from tortuscript.repaso import MODOS, cola_repaso, contar  # noqa: E402
 from tortuscript.translator import TraductorTortuScript, detectar_tipo  # noqa: E402
 from web.cuenta_routes import bp as cuenta_bp, _educativo  # noqa: E402
+from web.pagos_routes import bp as pagos_bp  # noqa: E402
 
 logger = logging.getLogger("tortuscript.web")
 HOSTS_PERMITIDOS = {"127.0.0.1", "localhost"}
+# Rutas que no operan sobre un perfil educativo: cuenta del adulto y eventos del proveedor de pagos.
+SIN_PERFIL = ("/cuenta", "/pagos")
 
 
 def _json_objeto():
@@ -74,7 +87,9 @@ CSP_WORKER_JUEGOS = "default-src 'none'; script-src 'self'"
 CABECERAS_SEGURIDAD = {
     "Content-Security-Policy": CSP,
     "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "no-referrer",
+    # same-origin y no no-referrer: con no-referrer los navegadores mandan `Origin: null` en los formularios del
+    # propio sitio y no se pueden distinguir de un marco hostil. Hacia otros sitios no sale ningún dato igual.
+    "Referrer-Policy": "same-origin",
     "X-Frame-Options": "DENY",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
@@ -92,6 +107,29 @@ ERRORES = {
 }
 
 
+def mismo_origen(pedido):
+    """¿Este pedido lo originó una página de este mismo sitio (o un cliente que no es un navegador)?
+
+    1. Los navegadores actuales lo declaran en `Sec-Fetch-Site`, que una página ajena no puede falsear:
+       vale `same-origin` y `none` (el usuario escribió la dirección).
+    2. Sin esa cabecera (navegador viejo) se mira `Origin` y, si falta, `Referer`: tienen que ser de este sitio.
+       `Origin: null` (marcos aislados, redirecciones opacas) no se acepta.
+    3. Sin ninguna cabecera no es un navegador (curl, pruebas, herramientas): pasa, y lo protegen la sesión,
+       el token de la app y el CSRF de cada ruta.
+    """
+    sitio = pedido.headers.get("Sec-Fetch-Site", "").lower()
+    if sitio:
+        return sitio in ("same-origin", "none")
+    origen = pedido.headers.get("Origin") or pedido.headers.get("Referer")
+    if not origen:
+        return True
+    try:
+        partes = urlsplit(origen)
+    except ValueError:
+        return False
+    return partes.scheme.lower() == pedido.scheme.lower() and partes.netloc.lower() == pedido.host.lower()
+
+
 def codigo_de_referencia():
     """Código corto para cruzar lo que vio el chico con el log (p. ej. 8F72A1)."""
     return secrets.token_hex(3).upper()
@@ -101,6 +139,8 @@ def create_app(token=None):
     app = Flask(__name__)
     app.config["TOKEN"] = token or secrets.token_urlsafe(24)
     app.config["JSON_AS_ASCII"] = False
+    # Nombres de host que atiende esta instancia. Local: solo la propia máquina (frena el «DNS rebinding»).
+    app.config["HOSTS_PERMITIDOS"] = set(HOSTS_PERMITIDOS)
     app.config["ACCOUNT_DB"] = Path(app.instance_path) / "cuentas.sqlite3"
     app.config["ACCOUNT_COOKIE_SECURE"] = False
     app.config["ACCOUNT_COOKIE_SAMESITE"] = "Lax"
@@ -108,16 +148,87 @@ def create_app(token=None):
     # cuentas en una instalación compartida. Solo habilitar en modo local,
     # de un único usuario, mediante configuración explícita.
     app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = False
+    # Secretos de webhook por proveedor de pagos. Vacío: no se acepta ningún evento (ADR-032).
+    app.config["PAYMENT_WEBHOOK_SECRETS"] = {}
+    # Oferta de suscripción (ADR-047): alias, importe y duración. Vacía: la página existe pero no se puede contratar.
+    app.config["PAGOS"] = pagos.ConfiguracionPagos()
+    # Tortu-LLM (ADR-035): invocable (instrucciones, pedido) -> texto. None: el tutor no existe para nadie.
+    app.config["TUTOR_PROVEEDOR"] = None
+    # Otros productos del ecosistema (ADR-037): {"croco-script": {"url": …, "clave": …, "kid": …}}. Vacío: sin transición.
+    app.config["FEDERACION"] = {}
     app.register_blueprint(cuenta_bp)
-    # Pistas vistas por (perfil, lección, paso): se reinician al abrir el ejercicio o la lección.
-    pistas_vistas = {}
+    app.register_blueprint(pagos_bp)
     INDICES_POR_LECCION = {}
     for i, e in enumerate(EJERCICIOS):
         INDICES_POR_LECCION.setdefault(e["leccion_id"], []).append(i)
-    intentos = {}    # errores y respuesta vista por (perfil, lección, paso); se reinicia al abrir la lección
-    practicas = {}   # sesión de práctica del día por perfil: {"dia", "pasos": [(lección, paso)]}
-    colas = {}       # colas de repaso fijadas al empezar: (perfil, modo, semilla) -> [índices]
-    turno = threading.RLock()     # los pedidos van de a uno: cargar → modificar → guardar el progreso no se pisa
+
+    # ─────────────── estado «en curso» (pistas, intentos, práctica, colas de repaso) ───────────────
+    # Vive en un archivo por perfil (tortuscript/en_curso.py), no en memoria del proceso: sobrevive a un
+    # reinicio, no crece sin límite y no depende de que haya un solo proceso web.
+    def _carpeta_de_progreso():
+        return Path(app.config.get("PROGRESS_DIR", Path(app.instance_path) / "progreso_perfiles"))
+
+    def _en_curso():
+        if "en_curso" not in g:
+            g.en_curso = EnCurso(_carpeta_de_progreso()).cargar(_perfil_contexto())
+            g.en_curso_antes = json.dumps(g.en_curso, sort_keys=True)
+        return g.en_curso
+
+    class _Mapa:
+        """Vista tipo diccionario de una sección del estado en curso. Las claves son tuplas que empiezan por el
+        perfil (como cuando esto era un dict en memoria); el perfil ya lo determina el archivo."""
+
+        def __init__(self, seccion):
+            self.seccion = seccion
+
+        @staticmethod
+        def _k(clave):
+            return "|".join(str(parte) for parte in clave[1:])
+
+        def get(self, clave, defecto=None):
+            return _en_curso()[self.seccion].get(self._k(clave), defecto)
+
+        def setdefault(self, clave, defecto):
+            return _en_curso()[self.seccion].setdefault(self._k(clave), defecto)
+
+        def pop(self, clave, defecto=None):
+            return _en_curso()[self.seccion].pop(self._k(clave), defecto)
+
+        def __contains__(self, clave):
+            return self._k(clave) in _en_curso()[self.seccion]
+
+        def __getitem__(self, clave):
+            return _en_curso()[self.seccion][self._k(clave)]
+
+        def __setitem__(self, clave, valor):
+            seccion = _en_curso()[self.seccion]
+            seccion.pop(self._k(clave), None)            # lo más nuevo queda al final: al acotar se va lo viejo
+            seccion[self._k(clave)] = valor
+
+    class _Practicas:
+        """La sesión de práctica del día del perfil activo: {"dia", "pasos": [(lección, paso)]}."""
+
+        @staticmethod
+        def get(_perfil):
+            return _en_curso()["practica"]
+
+        def __setitem__(self, _perfil, valor):
+            _en_curso()["practica"] = {"dia": valor["dia"], "pasos": [tuple(paso) for paso in valor["pasos"]]}
+
+    pistas_vistas = _Mapa("pistas")   # pistas vistas por (perfil, lección, paso); se reinician al abrir el ejercicio o la lección
+    intentos = _Mapa("intentos")      # errores y respuesta vista por (perfil, lección, paso); se reinicia al abrir la lección
+    practicas = _Practicas()
+    colas = _Mapa("colas")            # colas de repaso fijadas al empezar: (perfil, modo, semilla) -> [índices]
+
+    @app.after_request
+    def _guardar_en_curso(respuesta):
+        if "en_curso" in g and json.dumps(g.en_curso, sort_keys=True) != g.en_curso_antes:
+            EnCurso(_carpeta_de_progreso()).guardar(g.tortu_contexto.perfil.id, g.en_curso)
+        return respuesta
+
+    # Un candado por perfil: cargar → modificar → guardar el progreso de un chico no se pisa entre pestañas,
+    # y una familia no espera a otra. (Antes había un único candado para todo el servidor.)
+    turnos, turnos_guardia = {}, threading.Lock()
 
     # ─────────────── errores ───────────────
     def _respuesta_de_error(estado, codigo=None):
@@ -230,13 +341,21 @@ def create_app(token=None):
     def _cabeceras_de_seguridad(respuesta):
         for nombre, valor in CABECERAS_SEGURIDAD.items():
             respuesta.headers.setdefault(nombre, valor)
+        if app.config.get("HSTS"):                                # solo en modo servidor, que es siempre HTTPS
+            respuesta.headers.setdefault("Strict-Transport-Security", app.config["HSTS"])
         if request.path == RUTA_WORKER_JUEGOS:
             respuesta.headers["Content-Security-Policy"] = CSP_WORKER_JUEGOS
         return respuesta
 
     @app.before_request
     def _proteger():
-        if request.host.split(":")[0] not in HOSTS_PERMITIDOS:
+        if request.host.split(":")[0] not in app.config["HOSTS_PERMITIDOS"]:
+            abort(403)
+        # Ningún pedido que cambie algo se acepta desde otro sitio (CSRF), venga a la ruta que venga.
+        if request.method not in ("GET", "HEAD", "OPTIONS") and not request.path.startswith("/pagos/webhook/") \
+                and not mismo_origen(request):
+            if request.path.startswith(("/api/", "/cuenta")) and not request.form:
+                return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
             abort(403)
         if request.path.startswith("/api/") and \
                 request.headers.get("X-Tortu-Token") != app.config["TOKEN"]:
@@ -244,7 +363,7 @@ def create_app(token=None):
 
     @app.before_request
     def _requiere_contexto_educativo():
-        if request.endpoint in (None, "static") or request.path.startswith("/cuenta"):
+        if request.endpoint in (None, "static") or request.path.startswith(SIN_PERFIL):
             return None
         raw_session = request.cookies.get("tortu_session")
         if not raw_session:
@@ -265,26 +384,61 @@ def create_app(token=None):
             return redirect(url_for("cuenta.ingresar", next=request.full_path))
         return None
 
+    def _perfil_del_pedido():
+        """El perfil sobre el que opera este pedido, o None si no toca progreso de nadie."""
+        if "tortu_contexto" in g:
+            return g.tortu_contexto.perfil.id
+        raw_session = request.cookies.get("tortu_session")
+        if not raw_session:
+            return None
+        sesion = _educativo().auth.get_session(raw_session)       # rutas de cuenta: perfil activo de la sesión
+        return sesion["active_profile_id"] if sesion else None
+
     @app.before_request
     def _de_a_uno():
-        """Dos pestañas (o dos toques seguidos) no pueden leer el mismo progreso y pisarse al guardar.
-        Todo pedido de página o de API espera su turno; los archivos estáticos no."""
+        """Dos pestañas (o dos toques seguidos) del mismo perfil no pueden leer el mismo progreso y pisarse al
+        guardar: cada pedido espera el turno de SU perfil. Los archivos estáticos y los pedidos sin perfil no esperan."""
         if request.endpoint in (None, "static"):
             return None
+        perfil = _perfil_del_pedido()
+        if perfil is None:
+            return None
+        with turnos_guardia:
+            turno = turnos.setdefault(perfil, threading.RLock())
         turno.acquire()
-        g.con_turno = True
+        g.con_turno = turno
+        g.candado_archivo = _candado_entre_procesos(perfil)
         return None
+
+    def _candado_entre_procesos(perfil):
+        """Con varios procesos web, el candado en memoria no alcanza: se toma además uno de archivo por perfil.
+        (En Windows no hay `fcntl`; ahí la app es local y de un solo proceso.)"""
+        if fcntl is None or not _PERFIL_RE.fullmatch(str(perfil)):
+            return None
+        try:
+            carpeta = _carpeta_de_progreso()
+            carpeta.mkdir(parents=True, exist_ok=True)
+            archivo = open(carpeta / f".candado_{perfil}", "a")
+            fcntl.flock(archivo, fcntl.LOCK_EX)
+            return archivo
+        except OSError as e:
+            logger.error("No se pudo tomar el candado de archivo del perfil %s: %s", perfil, e)
+            return None
 
     @app.teardown_request
     def _soltar_turno(_error):
-        if g.pop("con_turno", False):
+        archivo = g.pop("candado_archivo", None)
+        if archivo is not None:
+            archivo.close()                                    # cerrar el archivo suelta el candado
+        turno = g.pop("con_turno", None)
+        if turno is not None:
             turno.release()
 
     @app.before_request
     def _bienvenida():
         """Un perfil nuevo empieza por la bienvenida (nombre, experiencia y meta diaria)."""
         if request.method != "GET" or request.endpoint in (None, "static", "bienvenida") \
-                or request.path.startswith("/api/") or request.path.startswith("/cuenta"):
+                or request.path.startswith("/api/") or request.path.startswith(SIN_PERFIL):
             return None
         if progreso.necesita_onboarding(_cargar_progreso()):
             return redirect(url_for("bienvenida"))
@@ -294,7 +448,7 @@ def create_app(token=None):
     def _semana_de_la_liga():
         """Al cambiar de semana se resuelve la liga anterior (¿subió?) una sola vez."""
         if request.method != "GET" or request.endpoint in (None, "static") \
-                or request.path.startswith("/api/") or request.path.startswith("/cuenta"):
+                or request.path.startswith("/api/") or request.path.startswith(SIN_PERFIL):
             return None
         p = _cargar_progreso()
         viejo = dict(p.get("liga") or {})
@@ -309,7 +463,7 @@ def create_app(token=None):
     @app.context_processor
     def _globales():
         # Las páginas de cuenta no tienen contexto educativo.
-        if request.path.startswith("/cuenta"):
+        if request.path.startswith(SIN_PERFIL):
             return {"token": app.config["TOKEN"]}
         contexto = _contexto()
         avisos = _tomar_avisos(_cargar_progreso())
@@ -555,7 +709,7 @@ def create_app(token=None):
             pistas_vistas.pop((_perfil_contexto(), leccion_id, i), None)
         datos = {"id": leccion_id, "titulo": lec["titulo"], "seccion": seccion["titulo"], "curso": curso["titulo"],
                  "nivel": seccion["nivel"], "pasos": [_publico(paso, leccion_id, i) for i, paso in enumerate(lec["pasos"])],
-                 "ya_completada": _completada(lec, p)}
+                 "ya_completada": _completada(lec, p), "tutor": _tutor_disponible()}
         return render_template("leccion.html", datos=datos, titulo=lec["titulo"])
 
     @app.route("/elegir-recorrido", methods=["GET", "POST"])
@@ -961,6 +1115,37 @@ def create_app(token=None):
                 contenido_pista["python"] = TraductorTortuScript().traducir_codigo(sol)
         return jsonify(nivel=nivel, **contenido_pista)
 
+    def _tutor():
+        return tortu_llm.TutorService(app.config.get("TUTOR_PROVEEDOR"))
+
+    def _tutor_disponible():
+        """El tutor existe para este perfil solo si hay proveedor Y el adulto de la cuenta lo aceptó."""
+        servicio = _tutor()
+        if servicio.proveedor is None:
+            return False
+        return _educativo().cuentas.tiene_consentimiento(_contexto().cuenta.id, "tutor_ia")
+
+    @app.post("/api/lecciones/<leccion_id>/pasos/<int:i>/tutor")
+    def api_tutor_paso(leccion_id, i):
+        """Ayuda de Tortu-LLM para un paso de escribir. Cuenta como una pista y nunca reemplaza al evaluador."""
+        lec, paso = _paso_o_404(leccion_id, i)
+        if paso["tipo"] != "escribir":
+            abort(400)
+        datos = _json_objeto()
+        codigo, error, nivel = datos.get("codigo", ""), datos.get("error", ""), datos.get("nivel", 1)
+        if not isinstance(codigo, str) or not isinstance(error, str) or type(nivel) is not int:
+            abort(400)
+        palabras = paso.get("palabras_pista") or evaluacion.palabras_clave(paso["solucion"].strip())
+        pista_escrita = "Palabras clave a usar: " + ", ".join(palabras)
+        p = _cargar_progreso()
+        # Al proveedor van la consigna, el intento y el error. La solución y la identidad no salen del servidor.
+        ayuda = _tutor().ayudar(p, _tutor_disponible(), paso.get("consigna", ""), codigo, error, nivel, pista_escrita)
+        if ayuda.origen == "tutor":
+            _guardar_progreso(p)
+        clave = (_perfil_contexto(), leccion_id, i)
+        pistas_vistas[clave] = max(pistas_vistas.get(clave, 0), 1)      # pedir ayuda vale como la primera pista
+        return jsonify(ok=True, texto=ayuda.texto, nivel=ayuda.nivel, origen=ayuda.origen, restantes=ayuda.restantes)
+
     @app.post("/api/lecciones/<leccion_id>/pasos/<int:i>/evaluar")
     def api_evaluar_paso(leccion_id, i):
         lec, paso = _paso_o_404(leccion_id, i)
@@ -1172,7 +1357,7 @@ def create_app(token=None):
         cuentas = _educativo().cuentas
         perfiles = [
             {"id": p.id, "nombre": p.display_name}
-            for p in cuentas.listar_child_profiles(contexto.cuenta.id)
+            for p in cuentas.listar_child_profiles(contexto.cuenta.id, solo_activos=True)
         ]
         return jsonify(modo="cuenta", actual=contexto.perfil.id, perfiles=perfiles)
 

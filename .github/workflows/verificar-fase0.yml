@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-      - audit/ux-v1-2026-09-30
-      - sweep/consolidacion-ux-v1
       - 'plan/**'
       - 'work/**'
   pull_request:
@@ -47,6 +45,10 @@ jobs:
           git diff --exit-code -- requirements.lock
       - name: Compilar módulos Python
         run: python -m compileall -q tortuscript web herramientas
+      - name: Imagen del sandbox (ADR-033)
+        # Con la imagen construida, tests/test_sandbox_docker.py deja de saltearse y prueba el aislamiento real.
+        if: matrix.python-version == '3.12'
+        run: docker build -f despliegue/sandbox/Dockerfile -t tortuscript-sandbox:1 .
       - name: Contrato comercial y educativo
         run: python -m unittest discover -s tests -p 'test_cuenta_routes.py'
       - name: Tests Python y JavaScript
@@ -86,9 +88,13 @@ jobs:
       - name: Auditoría de contraste WCAG AA
         if: always()
         run: python herramientas/revisar_contraste.py --url http://127.0.0.1:5077
-      - name: Auditoría diagnóstica de teclado y nombres accesibles
+      - name: Auditoría de teclado, foco, nombres accesibles y objetivos táctiles
         if: always()
-        run: python herramientas/revisar_teclado.py --url http://127.0.0.1:5077
+        run: python herramientas/revisar_teclado.py --url http://127.0.0.1:5077 --estricto
+      - name: Formularios de cuenta en un navegador real
+        # Va último: cierra la sesión de prueba. Detecta controles de origen que rechazan a navegadores reales.
+        if: always()
+        run: python herramientas/probar_formularios.py --url http://127.0.0.1:5077
       - name: Guardar capturas de diagnóstico
         if: always()
         uses: actions/upload-artifact@v7

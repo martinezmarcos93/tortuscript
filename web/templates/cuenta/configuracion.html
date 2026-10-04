@@ -16,6 +16,9 @@
       <p class="texto-grande">Administrá tu cuenta familiar.</p>
     </div>
 
+    {% if aviso %}<p class="aviso-ok" role="status">{{ aviso }}</p>{% endif %}
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
     <div class="tarjeta">
       <h2>Cuenta</h2>
       <p><b>Correo:</b> {{ cuenta.email }}</p>
@@ -23,16 +26,128 @@
     </div>
 
     <div class="tarjeta">
-      <h2>Perfiles educativos</h2>
-      <p>{{ perfiles|length }}/{{ max_perfiles }} perfiles utilizados.</p>
+      <h2>Suscripción</h2>
+      {% if suscripciones %}
+      {% set estados = {"incomplete": "pago pendiente", "active": "activa", "past_due": "con un pago rechazado", "canceled": "cancelada", "refunded": "reembolsada"} %}
+      {% set productos = {"tortuscript-premium": "TortuScript Premium", "croco-script": "Croco-Script"} %}
       <ul>
-        {% for perfil in perfiles %}
-        <li>{{ perfil.display_name }}</li>
+        {% for sub in suscripciones %}
+        <li><b>{{ productos.get(sub.producto, sub.producto) }}:</b> {% if sub.vencida %}período vencido el {{ sub.periodo_hasta[:10] }}{% else %}{{ estados.get(sub.estado, sub.estado) }}{% if sub.periodo_hasta %} · período hasta el {{ sub.periodo_hasta[:10] }}{% endif %}{% endif %}</li>
         {% endfor %}
       </ul>
+      {% endif %}
+      <p class="tenue">Una suscripción cubre todos los perfiles de la cuenta. Cancelarla no borra el progreso de nadie.</p>
+      <p><a class="boton chico" href="{{ url_for('cuenta.suscripcion') }}">Suscripción y medios de pago</a></p>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Perfiles educativos</h2>
+      <p>{{ perfiles|length }}/{{ max_perfiles }} perfiles en uso.</p>
+      {% for perfil in perfiles %}
+      <div class="fila-perfil">
+        <form method="post" action="{{ url_for('cuenta.renombrar_perfil', profile_id=perfil.id) }}" class="fila-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="etiqueta" for="nombre-{{ loop.index }}">Nombre del perfil {{ loop.index }}</label>
+          <input class="campo" id="nombre-{{ loop.index }}" name="nombre" maxlength="30" required value="{{ perfil.display_name }}" autocomplete="off">
+          <button class="boton chico" type="submit">Guardar nombre</button>
+        </form>
+        <form method="post" action="{{ url_for('cuenta.archivar_perfil', profile_id=perfil.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="boton chico" type="submit" aria-label="Archivar el perfil {{ perfil.display_name }}">Archivar</button>
+        </form>
+      </div>
+      {% else %}
+      <p class="tenue">Todavía no hay perfiles.</p>
+      {% endfor %}
+      <p class="tenue">Archivar saca el perfil de la lista sin borrar su progreso. Se puede restaurar cuando quieras.</p>
       {% if perfiles|length >= max_perfiles %}
       <p class="tenue">Para agregar más perfiles será necesario contratar el plan que amplía el límite.</p>
       {% endif %}
+      {% if archivados %}
+      <h3>Perfiles archivados</h3>
+      {% for perfil in archivados %}
+      <div class="fila-perfil">
+        <form method="post" action="{{ url_for('cuenta.restaurar_perfil', profile_id=perfil.id) }}" class="fila-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <span>{{ perfil.display_name }}</span>
+          <button class="boton chico" type="submit" aria-label="Restaurar el perfil {{ perfil.display_name }}">Restaurar</button>
+        </form>
+        <form method="post" action="{{ url_for('cuenta.eliminar_perfil', profile_id=perfil.id) }}" class="fila-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="etiqueta" for="eliminar-{{ loop.index }}">Para eliminarlo, escribí «{{ perfil.display_name }}»</label>
+          <input class="campo" id="eliminar-{{ loop.index }}" name="nombre" maxlength="30" required autocomplete="off">
+          <button class="boton chico" type="submit" aria-label="Eliminar para siempre el perfil {{ perfil.display_name }}">Eliminar para siempre</button>
+        </form>
+      </div>
+      {% endfor %}
+      <p class="tenue">Eliminar un perfil borra su progreso y no se puede deshacer. Antes podés descargar los datos de la cuenta, más abajo.</p>
+      {% endif %}
+    </div>
+
+    <div class="tarjeta">
+      <h2>Cambiar contraseña</h2>
+      <form method="post" action="{{ url_for('cuenta.cambiar_password') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="etiqueta" for="actual">Contraseña actual</label>
+        <input class="campo" id="actual" name="actual" type="password" autocomplete="current-password" required>
+        <label class="etiqueta" for="nueva">Contraseña nueva</label>
+        <input class="campo" id="nueva" name="nueva" type="password" autocomplete="new-password" minlength="12" required>
+        <label class="etiqueta" for="nueva2">Repetila</label>
+        <input class="campo" id="nueva2" name="nueva2" type="password" autocomplete="new-password" minlength="12" required>
+        <p><button class="boton" type="submit">Cambiar contraseña</button></p>
+      </form>
+    </div>
+
+    {% if tutor_configurado %}
+    <div class="tarjeta">
+      <h2>Ayuda de Tortu con inteligencia artificial</h2>
+      <p>Si la activás, en los ejercicios de escribir código aparece un botón para pedirle una pista a Tortu.
+        Tortu ayuda a pensar y no da la solución. Los ejercicios se pueden completar igual sin esta ayuda.</p>
+      <p><b>Qué se envía</b> a Anthropic (el proveedor del modelo Claude) cada vez que se pide ayuda: la consigna del
+        ejercicio, el código que escribió el chico en ese ejercicio y el mensaje de error, si hubo. <b>No se envía</b>
+        el correo, el nombre del perfil, el progreso ni otros proyectos; y de ese código se tachan correos, teléfonos
+        y enlaces. TortuScript no guarda las conversaciones. Hay un máximo de 20 ayudas por día por perfil.</p>
+      <form method="post" action="{{ url_for('cuenta.registrar_consentimiento') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="finalidad" value="tutor_ia">
+        {% if tutor_aceptado %}
+        <p role="status"><b>Estado:</b> activada para todos los perfiles de la cuenta.</p>
+        <button class="boton" type="submit" name="decision" value="revocar">Desactivar la ayuda con IA</button>
+        {% else %}
+        <p role="status"><b>Estado:</b> desactivada.</p>
+        <button class="boton" type="submit" name="decision" value="aceptar">Acepto y activo la ayuda con IA</button>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="tarjeta">
+      <h2>Tus datos</h2>
+      <p>Podés descargar todo lo que TortuScript guarda de esta cuenta y de sus perfiles: correo, perfiles, progreso y
+        las decisiones registradas. El archivo no incluye contraseñas.</p>
+      <p><a class="boton" href="{{ url_for('cuenta.exportar_datos') }}" download>Descargar mis datos</a></p>
+      {% if consentimientos %}
+      <h3>Decisiones registradas</h3>
+      <ul>
+        {% for c in consentimientos %}
+        <li>{{ {"responsable_adulto": "Soy la persona adulta responsable", "analitica": "Analítica", "tutor_ia": "Tutor con IA", "sincronizacion": "Sincronización"}.get(c.finalidad, c.finalidad) }}:
+          {{ "aceptado" if c.otorgado else "revocado" }} el {{ c.created_at[:10] }} (aviso {{ c.version }})</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+
+    <div class="tarjeta">
+      <h2>Eliminar la cuenta</h2>
+      <p>Al pedirlo se cierran todas las sesiones y la cuenta queda sin uso durante {{ dias_de_gracia }} días. Si en ese
+        plazo volvés a ingresar, el pedido se cancela y no se borra nada. Pasado el plazo se eliminan para siempre la
+        cuenta, los perfiles y todo su progreso. Lo ya pagado no se reembolsa por eliminar la cuenta.</p>
+      <form method="post" action="{{ url_for('cuenta.eliminar_cuenta') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="etiqueta" for="password-eliminar">Tu contraseña, para confirmar</label>
+        <input class="campo" id="password-eliminar" name="password" type="password" autocomplete="current-password" required>
+        <p><button class="boton chico" type="submit">Pedir la eliminación de la cuenta</button></p>
+      </form>
     </div>
 
     <div class="pie">
@@ -43,7 +158,7 @@
 
     <hr>
     <form method="post" action="{{ url_for('cuenta.logout') }}" class="centrado">
-      <input type="hidden" name="csrf" value="{{ request.cookies.get('tortu_csrf', '') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
       <button class="boton chico" type="submit">Cerrar sesión</button>
     </form>
   </section>

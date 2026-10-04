@@ -5,7 +5,8 @@ Uso:  python iniciar_web.py                  (abre el navegador solo)
       python iniciar_web.py --puerto 8080    (si no querés el puerto de siempre)
 
 También sirven los lanzadores de la carpeta lanzadores/ (doble clic en Windows, acceso directo en Linux).
-Corre solo en tu compu (127.0.0.1), sin internet y sin cuentas. Se cierra con Ctrl+C o cerrando la ventana.
+Corre solo en tu compu (127.0.0.1), sin internet. Las cuentas y el correo se configuran con .env (ver .env.example).
+Se cierra con Ctrl+C o cerrando la ventana.
 """
 import argparse
 import logging
@@ -78,15 +79,32 @@ def cargar_env(archivo):
     return agregadas
 
 
+def purgar_cuentas_vencidas(app):
+    """Al arrancar se borran las cuentas cuyo plazo de eliminación venció (ADR-046). Un fallo no impide arrancar."""
+    from web.cuenta_routes import purgar_cuentas_vencidas as purgar
+    try:
+        with app.app_context():
+            return purgar()
+    except Exception as e:
+        logging.getLogger(__name__).error("No se pudo correr la purga de cuentas eliminadas: %s", e, exc_info=True)
+        return 0
+
+
 def crear_aplicacion(datos, url):
     """La app real: cuentas y progreso en la carpeta de datos, y correo según el entorno (o deshabilitado)."""
-    from tortuscript import correo, rutas
+    from tortuscript import correo, pagos, rutas, tutor
     from web.app import create_app
     app = create_app()
     cuentas = rutas.carpeta_de_cuentas(datos)
     app.config["ACCOUNT_DB"] = cuentas / "cuentas.sqlite3"
     app.config["PROGRESS_DIR"] = cuentas / "progreso_perfiles"
     app.config["ACCOUNT_EMAIL_SENDER"] = correo.desde_entorno(url_base=url)
+    app.config["TUTOR_PROVEEDOR"] = tutor.proveedor_desde_entorno()      # None salvo TORTU_TUTOR=claude
+    try:
+        app.config["PAGOS"] = pagos.configuracion_desde_entorno()        # vacía salvo TORTU_PAGO_ALIAS e IMPORTE
+    except pagos.PagoError as e:
+        print(f"⚠️  Suscripción deshabilitada: {e}")
+    purgar_cuentas_vencidas(app)
     return app
 
 

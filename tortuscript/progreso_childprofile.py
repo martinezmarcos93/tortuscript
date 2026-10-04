@@ -134,6 +134,25 @@ class ProgresoChildProfile:
                 os.remove(tmp)
             raise ProgresoPerfilError("No se pudo guardar el progreso del perfil.") from exc
 
+    def eliminar(self, profile_id: str) -> int:
+        """Supresión (ADR-046): borra todo lo que hay en disco de un perfil —progreso, respaldo, copias apartadas
+        por daño y estado en curso—. Devuelve cuántos archivos borró. Los respaldos externos no se tocan."""
+        profile_id = self._validar(profile_id)
+        candidatos = [self._archivo(profile_id), self.directory / f"en_curso_{profile_id}.json",
+                      self.directory / f".candado_{profile_id}"]
+        candidatos += [p for p in self.directory.glob(f"progreso_{profile_id}.json.*") if p.is_file()]
+        borrados = 0
+        for archivo in candidatos:
+            try:
+                archivo.unlink()
+                borrados += 1
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                logger.error("No se pudo borrar %s del perfil %s: %s", archivo.name, profile_id, e, exc_info=True)
+                raise ProgresoPerfilError("No se pudieron borrar los datos del perfil.") from e
+        return borrados
+
     def crear_si_no_existe(self, profile_id: str, data: dict) -> ProgresoSnapshot:
         actual = self.cargar(profile_id)
         if actual is not None:

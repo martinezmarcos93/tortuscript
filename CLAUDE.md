@@ -1,8 +1,9 @@
 # TortuScript — reglas para asistentes (Claude/Codex)
 
 ## Ramas de backup: PROHIBIDO tocarlas
-- `backup/main-2026-09-26` es un clon exacto de `main` en `7c9c04c` (26/09/2026), local y publicado en `origin`.
-  Es permanente: se queda así para siempre.
+- `backup/main-2026-10-03` es un clon exacto de `main` en `1312dc0` (03/10/2026), local y publicado en `origin`.
+  Reemplaza a `backup/main-2026-09-26` (`7c9c04c`, que sigue en la historia de `main`); el cambio lo decidió Marcos
+  el 04/10/2026. Se queda así hasta que Marcos decida otra actualización.
 - `backup/*` es una referencia de recuperación protegida. No se modifica, no se mueve, no se borra (ni local ni en
   `origin`) y no se usa como rama de trabajo: no hay commit, rebase, reset, cherry-pick ni push forzado sobre ella.
 - **Nunca participa en un merge**, ni hacia `backup/*` ni desde `backup/*` hacia `main` u otra rama. Los cambios se

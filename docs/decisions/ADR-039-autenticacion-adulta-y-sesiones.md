@@ -1,6 +1,6 @@
 # ADR-039 — Autenticación adulta y sesiones server-side
 
-- Estado: Aceptado
+- Estado: Aceptada
 - Fecha: 2026-09-30
 - Contexto: incorporación de identidad remota a la aplicación web.
 

@@ -259,3 +259,13 @@ def progreso_para_mostrar(progreso):
         ],
         "competencias": r["competencias"],
     }
+
+
+def curriculo_publicado():
+    """El documento Curriculum.v1 de TortuScript (ADR-037): itinerarios con unidades y sus identificadores.
+    Los itinerarios que todavía no tienen unidades propias (el nivel avanzado, que vive en Croco-Script) no figuran."""
+    from tortuscript import federacion
+    catalogo = cargar_catalogo()
+    itinerarios = [{"id": it["id"], "unidades": [u["id"] for u in it["unidades"]]}
+                   for it in catalogo["itinerarios"] if it.get("unidades")]
+    return federacion.curriculo_v1("tortuscript", catalogo["version"], itinerarios)

@@ -52,6 +52,16 @@ class RuntimeEducativoTests(unittest.TestCase):
         with self.assertRaises(ContextoEducativoError):
             self.runtime.snapshot_publico(self.session)
 
+    def test_snapshot_parcial_o_de_esquema_anterior_se_completa_al_leerlo(self):
+        # El esquema es aditivo: un snapshot sin campos nuevos no puede romper las páginas.
+        from tortuscript import progreso as legado
+        self.service.guardar_progreso(self.session, nuevo_snapshot(self.perfil.id, {"xp_total": 40}))
+        datos = self.runtime.cargar_datos(self.session)
+        self.assertEqual(datos["xp_total"], 40)
+        for campo in legado.PROGRESO_INICIAL:
+            self.assertIn(campo, datos)
+        self.assertEqual(datos["version"], legado.VERSION_ESQUEMA)
+
 
 if __name__ == "__main__":
     unittest.main()

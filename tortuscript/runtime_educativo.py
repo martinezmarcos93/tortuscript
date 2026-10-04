@@ -30,7 +30,9 @@ class RuntimeEducativo:
         snapshot = self.cargar(raw_session)
         if snapshot is None:
             return legado._migrar(deepcopy(legado.PROGRESO_INICIAL))
-        return deepcopy(snapshot.data)
+        # El esquema del progreso es aditivo: un snapshot guardado por una versión anterior
+        # (o incompleto) se completa al leerlo, igual que el progreso local.
+        return legado._migrar(deepcopy(snapshot.data))
 
     def guardar(self, raw_session: str | None, snapshot: ProgresoSnapshot) -> None:
         self.service.guardar_progreso(raw_session, snapshot)

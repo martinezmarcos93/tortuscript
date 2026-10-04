@@ -18,10 +18,15 @@
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="{{ url_for('cuenta.registrar_post') }}">
       <label class="etiqueta" for="email">Correo</label>
-      <input class="campo" id="email" name="email" type="email" autocomplete="email" required>
+      <input class="campo" id="email" name="email" type="email" autocomplete="email" required value="{{ email or '' }}">
       <label class="etiqueta" for="password">Contraseña</label>
       <input class="campo" id="password" name="password" type="password" autocomplete="new-password" minlength="12" required>
       <p class="tenue">La contraseña debe tener al menos 12 caracteres.</p>
+      <label class="opcion"><input type="checkbox" name="responsable" value="si" required>
+        Soy la persona adulta responsable de las chicas y los chicos que van a usar esta cuenta.</label>
+      <p class="tenue">Guardamos tu correo para entrar y recuperar la contraseña, y el progreso de cada perfil para que
+        pueda seguir donde dejó. No pedimos el nombre real ni otros datos de los chicos, no hay publicidad y nada se
+        comparte con terceros. Desde «Configuración de cuenta» podés descargar todos los datos.</p>
       <p><button class="boton verde grande" type="submit">Crear cuenta</button></p>
     </form>
     <p class="centrado"><a href="{{ url_for('cuenta.ingresar') }}">Ya tengo una cuenta</a></p>

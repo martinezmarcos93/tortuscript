@@ -20,6 +20,14 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 LOCK = RAIZ / "requirements.lock"
+# Vulnerabilidades conocidas con un tratamiento aceptado y escrito. Cada entrada dice por qué no aplica y cuándo
+# deja de valer; una vulnerabilidad nueva del mismo paquete vuelve a fallar. Revisar al cambiar de versión.
+ACEPTADAS = {
+    ("click", "PYSEC-2026-2132"): (
+        "inyección de comandos en click.edit() (CVE-2026-7246, local y con privilegios). TortuScript no llama a "
+        "click.edit ni usa la CLI de Flask; click solo está porque Flask lo requiere. Se corrige en click 8.3.3, "
+        "que exige Python 3.10: actualizar cuando se deje de soportar Python 3.9."),
+}
 _LINEA = re.compile(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)")
 
 
@@ -71,10 +79,18 @@ def auditar():
     consultas = [{"package": {"name": p, "ecosystem": "PyPI"}, "version": v} for p, v in paquetes]
     resultados = _json("https://api.osv.dev/v1/querybatch", {"queries": consultas})["results"]
     hallazgos = [(p, v, [x["id"] for x in r.get("vulns", [])]) for (p, v), r in zip(paquetes, resultados) if r.get("vulns")]
+    sin_tratar = 0
     for p, v, ids in hallazgos:
-        print(f"⚠️  {p}=={v}: {', '.join(ids)}")
-    print(f"{len(paquetes)} paquetes revisados en OSV: {len(hallazgos)} con vulnerabilidades conocidas")
-    return 1 if hallazgos else 0
+        nuevas = [i for i in ids if (p, i) not in ACEPTADAS]
+        sin_tratar += bool(nuevas)
+        if nuevas:
+            print(f"⚠️  {p}=={v}: {', '.join(nuevas)}")
+        for i in ids:
+            if (p, i) in ACEPTADAS:
+                print(f"ℹ️  {p}=={v}: {i} — riesgo aceptado: {ACEPTADAS[(p, i)]}")
+    print(f"{len(paquetes)} paquetes revisados en OSV: {sin_tratar} con vulnerabilidades sin tratar, "
+          f"{len(hallazgos) - sin_tratar} con riesgo aceptado")
+    return 1 if sin_tratar else 0
 
 
 def main():

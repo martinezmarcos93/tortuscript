@@ -5,9 +5,12 @@ versión publicada de la app web: los cambios de versión se consultan antes de 
 
 ## Sin publicar — barridos de consolidación (desde 03/10/2026)
 
-Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
+PR #5 (`plan/barridos-pendientes-2026-10-03`, fusionada a `main` el 03/10) y rama `work/barridos-2026-10-04`.
+Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 
 ### Corregido
+- **Índice de decisiones:** faltaban los enlaces a seis ADR (025 a 028, 039 y 040) y dos figuraban como «Aceptado»
+  en vez de «Aceptada». El límite de perfiles de ADR-030, ADR-038 y el roadmap comercial decía 5; el vigente es 3.
 - **Migración de progreso local (ADR-044):** la importación lee el archivo de origen de forma estricta. Un archivo
   ilegible (JSON roto, raíz que no es objeto, `ejercicios` mal tipado) se rechaza sin apartarlo ni reescribirlo; antes
   se convertía en un progreso vacío que, con reemplazo explícito, podía pisar el progreso comercial. Los campos
@@ -33,8 +36,45 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   publicar; ahora se reserva el nombre con creación exclusiva, que tampoco sobrescribe.
 - **Accesibilidad de los editores de código (Barrido 2):** el campo de CodeMirror no tenía nombre accesible (un
   lector de pantalla solo anunciaba «cuadro de edición»); ahora cada editor se anuncia con su función y sus atajos.
+- **Objetivos táctiles en la Zona Tortuga (Barrido 2):** la casilla del depurador y el control de velocidad medían
+  menos de 24 px; ahora cumplen WCAG 2.5.8. La auditoría de teclado y táctil da 0 hallazgos y pasa a ser bloqueante
+  en CI (`--estricto`).
+- **Snapshot de progreso incompleto:** un progreso de perfil guardado por una versión anterior (o parcial) provocaba
+  error 500 al faltarle campos; ahora se completa al leerlo, como el progreso local.
+- **El ingreso por formulario fallaba en navegadores reales:** con `Referrer-Policy: no-referrer` Chromium manda
+  `Origin: null` en los formularios del propio sitio y el control de origen del login respondía 403 a todo el mundo
+  (los tests no lo veían porque el cliente de pruebas no manda esas cabeceras). La política pasa a `same-origin`, el
+  control se guía por `Sec-Fetch-Site` y cubre **todas** las rutas que cambian algo, no solo el login.
+  `herramientas/probar_formularios.py` recorre ingreso, perfiles, renombrado y cierre de sesión en un navegador real
+  y corre en CI.
 
 ### Agregado
+- **Suscripción por transferencia (Barrido 7, ADR-047):** página «Suscripción» (`/cuenta/suscripcion`) con el
+  estado del acceso y los medios de pago. El adulto arma una orden, ve el alias y una referencia para el concepto,
+  transfiere y avisa; quien opera confirma con `herramientas/gestionar_pagos.py` y recién ahí se activa el acceso
+  (por el mismo circuito de eventos de ADR-032: idempotente, con vencimiento y días de gracia). Renovar antes de
+  vencer extiende el período. El alias y el importe se configuran en el `.env` (`TORTU_PAGO_*`), nunca en el
+  repositorio; sin ellos la página existe pero no se puede contratar. La tarjeta figura como «próximamente»:
+  `pagos.MEDIOS_DE_PAGO` deja lista la ventana para sumar medios automáticos.
+- **Supresión definitiva (Barrido 4, ADR-046 aceptada):** el adulto puede eliminar para siempre un perfil
+  archivado (escribiendo su nombre; se borran la fila, el progreso, el respaldo, las copias apartadas y el estado en
+  curso) y pedir la eliminación de la cuenta con su contraseña. La cuenta queda 14 días pendiente con las sesiones
+  cerradas; ingresar en ese plazo cancela el pedido. Vencido, se borra todo al arrancar o al intentar ingresar, y
+  queda solo una constancia con la fecha y un hash. Una suscripción que se renueva sola bloquea el pedido.
+- **Tope de ejecuciones simultáneas (Barrido 8, ADR-033):** `tortuscript/cupos.py` reparte una cantidad fija de
+  cupos para correr el código de los chicos (con o sin sandbox), con una cola acotada y compartidos entre los
+  procesos web de la máquina. Quien no consigue cupo a tiempo recibe un mensaje claro («hay muchos programas
+  corriendo, probá de nuevo») y no se lanza ningún proceso. Se ajusta con `TORTU_EJECUCIONES_MAX`.
+- **Contrato `Curriculum.v1` (Barrido 11, ADR-037):** `docs/contratos/curriculum-v1.json` publica los
+  identificadores de itinerarios y unidades que Croco-Script puede nombrar como prerrequisito. Lo genera
+  `herramientas/publicar_contratos.py` desde el catálogo curricular y un test falla si queda desactualizado; los
+  prerrequisitos del nivel avanzado ya se validan contra él.
+- **Prueba de entrega de correo (Barrido 6):** `herramientas/probar_correo.py <dirección>` manda un correo igual al
+  de una familia con la configuración de la instalación, para validar el proveedor SMTP cuando haya credenciales.
+  Se agregan pruebas de vencimiento, uso único y anulación de los enlaces de verificación y recuperación.
+- **Coherencia del repositorio (Barrido 1):** `tests/test_coherencia_repo.py` falla si queda una plantilla, un
+  archivo estático, un módulo, un archivo de contenido o una herramienta sin usar ni documentar, si una ADR no está
+  en el índice o figura con otro estado, o si un texto visible usa «tú» en vez de «vos».
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
   pedir el enlace y formulario para elegir la clave nueva. Abrir el enlace no consume el token; una clave corta o
   mal repetida se corrige sin pedir otro enlace; al cambiarla se cierran las sesiones abiertas. La respuesta es la
@@ -57,15 +97,71 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
 - **Auditoría de teclado ampliada:** `herramientas/revisar_teclado.py` recorre cada página con Tab (trampas de foco,
   salida del editor con Escape, indicador de foco visible), incluye las páginas de cuenta con y sin sesión y mide
   los objetivos táctiles en 360 px. `--estricto` la convierte en puerta de CI.
+- **Privacidad: lo que el adulto puede hacer con los datos (Barrido 4, ADR-026):** desde «Configuración de cuenta»
+  se puede cambiar el nombre de un perfil (rectificación), archivarlo y restaurarlo sin perder su progreso, cambiar
+  la contraseña (cierra las demás sesiones e invalida enlaces de recuperación pendientes) y **descargar todos los
+  datos** de la cuenta y sus perfiles, sin contraseñas ni tokens. Se agrega la bitácora de consentimientos
+  (`consents`, solo se agregan filas; una finalidad no habilita otra; vale la última decisión) y el registro exige y
+  registra la declaración «soy la persona adulta responsable».
+- **Pagos y acceso (Barrido 7, ADR-032), sin proveedor real ni cobros:** `tortuscript/pagos.py` aplica eventos del
+  proveedor (checkout, pago, pago rechazado, actualización, cancelación, reembolso) sobre `Subscription` y
+  `Entitlement` en una sola transacción, de forma idempotente y resistente a eventos fuera de orden; los
+  inconsistentes quedan en revisión sin dar acceso. El acceso ahora tiene vencimiento (período + 7 días de gracia;
+  al cancelar, hasta el fin de lo pagado; al reembolsar, se corta) y se evalúa al consultar. `POST
+  /pagos/webhook/<proveedor>` exige firma HMAC del cuerpo con ventana de 5 minutos y está apagado por defecto (sin
+  secreto configurado responde 404). La configuración de cuenta muestra el estado de la suscripción.
+- **Contrato del trabajo del worker (ADR-033):** antes de lanzar un proceso se valida y acota lo que manda el
+  navegador (operación conocida, código de hasta 20.000 caracteres sin nulos, hasta 100 respuestas de 1.000
+  caracteres, semilla en rango). Un pedido fuera de contrato se rechaza sin crear ningún proceso.
+- **Sandbox de contenedores efímeros (Barrido 8, ADR-033), opcional:** con `TORTU_SANDBOX=docker` cada ejecución del
+  código de un chico corre en un contenedor nuevo sin red, sin secretos ni datos, con sistema de archivos de solo
+  lectura, sin privilegios, con topes de memoria, CPU, procesos y tiempo, y destruido al terminar. Si el contenedor
+  no puede arrancar la ejecución falla (nunca vuelve al subproceso local). `tests/test_sandbox_docker.py` prueba el
+  aislamiento con código hostil real; ver `despliegue/sandbox/README.md` para lo que falta antes de producción. Por
+  defecto sigue el subproceso local.
+- **Contratos con Croco-Script (Barrido 11, ADR-037):** `tortuscript/federacion.py` define `Identity.v1`,
+  `Entitlement.v1`, `Progress.v1` y `Authorization.v1`, un token firmado (HS256) de 60 segundos y un solo uso, con
+  emisor, destinatario y solo identificadores opacos. `GET /cuenta/ir/<producto>` comprueba el acceso en servidor y
+  redirige con el token; sin configuración la ruta no existe. `docs/contratos/` documenta lo que el receptor debe
+  validar e incluye 16 vectores de prueba que el código de TortuScript verifica en cada corrida.
+- **Tortu-LLM, ayuda opcional con IA (Barrido 10, ADR-035), apagada por defecto:** `tortuscript/tutor.py` con cuatro
+  niveles (pista conceptual, pregunta orientadora, diagnóstico del error, ejemplo parcial). Al proveedor solo van la
+  consigna, el intento y el error, con correos, teléfonos y enlaces tachados; la solución y la identidad no salen
+  del servidor. Las respuestas con un programa armado o demasiado largas se descartan, hay un cupo de 20 ayudas por
+  día por perfil y ante cualquier falla o rechazo se muestra la pista escrita. Requiere `TORTU_TUTOR=claude`, el
+  paquete `anthropic` instalado aparte (opcional; no está en `requirements.txt`) **y** que el adulto lo active en
+  «Configuración de cuenta», donde también puede revocarlo. Pedir ayuda cuenta como una pista y nunca aprueba un
+  ejercicio.
+- **Modo servidor (bloque G del roadmap comercial), preparado y nunca desplegado:** `wsgi.py` y `web/servidor.py`
+  arman la aplicación para atender a terceros detrás de un proxy HTTPS (hosts permitidos, IP real del cliente para
+  los límites, cookies `Secure`, HSTS, límite de intentos compartido). No arranca si falta algo obligatorio: hosts,
+  URL https, carpeta de datos, sandbox de contenedores o correo SMTP. `despliegue/README.md` explica los pasos, las
+  restricciones (un proceso, un servidor) y la lista previa a abrir al público.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
+- **Fuga del entorno del servidor desde el código del alumno (Barrido 8):**
+  `"{0.__globals__[sys].modules[os].environ}".format(dado)` mostraba todas las variables de entorno del servidor
+  (con `.env`, también la clave SMTP). Ahora el proceso del alumno arranca solo con un entorno mínimo permitido, lo
+  borra antes de ejecutar y `.format`/`.format_map` se rechazan con un mensaje para chicos.
+- El proceso del alumno tampoco puede crear procesos ni hilos (`RLIMIT_NPROC`), abrir más de 64 archivos ni dejar
+  volcados de memoria. `tests/test_sandbox_abuso.py` fija 17 pruebas de abuso (escapes clásicos, memoria, CPU,
+  salida, procesos, archivos).
+- La auditoría de dependencias informa una vulnerabilidad en `click` 8.1.8 (CVE-2026-7246, en `click.edit()`, que
+  TortuScript no usa). Queda como riesgo aceptado y documentado en `herramientas/auditar_dependencias.py` hasta
+  dejar de soportar Python 3.9; una vulnerabilidad nueva vuelve a fallar.
 
 ### Cambiado
 - **Costo por pedido (Barrido 5):** el esquema de cuentas se asegura una vez por archivo y proceso, y cada pedido
   valida la sesión y lee el progreso una sola vez. Una página pasaba por ~12 migraciones de esquema, 7 lecturas del
   progreso y ~80 transacciones SQLite: el inicio bajó de 118 ms a 9 ms y el mapa de 366 ms a 7 ms (medido con el
   cliente de pruebas).
+- **Candado por perfil:** los pedidos de un mismo perfil siguen yendo de a uno, pero una familia ya no espera a otra
+  (antes había un único candado para todo el servidor).
+- **Estado en curso en disco:** las pistas vistas, los errores del intento, la sesión de práctica y las colas de
+  repaso dejaron de vivir en memoria del proceso web. Ahora son un archivo chico y acotado por perfil
+  (`tortuscript/en_curso.py`): sobreviven a un reinicio, no crecen sin límite y, con un candado de archivo por
+  perfil, permiten correr más de un proceso web. No forman parte del progreso, los respaldos ni las exportaciones.
 
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 

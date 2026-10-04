@@ -146,6 +146,59 @@ class CuentaNavegacionTests(unittest.TestCase):
             self.assertEqual(r.status_code, 201)
         self.assertNotIn('id="nombre"', self.client.get("/cuenta/seleccionar-perfil").get_data(as_text=True))
 
+    # ── origen de los pedidos (CSRF) ──
+    def test_origen_de_los_pedidos_que_cambian_algo(self):
+        """Lo que manda cada tipo de cliente. `Origin: null` con Sec-Fetch-Site same-origin es lo que mandaba
+        Chromium con Referrer-Policy: no-referrer; rechazarlo dejaba a todo el mundo sin poder ingresar."""
+        datos = {"email": self.email, "password": CLAVE}
+        aceptados = (
+            {},                                                                   # curl, pruebas
+            {"Sec-Fetch-Site": "same-origin", "Origin": "http://localhost"},     # navegador actual
+            {"Sec-Fetch-Site": "same-origin", "Origin": "null"},                 # navegador con política estricta
+            {"Sec-Fetch-Site": "none"},                                           # dirección escrita a mano
+            {"Origin": "http://localhost"},                                       # navegador viejo
+            {"Referer": "http://localhost/cuenta/ingresar"},
+        )
+        rechazados = (
+            {"Sec-Fetch-Site": "cross-site", "Origin": "http://localhost"},      # no se puede falsear desde una página
+            {"Sec-Fetch-Site": "same-site"},                                      # otro subdominio
+            {"Origin": "null"},                                                   # marco aislado, sin Sec-Fetch-Site
+            {"Origin": "https://localhost"},                                      # otro esquema
+            {"Origin": "http://localhost:9999"},                                  # otro puerto
+            {"Origin": "http://evil.example"},
+            {"Referer": "http://evil.example/x"},
+            {"Origin": "http://[mal"},
+        )
+        for cabeceras in aceptados:
+            with self.subTest(aceptado=cabeceras):
+                r = self.app.test_client().post("/cuenta/login", data=datos, headers=cabeceras)
+                self.assertEqual(r.status_code, 302)
+        for cabeceras in rechazados:
+            with self.subTest(rechazado=cabeceras):
+                cliente = self.app.test_client()
+                r = cliente.post("/cuenta/login", data=datos, headers=cabeceras)
+                self.assertEqual(r.status_code, 403)
+                self.assertNotIn("Set-Cookie", r.headers)
+
+    def test_el_control_de_origen_cubre_todas_las_rutas_que_cambian_algo(self):
+        self._login_form()
+        hostil = {"Sec-Fetch-Site": "cross-site", "Origin": "https://evil.example"}
+        csrf = self._csrf()
+        for ruta, cuerpo in (("/cuenta/perfiles", {"nombre": "Robado", "csrf": csrf}),
+                             ("/cuenta/logout", {"csrf": csrf}),
+                             ("/cuenta/password", {"csrf": csrf, "actual": CLAVE, "nueva": "otra-clave-larga-456"}),
+                             ("/cuenta/consentimiento", {"csrf": csrf, "finalidad": "tutor_ia", "decision": "aceptar"})):
+            with self.subTest(ruta=ruta):
+                self.assertEqual(self.client.post(ruta, data=cuerpo, headers=hostil).status_code, 403)
+        r = self.client.post("/api/config", json={"meta_min": 5}, headers={"X-Tortu-Token": "test-token", **hostil})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(self.client.get("/cuenta/me").status_code, 200)          # la sesión sigue en pie
+        self.assertEqual(self.client.get("/cuenta/me", headers=hostil).status_code, 200)   # leer no se bloquea
+
+    def test_la_politica_de_referente_no_filtra_nada_a_otros_sitios(self):
+        r = self.client.get("/cuenta/ingresar")
+        self.assertEqual(r.headers["Referrer-Policy"], "same-origin")
+
     # ── recuperación de contraseña por formulario ──
     def _token_de_recuperacion(self):
         pedido = self.client.post("/cuenta/recuperar", data={"email": self.email})

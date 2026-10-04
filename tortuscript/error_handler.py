@@ -26,6 +26,9 @@ def _explicacion(tipo, detalle):
     if tipo == "TardoDemasiado":
         return ("⏱️ Tu programa tardó demasiado y lo frenamos\n\n"
                 "💡 ¿Hay un bucle que no termina o una cuenta enorme?")
+    if tipo == "Ocupado":
+        return ("🐢 Hay muchos programas corriendo a la vez\n\n"
+                "💡 Tu código no tiene nada malo: esperá unos segundos y probá de nuevo.")
     if tipo == "SalidaDemasiadoLarga":
         return ("📜 Tu programa mostró demasiado texto\n\n"
                 "💡 ¿Pusiste un `mostrar` dentro de un bucle que repite muchísimas veces?")
@@ -131,7 +134,7 @@ def armar_mensaje_error(excepcion, archivo="<tu código>"):
     if linea:
         partes.append(f"📍 Mirá la línea {linea}")
     if tipo not in ("BucleInfinito", "SalidaDemasiadoLarga", "CodigoNoPermitido", "ErrorTortuga", "ErrorDado", "ErrorJuego",
-                    "MemoryError", "SinMemoria", "TardoDemasiado"):
+                    "MemoryError", "SinMemoria", "TardoDemasiado", "Ocupado"):
         partes.append(f"🔧 Para curiosos (en inglés): {tipo}: {detalle}")
     return "\n\n".join(partes)
 

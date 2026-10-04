@@ -1,0 +1,5 @@
+# El contexto es la raíz del repo: a la imagen solo entra el paquete tortuscript.
+*
+!tortuscript
+tortuscript/__pycache__
+**/__pycache__

@@ -80,6 +80,7 @@ class CuentaRoutesTests(unittest.TestCase):
         registro_html = self.client.post("/cuenta/registrar", data={
             "email": "sin-correo-html@example.com",
             "password": "una-clave-larga-123",
+            "responsable": "si",
         })
         self.assertEqual(registro_html.status_code, 503)
 

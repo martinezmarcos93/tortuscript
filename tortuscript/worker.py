@@ -103,8 +103,22 @@ def atender(pedido):
     return respuesta
 
 
+def _limitar_memoria_pedida(valor):
+    """En el sandbox de contenedores el tope de memoria virtual lo pide quien lanza (no hay `preexec_fn`):
+    así un programa que pide demasiado recibe un MemoryError explicado antes de que lo mate el contenedor."""
+    try:
+        import resource
+        maximo = int(valor)
+        resource.setrlimit(resource.RLIMIT_AS, (maximo, maximo))
+    except (ImportError, TypeError, ValueError, OSError):
+        pass                                # sin el dato, o en Windows: valen los límites del padre
+
+
 def main():
     limitar_memoria_windows()               # en Linux/macOS lo pone el padre (proceso.py)
+    import os
+    _limitar_memoria_pedida(os.environ.get("TORTU_MEMORIA_MAX"))
+    os.environ.clear()                      # el padre ya lo recorta; acá no queda nada que leer
     for flujo in (sys.stdin, sys.stdout):   # Windows abre los pipes en cp1252
         flujo.reconfigure(encoding="utf-8")
     salida_real = sys.stdout            # el código del alumno escribe en otro buffer

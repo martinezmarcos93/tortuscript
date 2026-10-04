@@ -247,8 +247,8 @@ a.nodo:hover { transform: translateY(-3px) scale(1.04); }
 }
 .lienzo-panel h3 { color: var(--celeste); }
 .opcion { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; max-width: 100%; font-weight: 800; color: var(--texto-suave); }
-.opcion input[type=checkbox] { width: 1.2rem; height: 1.2rem; accent-color: var(--violeta); flex: none; }
-.opcion input[type=range] { width: min(180px, 45vw); max-width: 100%; accent-color: var(--violeta); }
+.opcion input[type=checkbox] { width: 1.5rem; height: 1.5rem; accent-color: var(--violeta); flex: none; }
+.opcion input[type=range] { width: min(180px, 45vw); max-width: 100%; height: 1.5rem; accent-color: var(--violeta); }
 .CodeMirror .linea-actual { background: #33407a; box-shadow: inset 4px 0 0 var(--amarillo); }
 
 /* ───────── páginas de contenido ───────── */
@@ -725,3 +725,16 @@ html[data-contraste="alto"] .opcion-ajuste[aria-checked="true"] { background: #f
   .paso-caja { padding: 1rem; }
   .leccion-titulo { align-items: flex-start; flex-direction: column; gap: .35rem; }
 }
+
+/* Configuración de cuenta: una fila por perfil, que se apila en pantallas angostas */
+.fila-perfil { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin: .6rem 0; }
+.fila-perfil .fila-form { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; flex: 1 1 16rem; }
+.fila-perfil .campo { flex: 1 1 10rem; min-width: 0; }
+.fila-perfil .etiqueta { flex-basis: 100%; }
+.aviso-ok { border: 2px solid var(--verde); border-radius: 12px; padding: .7rem 1rem; }
+p.error, div.error { border: 2px solid var(--rojo); border-radius: 12px; padding: .7rem 1rem; }
+.pagina-error .tarjeta .tarjeta { margin: 1rem 0; }
+.pagina-error .tarjeta form .campo { margin-bottom: .8rem; }
+.pagina-error .pie { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.fila-perfil .etiqueta { flex-basis: auto; align-self: flex-start; }
+.fila-perfil .campo { flex-basis: 100%; margin-bottom: 0; }
