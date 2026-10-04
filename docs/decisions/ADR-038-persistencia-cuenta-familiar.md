@@ -1,6 +1,6 @@
 # ADR-038 — Persistencia de cuenta familiar y perfiles
 
-- Estado: Aceptado
+- Estado: Aceptada
 - Fecha: 2026-09-30
 - Contexto: transición de TortuScript desde aplicación local hacia producto web comercial.
 
@@ -32,7 +32,7 @@ Esas responsabilidades se incorporarán en sus bloques correspondientes.
 
 1. Una cuenta representa al adulto titular.
 2. Los perfiles infantiles pertenecen a una cuenta y no poseen credenciales de acceso propias en esta etapa.
-3. Una cuenta admite como máximo 5 perfiles activos.
+3. Una cuenta admite como máximo 3 perfiles activos (`MAX_CHILD_PROFILES`; decisión de Marcos del 04/10/2026, antes 5).
 4. La suscripción y el entitlement pertenecen a la cuenta, no al perfil.
 5. Un entitlement activo de producto se consulta por cuenta o por perfil mediante su pertenencia a la cuenta.
 6. La capa no almacena tarjetas, contraseñas ni tokens.

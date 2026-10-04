@@ -36,10 +36,10 @@ Las medidas de endurecimiento que no condicionan el modelo de producto, por ejem
 | [ADR-022](ADR-022-preparacion-saas-sin-implementacion.md) | Preparación comercial sin SaaS en V1 | Propuesta |
 | [ADR-023](ADR-023-recorridos-iniciales.md) | Recorridos iniciales después de Nivel 0 | Aceptada |
 | [ADR-024](ADR-024-proyecto-integrador-adaptativo.md) | Proyecto integrador adaptativo y exportable | Aceptada |
-| ADR-025 | Arquitectura web/comercial futura | Aceptada |
-| ADR-026 | Privacidad y menores | Aceptada |
-| ADR-027 | UX diferenciada por edad | Aceptada |
-| ADR-028 | Fuentes curriculares avanzadas externas | Aceptada |
+| [ADR-025](ADR-025-arquitectura-web-comercial-futura.md) | Arquitectura web/comercial futura | Aceptada |
+| [ADR-026](ADR-026-privacidad-menores.md) | Privacidad y menores | Aceptada |
+| [ADR-027](ADR-027-ux-por-edades.md) | UX diferenciada por edad | Aceptada |
+| [ADR-028](ADR-028-fuentes-curriculares-avanzadas.md) | Fuentes curriculares avanzadas externas | Aceptada |
 | [ADR-029](ADR-029-transicion-a-producto-web-comercial.md) | Transición a producto web comercial | **Aceptada** |
 | [ADR-030](ADR-030-cuenta-familiar-y-perfiles-infantiles.md) | Cuenta familiar y perfiles infantiles | **Aceptada** |
 | [ADR-031](ADR-031-autenticacion-sesiones-y-seguridad-web.md) | Autenticación, sesiones y seguridad web | **Aceptada** |
@@ -62,6 +62,8 @@ Las medidas de endurecimiento que no condicionan el modelo de producto, por ejem
 
 ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evolución de producto. Las ADR anteriores siguen vigentes salvo contradicción explícita. La implementación comercial debe respetar las separaciones entre núcleo educativo, identidad adulta, perfiles infantiles, acceso comercial, ejecución remota y producto avanzado Croco-Script.
 
+| [ADR-039](ADR-039-autenticacion-adulta-y-sesiones.md) | Autenticación adulta y sesiones server-side | **Aceptada** |
+| [ADR-040](ADR-040-autorizacion-comercial-por-perfil.md) | Servicio de autorización comercial por perfil | **Aceptada** |
 | [ADR-041](ADR-041-progreso-por-childprofile.md) | Contrato de progreso asociado a ChildProfile | **Aceptada** |
 | [ADR-042](ADR-042-adaptador-progreso-childprofile.md) | Adaptador de progreso por ChildProfile | **Aceptada** |
 | [ADR-043](ADR-043-contexto-educativo-autenticado.md) | Contexto educativo autenticado por ChildProfile | **Aceptada** |
@@ -69,3 +71,5 @@ ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evoluci�
 | [ADR-045](ADR-045-runtime-educativo-childprofile.md) | Adaptador del runtime educativo para ChildProfile | **Aceptada** |
 | [ADR-046](ADR-046-supresion-de-cuenta-y-perfiles.md) | Supresión de cuenta y de perfiles | **Aceptada** |
 | [ADR-047](ADR-047-transferencia-como-primer-medio-de-pago.md) | Transferencia como primer medio de pago | **Aceptada** |
+| [ADR-048](ADR-048-sincronizacion-desktop-cloud.md) | Modelo de sincronización Desktop ↔ Cloud | Propuesta |
+| [ADR-049](ADR-049-no-se-importa-progreso-exportado.md) | El progreso exportado no se vuelve a importar | Propuesta |

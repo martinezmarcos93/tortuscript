@@ -197,7 +197,7 @@ La campaña de marketing y el lanzamiento público quedan fuera del acto técnic
 
 TortuScript queda listo para beta pública controlada cuando:
 - una cuenta adulta puede registrarse y verificarse;
-- puede crear hasta 5 perfiles;
+- puede crear hasta 3 perfiles;
 - los perfiles están aislados;
 - el progreso se sincroniza;
 - el contenido gratuito funciona;

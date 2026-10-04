@@ -9,6 +9,8 @@ PR #5 (`plan/barridos-pendientes-2026-10-03`, fusionada a `main` el 03/10) y ram
 Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 
 ### Corregido
+- **Índice de decisiones:** faltaban los enlaces a seis ADR (025 a 028, 039 y 040) y dos figuraban como «Aceptado»
+  en vez de «Aceptada». El límite de perfiles de ADR-030, ADR-038 y el roadmap comercial decía 5; el vigente es 3.
 - **Migración de progreso local (ADR-044):** la importación lee el archivo de origen de forma estricta. Un archivo
   ilegible (JSON roto, raíz que no es objeto, `ejercicios` mal tipado) se rechaza sin apartarlo ni reescribirlo; antes
   se convertía en un progreso vacío que, con reemplazo explícito, podía pisar el progreso comercial. Los campos
@@ -59,6 +61,20 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   curso) y pedir la eliminación de la cuenta con su contraseña. La cuenta queda 14 días pendiente con las sesiones
   cerradas; ingresar en ese plazo cancela el pedido. Vencido, se borra todo al arrancar o al intentar ingresar, y
   queda solo una constancia con la fecha y un hash. Una suscripción que se renueva sola bloquea el pedido.
+- **Tope de ejecuciones simultáneas (Barrido 8, ADR-033):** `tortuscript/cupos.py` reparte una cantidad fija de
+  cupos para correr el código de los chicos (con o sin sandbox), con una cola acotada y compartidos entre los
+  procesos web de la máquina. Quien no consigue cupo a tiempo recibe un mensaje claro («hay muchos programas
+  corriendo, probá de nuevo») y no se lanza ningún proceso. Se ajusta con `TORTU_EJECUCIONES_MAX`.
+- **Contrato `Curriculum.v1` (Barrido 11, ADR-037):** `docs/contratos/curriculum-v1.json` publica los
+  identificadores de itinerarios y unidades que Croco-Script puede nombrar como prerrequisito. Lo genera
+  `herramientas/publicar_contratos.py` desde el catálogo curricular y un test falla si queda desactualizado; los
+  prerrequisitos del nivel avanzado ya se validan contra él.
+- **Prueba de entrega de correo (Barrido 6):** `herramientas/probar_correo.py <dirección>` manda un correo igual al
+  de una familia con la configuración de la instalación, para validar el proveedor SMTP cuando haya credenciales.
+  Se agregan pruebas de vencimiento, uso único y anulación de los enlaces de verificación y recuperación.
+- **Coherencia del repositorio (Barrido 1):** `tests/test_coherencia_repo.py` falla si queda una plantilla, un
+  archivo estático, un módulo, un archivo de contenido o una herramienta sin usar ni documentar, si una ADR no está
+  en el índice o figura con otro estado, o si un texto visible usa «tú» en vez de «vos».
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
   pedir el enlace y formulario para elegir la clave nueva. Abrir el enlace no consume el token; una clave corta o
   mal repetida se corrige sin pedir otro enlace; al cambiarla se cierran las sesiones abiertas. La respuesta es la

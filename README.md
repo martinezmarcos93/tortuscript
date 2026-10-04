@@ -44,7 +44,7 @@ hacen falta:
 | Pieza | Para qué | Cómo se enciende | Documento |
 |---|---|---|---|
 | Suscripción por transferencia | El adulto paga por transferencia y quien opera confirma el pago a mano | `TORTU_PAGO_ALIAS` y `TORTU_PAGO_IMPORTE`; confirmar con `herramientas/gestionar_pagos.py` | ADR-047 |
-| Pagos automáticos | Eventos de un proveedor de tarjetas (todavía no hay ninguno conectado) | secreto de webhook del proveedor | ADR-032, `tortuscript/pagos.py` |
+| Pagos automáticos | Eventos de un proveedor de tarjetas (todavía no hay ninguno conectado) | secreto de webhook del proveedor; los eventos que no se pudieron aplicar se ven con `herramientas/revisar_pagos.py` | ADR-032, `tortuscript/pagos.py` |
 | Sandbox de contenedores | Ejecutar el código de los chicos aislado, sin red | `TORTU_SANDBOX=docker` | `despliegue/sandbox/README.md` |
 | Paso a Croco-Script | Entrar al producto avanzado sin otra cuenta | configuración `FEDERACION` | `docs/contratos/README.md` |
 | Tortu-LLM | Pistas con IA que ayudan a pensar | `TORTU_TUTOR=claude` + aceptación del adulto | ADR-035, `tortuscript/tutor.py` |
