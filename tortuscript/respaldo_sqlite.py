@@ -98,9 +98,17 @@ def restaurar_respaldo(
         with closing(sqlite3.connect(src)) as respaldo_con, closing(sqlite3.connect(temporal)) as destino_con:
             respaldo_con.backup(destino_con)
         _validar_sqlite(temporal)
-        if dst.exists() and not permitir_sobrescritura:
-            raise ErrorRespaldo("El destino apareció durante la restauración; no se sobrescribió.")
-        os.replace(temporal, dst)
+        if permitir_sobrescritura:
+            os.replace(temporal, dst)
+        else:
+            # Publicación atómica sin sobrescritura, también ante una carrera concurrente.
+            try:
+                os.link(temporal, dst)
+            except FileExistsError as exc:
+                raise ErrorRespaldo(
+                    "El destino apareció durante la restauración; no se sobrescribió."
+                ) from exc
+            temporal.unlink()
         return dst
     except ErrorRespaldo:
         raise
