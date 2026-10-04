@@ -119,6 +119,9 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 - El proceso del alumno tampoco puede crear procesos ni hilos (`RLIMIT_NPROC`), abrir más de 64 archivos ni dejar
   volcados de memoria. `tests/test_sandbox_abuso.py` fija 17 pruebas de abuso (escapes clásicos, memoria, CPU,
   salida, procesos, archivos).
+- La auditoría de dependencias informa una vulnerabilidad en `click` 8.1.8 (CVE-2026-7246, en `click.edit()`, que
+  TortuScript no usa). Queda como riesgo aceptado y documentado en `herramientas/auditar_dependencias.py` hasta
+  dejar de soportar Python 3.9; una vulnerabilidad nueva vuelve a fallar.
 
 ### Cambiado
 - **Costo por pedido (Barrido 5):** el esquema de cuentas se asegura una vez por archivo y proceso, y cada pedido
