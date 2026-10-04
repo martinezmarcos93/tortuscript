@@ -8,6 +8,7 @@ Seguridad de una app local:
 - El código del chico nunca corre en este proceso: va a tortuscript.proceso.
 """
 import base64
+import copy
 import logging
 import secrets
 import sys
@@ -148,33 +149,48 @@ def create_app(token=None):
 
     # ─────────────── almacenamiento educativo ───────────────
     def _runtime_educativo():
-        """Runtime comercial obligatorio: toda experiencia educativa vive en un ChildProfile."""
+        """Runtime comercial obligatorio: toda experiencia educativa vive en un ChildProfile.
+        La sesión se valida una vez por pedido: no puede cambiar a mitad de una respuesta."""
+        if "tortu_runtime" in g:
+            return g.tortu_runtime
         raw_session = request.cookies.get("tortu_session")
         if not raw_session:
             abort(401)
         runtime = RuntimeEducativo(_educativo())
         try:
-            runtime.contexto(raw_session)
+            g.tortu_contexto = runtime.contexto(raw_session)
         except ContextoEducativoError:
             abort(401)
-        return runtime, raw_session
+        g.tortu_runtime = (runtime, raw_session)
+        return g.tortu_runtime
+
+    def _contexto():
+        _runtime_educativo()
+        return g.tortu_contexto
 
     def _perfil_contexto():
-        runtime, raw_session = _runtime_educativo()
-        return runtime.contexto(raw_session).perfil.id
+        return _contexto().perfil.id
 
     def _nombre_perfil_contexto(p=None):
         # La identidad visible pertenece al ChildProfile, no al nombre legacy del progreso.
-        raw_session = request.cookies.get("tortu_session")
-        return RuntimeEducativo(_educativo()).contexto(raw_session).perfil.display_name
+        return _contexto().perfil.display_name
 
     def _cargar_progreso():
-        runtime, raw_session = _runtime_educativo()
-        return runtime.cargar_datos(raw_session)
+        """Una copia propia del progreso del perfil activo. El archivo se lee una vez por pedido;
+        toda escritura pasa por los helpers de abajo, que descartan lo leído."""
+        if "tortu_progreso" not in g:
+            runtime, raw_session = _runtime_educativo()
+            g.tortu_progreso = runtime.cargar_datos(raw_session)
+        return copy.deepcopy(g.tortu_progreso)
+
+    def _progreso_cambio():
+        g.pop("tortu_progreso", None)
 
     def _guardar_progreso(p):
         runtime, raw_session = _runtime_educativo()
         runtime.guardar_datos(raw_session, p)
+        # Lo guardado es lo que devolvería una relectura (sin las claves internas "_…").
+        g.tortu_progreso = copy.deepcopy({k: v for k, v in p.items() if not k.startswith("_")})
         return True
 
     def _tomar_avisos(p):
@@ -186,8 +202,9 @@ def create_app(token=None):
     def _registrar_ejercicio(p, indice, estrellas, xp_ganado):
         runtime, raw_session = _runtime_educativo()
         resultado = runtime.registrar_ejercicio(raw_session, indice, estrellas, xp_ganado)
+        _progreso_cambio()
         p.clear()
-        p.update(runtime.cargar_datos(raw_session))
+        p.update(_cargar_progreso())
         return resultado
 
     def _registrar_paso_leccion(p, leccion_id, indice, xp, perfecto, total_pasos, estrellas=None):
@@ -195,15 +212,17 @@ def create_app(token=None):
         resultado = runtime.registrar_paso_leccion(
             raw_session, leccion_id, indice, xp, perfecto, total_pasos, estrellas
         )
+        _progreso_cambio()
         p.clear()
-        p.update(runtime.cargar_datos(raw_session))
+        p.update(_cargar_progreso())
         return resultado
 
     def _registrar_practica(p, leccion_id, paso, acierto):
         runtime, raw_session = _runtime_educativo()
         resultado = runtime.registrar_practica(raw_session, leccion_id, paso, acierto)
+        _progreso_cambio()
         p.clear()
-        p.update(runtime.cargar_datos(raw_session))
+        p.update(_cargar_progreso())
         return resultado
 
     # ─────────────── seguridad ───────────────
@@ -234,7 +253,8 @@ def create_app(token=None):
             return redirect(url_for("cuenta.ingresar", next=request.full_path))
         runtime = RuntimeEducativo(_educativo())
         try:
-            runtime.contexto(raw_session)
+            g.tortu_contexto = runtime.contexto(raw_session)
+            g.tortu_runtime = (runtime, raw_session)
         except ContextoEducativoError:
             if request.path.startswith("/api/"):
                 return jsonify(ok=False, mensaje="La sesión educativa ya no es válida."), 401
@@ -291,8 +311,7 @@ def create_app(token=None):
         # Las páginas de cuenta no tienen contexto educativo.
         if request.path.startswith("/cuenta"):
             return {"token": app.config["TOKEN"]}
-        raw_session = request.cookies.get("tortu_session")
-        contexto = RuntimeEducativo(_educativo()).contexto(raw_session)
+        contexto = _contexto()
         avisos = _tomar_avisos(_cargar_progreso())
         return {
             "token": app.config["TOKEN"],
@@ -336,12 +355,11 @@ def create_app(token=None):
         }
 
     def _es_admin():
-        raw_session = request.cookies.get("tortu_session")
-        if not raw_session:
+        if not request.cookies.get("tortu_session"):
             return False
         try:
-            return RuntimeEducativo(_educativo()).contexto(raw_session).cuenta.role == "admin"
-        except ContextoEducativoError:
+            return _contexto().cuenta.role == "admin"
+        except HTTPException:
             return False
 
     def _desbloqueado(indice, p=None):
@@ -849,32 +867,13 @@ def create_app(token=None):
                 p = _cargar_progreso()
                 nivel_antes = progreso.calcular_nivel(p.get("xp_total", 0))[0]
                 indice = contenido.indices_ejercicio(leccion_id).get(i)
-                runtime, raw_session = _runtime_educativo()
-                if runtime is not None:
-                    if indice is not None:
-                        mejora = runtime.registrar_ejercicio(raw_session, indice, estrellas, xp)
-                        info = runtime.registrar_paso_leccion(
-                            raw_session, leccion_id, i, 0, estrellas == 3, len(lec["pasos"])
-                        )
-                    else:
-                        info = runtime.registrar_paso_leccion(
-                            raw_session, leccion_id, i, xp, estrellas == 3, len(lec["pasos"]),
-                            estrellas=estrellas
-                        )
-                        mejora = info["xp_ganado"] > 0
-                    p = _cargar_progreso()
+                if indice is not None:
+                    mejora = _registrar_ejercicio(p, indice, estrellas, xp)
+                    info = _registrar_paso_leccion(p, leccion_id, i, 0, estrellas == 3, len(lec["pasos"]))
                 else:
-                    if indice is not None:
-                        mejora = _registrar_ejercicio(p, indice, estrellas, xp)
-                        info = _registrar_paso_leccion(
-                            p, leccion_id, i, 0, estrellas == 3, len(lec["pasos"])
-                        )
-                    else:
-                        info = _registrar_paso_leccion(
-                            p, leccion_id, i, xp, estrellas == 3, len(lec["pasos"]),
-                            estrellas=estrellas
-                        )
-                        mejora = info["xp_ganado"] > 0
+                    info = _registrar_paso_leccion(p, leccion_id, i, xp, estrellas == 3, len(lec["pasos"]),
+                                                   estrellas=estrellas)
+                    mejora = info["xp_ganado"] > 0
                 r["premio"] = {"estrellas": estrellas, "xp": xp, "mejora": mejora,
                                "sube_nivel": progreso.calcular_nivel(p["xp_total"])[0] > nivel_antes}
                 r["leccion"] = _resumen_leccion(leccion_id, info)
@@ -895,32 +894,13 @@ def create_app(token=None):
                 p = _cargar_progreso()
                 nivel_antes = progreso.calcular_nivel(p.get("xp_total", 0))[0]
                 indice = contenido.indices_ejercicio(leccion_id).get(i)
-                runtime, raw_session = _runtime_educativo()
-                if runtime is not None:
-                    if indice is not None:
-                        mejora = runtime.registrar_ejercicio(raw_session, indice, estrellas, xp)
-                        info = runtime.registrar_paso_leccion(
-                            raw_session, leccion_id, i, 0, estrellas == 3, len(lec["pasos"])
-                        )
-                    else:
-                        info = runtime.registrar_paso_leccion(
-                            raw_session, leccion_id, i, xp, estrellas == 3, len(lec["pasos"]),
-                            estrellas=estrellas
-                        )
-                        mejora = info["xp_ganado"] > 0
-                    p = _cargar_progreso()
+                if indice is not None:
+                    mejora = _registrar_ejercicio(p, indice, estrellas, xp)
+                    info = _registrar_paso_leccion(p, leccion_id, i, 0, estrellas == 3, len(lec["pasos"]))
                 else:
-                    if indice is not None:
-                        mejora = _registrar_ejercicio(p, indice, estrellas, xp)
-                        info = _registrar_paso_leccion(
-                            p, leccion_id, i, 0, estrellas == 3, len(lec["pasos"])
-                        )
-                    else:
-                        info = _registrar_paso_leccion(
-                            p, leccion_id, i, xp, estrellas == 3, len(lec["pasos"]),
-                            estrellas=estrellas
-                        )
-                        mejora = info["xp_ganado"] > 0
+                    info = _registrar_paso_leccion(p, leccion_id, i, xp, estrellas == 3, len(lec["pasos"]),
+                                                   estrellas=estrellas)
+                    mejora = info["xp_ganado"] > 0
                 r["premio"] = {"estrellas": estrellas, "xp": xp, "mejora": mejora,
                                "sube_nivel": progreso.calcular_nivel(p["xp_total"])[0] > nivel_antes}
                 r["leccion"] = _resumen_leccion(leccion_id, info)
@@ -1184,8 +1164,7 @@ def create_app(token=None):
 
     @app.get("/api/perfiles")
     def api_perfiles():
-        runtime, raw_session = _runtime_educativo()
-        contexto = runtime.contexto(raw_session)
+        contexto = _contexto()
         cuentas = _educativo().cuentas
         perfiles = [
             {"id": p.id, "nombre": p.display_name}

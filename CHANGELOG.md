@@ -40,6 +40,12 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
 
+### Cambiado
+- **Costo por pedido (Barrido 5):** el esquema de cuentas se asegura una vez por archivo y proceso, y cada pedido
+  valida la sesión y lee el progreso una sola vez. Una página pasaba por ~12 migraciones de esquema, 7 lecturas del
+  progreso y ~80 transacciones SQLite: el inicio bajó de 118 ms a 9 ms y el mapa de 366 ms a 7 ms (medido con el
+  cliente de pruebas).
+
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 
 Rama `feat/tortugame`. Fase 3 del roadmap; implementa ADR-006, 007 y 008 (aceptadas).

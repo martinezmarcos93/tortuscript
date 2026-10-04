@@ -47,9 +47,19 @@ def _form_or_json_dict():
 def _repos():
     path = Path(current_app.config["ACCOUNT_DB"])
     cuentas = CuentaRepository(path)
-    cuentas.ensure_schema()
     auth = AuthRepository(path)
-    auth.ensure_schema()
+    # El esquema se asegura una vez por archivo y por proceso: hacerlo en cada pedido
+    # costaba una docena de transacciones DDL por página. La marca incluye el inodo
+    # para volver a asegurarlo si el archivo se reemplaza (restauración de backup).
+    listos = current_app.extensions.setdefault("tortu_esquemas_listos", set())
+    try:
+        marca = (str(path), path.stat().st_ino)
+    except OSError:
+        marca = None
+    if marca is None or marca not in listos:
+        cuentas.ensure_schema()
+        auth.ensure_schema()
+        listos.add((str(path), path.stat().st_ino))
     return cuentas, auth
 
 
