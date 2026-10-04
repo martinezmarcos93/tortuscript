@@ -601,6 +601,10 @@
     const run = el("button", "boton verde", esJuego ? "▶ Jugar" : dibuja ? "▶ Dibujar" : "▶ Ejecutar"); run.type = "button";
     const pista = el("button", "boton amarillo", "💡 Pista (1/3)"); pista.type = "button";
     acciones.append(run, pista);
+    // Tortu-LLM: solo si el adulto de la cuenta lo activó (el servidor decide; acá solo se muestra el botón).
+    const tortu = datos.tutor ? el("button", "boton", "🐢 Preguntarle a Tortu") : null;
+    let ultimoError = "", nivelTortu = 1;
+    if (tortu) { tortu.type = "button"; acciones.append(tortu); }
     zonaEditor.appendChild(acciones);
     zonaEditor.appendChild(el("p", "tenue ayuda-teclado", "Con el teclado: Tab escribe espacios · Esc sale del editor · Ctrl+Enter ejecuta."));
     const salida = el("pre", "consola mini");
@@ -635,12 +639,14 @@
           await lienzo.reproducir(r.ordenes || [], { velocidad: 9 });
         }
         const ev = r.evaluacion || {};
+        ultimoError = r.error ? (r.mensaje || "") : "";
         if (r.error) { Tortu.tocar("error"); mostrarPie("mal", ["🔧 Hay algo para arreglar", r.mensaje], "Reintentar", reintentar, false); return; }
         if (ev.estado === "correcto") {
           const p = r.premio || {};
           hechos += 1; if (p.estrellas === 3) perfectos += 1;
           xpTotal += p.mejora ? p.xp : 0; resultadoFinal = r.leccion || resultadoFinal;
           pintarProgreso(); run.disabled = true; pista.disabled = true; editor.setOption("readOnly", true);
+          if (tortu) tortu.disabled = true;
           Tortu.tocar(p.sube_nivel ? "level_up" : "success");
           const partes = ["✅ ¡Correcto!"];
           if (p.mejora) partes.push(`${"⭐".repeat(p.estrellas)}${"☆".repeat(3 - p.estrellas)}  +${p.xp} XP`);
@@ -671,6 +677,26 @@
       } finally { if (!editor.getOption("readOnly")) run.disabled = false; }
     }
     run.addEventListener("click", ejecutar);
+    if (tortu) tortu.addEventListener("click", async () => {
+      tortu.disabled = true;
+      const antes = tortu.textContent; tortu.textContent = "🐢 Tortu está pensando…";
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "tutor"), { codigo: editor.getValue(), error: ultimoError, nivel: nivelTortu });
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.setAttribute("role", "status");
+        caja.appendChild(el("h3", "", r.origen === "tutor" ? "🐢 Tortu dice" : "💡 Pista"));
+        caja.appendChild(el("div", "", r.texto));
+        if (r.origen === "tutor") {
+          caja.appendChild(el("div", "tenue", `Esta ayuda la escribió una inteligencia artificial y puede equivocarse. Te quedan ${r.restantes} por hoy.`));
+          nivelTortu = Math.min(nivelTortu + 1, 4);          // la próxima vez, un poco más de ayuda
+        }
+        cajaPista.appendChild(caja);
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("div", "veredicto error", e?.datos?.mensaje || "Tortu no pudo responder. Probá de nuevo o usá la pista."));
+      } finally { tortu.textContent = antes; if (!editor.getOption("readOnly")) tortu.disabled = false; }
+    });
     pista.addEventListener("click", async () => {
       pista.disabled = true;
       try {

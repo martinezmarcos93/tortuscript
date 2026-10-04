@@ -28,7 +28,7 @@ from tortuscript import web_evaluacion, sql_evaluacion  # noqa: E402
 from tortuscript import practica as espaciado  # noqa: E402
 from tortuscript import proyectos as mis_proyectos  # noqa: E402
 from tortuscript import proyectos_integradores, catalogo_producto  # noqa: E402
-from tortuscript import diagnostico, intereses, respaldo  # noqa: E402
+from tortuscript import diagnostico, intereses, respaldo, tutor as tortu_llm  # noqa: E402
 from tortuscript.juego_ast import arbol_del_juego  # noqa: E402
 from tortuscript.executor import CodigoNoPermitido  # noqa: E402
 from tortuscript.error_handler import armar_mensaje_error  # noqa: E402
@@ -113,6 +113,8 @@ def create_app(token=None):
     app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = False
     # Secretos de webhook por proveedor de pagos. Vacío: no se acepta ningún evento (ADR-032).
     app.config["PAYMENT_WEBHOOK_SECRETS"] = {}
+    # Tortu-LLM (ADR-035): invocable (instrucciones, pedido) -> texto. None: el tutor no existe para nadie.
+    app.config["TUTOR_PROVEEDOR"] = None
     # Otros productos del ecosistema (ADR-037): {"croco-script": {"url": …, "clave": …, "kid": …}}. Vacío: sin transición.
     app.config["FEDERACION"] = {}
     app.register_blueprint(cuenta_bp)
@@ -563,7 +565,7 @@ def create_app(token=None):
             pistas_vistas.pop((_perfil_contexto(), leccion_id, i), None)
         datos = {"id": leccion_id, "titulo": lec["titulo"], "seccion": seccion["titulo"], "curso": curso["titulo"],
                  "nivel": seccion["nivel"], "pasos": [_publico(paso, leccion_id, i) for i, paso in enumerate(lec["pasos"])],
-                 "ya_completada": _completada(lec, p)}
+                 "ya_completada": _completada(lec, p), "tutor": _tutor_disponible()}
         return render_template("leccion.html", datos=datos, titulo=lec["titulo"])
 
     @app.route("/elegir-recorrido", methods=["GET", "POST"])
@@ -968,6 +970,37 @@ def create_app(token=None):
             elif paso.get("lenguaje") != "python":
                 contenido_pista["python"] = TraductorTortuScript().traducir_codigo(sol)
         return jsonify(nivel=nivel, **contenido_pista)
+
+    def _tutor():
+        return tortu_llm.TutorService(app.config.get("TUTOR_PROVEEDOR"))
+
+    def _tutor_disponible():
+        """El tutor existe para este perfil solo si hay proveedor Y el adulto de la cuenta lo aceptó."""
+        servicio = _tutor()
+        if servicio.proveedor is None:
+            return False
+        return _educativo().cuentas.tiene_consentimiento(_contexto().cuenta.id, "tutor_ia")
+
+    @app.post("/api/lecciones/<leccion_id>/pasos/<int:i>/tutor")
+    def api_tutor_paso(leccion_id, i):
+        """Ayuda de Tortu-LLM para un paso de escribir. Cuenta como una pista y nunca reemplaza al evaluador."""
+        lec, paso = _paso_o_404(leccion_id, i)
+        if paso["tipo"] != "escribir":
+            abort(400)
+        datos = _json_objeto()
+        codigo, error, nivel = datos.get("codigo", ""), datos.get("error", ""), datos.get("nivel", 1)
+        if not isinstance(codigo, str) or not isinstance(error, str) or type(nivel) is not int:
+            abort(400)
+        palabras = paso.get("palabras_pista") or evaluacion.palabras_clave(paso["solucion"].strip())
+        pista_escrita = "Palabras clave a usar: " + ", ".join(palabras)
+        p = _cargar_progreso()
+        # Al proveedor van la consigna, el intento y el error. La solución y la identidad no salen del servidor.
+        ayuda = _tutor().ayudar(p, _tutor_disponible(), paso.get("consigna", ""), codigo, error, nivel, pista_escrita)
+        if ayuda.origen == "tutor":
+            _guardar_progreso(p)
+        clave = (_perfil_contexto(), leccion_id, i)
+        pistas_vistas[clave] = max(pistas_vistas.get(clave, 0), 1)      # pedir ayuda vale como la primera pista
+        return jsonify(ok=True, texto=ayuda.texto, nivel=ayuda.nivel, origen=ayuda.origen, restantes=ayuda.restantes)
 
     @app.post("/api/lecciones/<leccion_id>/pasos/<int:i>/evaluar")
     def api_evaluar_paso(leccion_id, i):

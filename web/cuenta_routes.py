@@ -210,7 +210,10 @@ AVISOS_CONFIGURACION = {
     "archivado": "El perfil se archivó. Su progreso queda guardado y se puede restaurar.",
     "restaurado": "El perfil volvió a estar disponible.",
     "password": "La contraseña se cambió. Cerramos las demás sesiones abiertas.",
+    "consentimiento": "Guardamos tu decisión.",
 }
+# Finalidades que el adulto puede aceptar o revocar desde la configuración, con la versión de su aviso.
+AVISOS_DE_CONSENTIMIENTO = {"tutor_ia": "2026-10-04"}
 # Versión del texto que acepta el adulto al registrarse (web/templates/cuenta/registrar.html).
 VERSION_AVISO_RESPONSABLE = "2026-10-04"
 
@@ -231,6 +234,8 @@ def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
         csrf=request.cookies.get("tortu_csrf", ""),
         consentimientos=cuentas.listar_consentimientos(row["account_id"]),
         suscripciones=_suscripciones(row["account_id"]),
+        tutor_configurado=current_app.config.get("TUTOR_PROVEEDOR") is not None,
+        tutor_aceptado=cuentas.tiene_consentimiento(row["account_id"], "tutor_ia"),
         aviso=AVISOS_CONFIGURACION.get(request.args.get("ok", "")),
         error=error,
     ), estado
@@ -289,6 +294,26 @@ def archivar_perfil(profile_id):
 @bp.post("/perfiles/<profile_id>/restaurar")
 def restaurar_perfil(profile_id):
     return _gestionar_perfil(lambda cuentas, cuenta_id: cuentas.restaurar_child_profile(cuenta_id, profile_id), "restaurado")
+
+
+@bp.post("/consentimiento")
+def registrar_consentimiento():
+    """El adulto acepta o revoca una finalidad opcional. Cada decisión se agrega a la bitácora."""
+    sesion, rechazo = _adulto_con_csrf()
+    if rechazo:
+        return rechazo
+    cuentas, auth, row, _ = sesion
+    datos = _form_or_json_dict()
+    finalidad, decision = datos.get("finalidad"), datos.get("decision")
+    if finalidad not in AVISOS_DE_CONSENTIMIENTO or decision not in ("aceptar", "revocar"):
+        if request.form:
+            return _pagina_configuracion(cuentas, auth, row, 400, "Esa decisión no es válida.")
+        return jsonify(ok=False, mensaje="Esa decisión no es válida."), 400
+    cuentas.registrar_consentimiento(
+        row["account_id"], finalidad, AVISOS_DE_CONSENTIMIENTO[finalidad], decision == "aceptar")
+    if request.form:
+        return redirect(url_for("cuenta.configuracion", ok="consentimiento"))
+    return jsonify(ok=True, otorgado=decision == "aceptar")
 
 
 @bp.post("/password")

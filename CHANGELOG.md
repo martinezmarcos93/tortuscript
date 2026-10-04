@@ -90,6 +90,14 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   emisor, destinatario y solo identificadores opacos. `GET /cuenta/ir/<producto>` comprueba el acceso en servidor y
   redirige con el token; sin configuración la ruta no existe. `docs/contratos/` documenta lo que el receptor debe
   validar e incluye 16 vectores de prueba que el código de TortuScript verifica en cada corrida.
+- **Tortu-LLM, ayuda opcional con IA (Barrido 10, ADR-035), apagada por defecto:** `tortuscript/tutor.py` con cuatro
+  niveles (pista conceptual, pregunta orientadora, diagnóstico del error, ejemplo parcial). Al proveedor solo van la
+  consigna, el intento y el error, con correos, teléfonos y enlaces tachados; la solución y la identidad no salen
+  del servidor. Las respuestas con un programa armado o demasiado largas se descartan, hay un cupo de 20 ayudas por
+  día por perfil y ante cualquier falla o rechazo se muestra la pista escrita. Requiere `TORTU_TUTOR=claude`, el
+  paquete `anthropic` instalado aparte (opcional; no está en `requirements.txt`) **y** que el adulto lo active en
+  «Configuración de cuenta», donde también puede revocarlo. Pedir ayuda cuenta como una pista y nunca aprueba un
+  ejercicio.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

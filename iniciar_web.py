@@ -81,13 +81,14 @@ def cargar_env(archivo):
 
 def crear_aplicacion(datos, url):
     """La app real: cuentas y progreso en la carpeta de datos, y correo según el entorno (o deshabilitado)."""
-    from tortuscript import correo, rutas
+    from tortuscript import correo, rutas, tutor
     from web.app import create_app
     app = create_app()
     cuentas = rutas.carpeta_de_cuentas(datos)
     app.config["ACCOUNT_DB"] = cuentas / "cuentas.sqlite3"
     app.config["PROGRESS_DIR"] = cuentas / "progreso_perfiles"
     app.config["ACCOUNT_EMAIL_SENDER"] = correo.desde_entorno(url_base=url)
+    app.config["TUTOR_PROVEEDOR"] = tutor.proveedor_desde_entorno()      # None salvo TORTU_TUTOR=claude
     return app
 
 

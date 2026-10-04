@@ -88,6 +88,29 @@
       </form>
     </div>
 
+    {% if tutor_configurado %}
+    <div class="tarjeta">
+      <h2>Ayuda de Tortu con inteligencia artificial</h2>
+      <p>Si la activás, en los ejercicios de escribir código aparece un botón para pedirle una pista a Tortu.
+        Tortu ayuda a pensar y no da la solución. Los ejercicios se pueden completar igual sin esta ayuda.</p>
+      <p><b>Qué se envía</b> a Anthropic (el proveedor del modelo Claude) cada vez que se pide ayuda: la consigna del
+        ejercicio, el código que escribió el chico en ese ejercicio y el mensaje de error, si hubo. <b>No se envía</b>
+        el correo, el nombre del perfil, el progreso ni otros proyectos; y de ese código se tachan correos, teléfonos
+        y enlaces. TortuScript no guarda las conversaciones. Hay un máximo de 20 ayudas por día por perfil.</p>
+      <form method="post" action="{{ url_for('cuenta.registrar_consentimiento') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="finalidad" value="tutor_ia">
+        {% if tutor_aceptado %}
+        <p role="status"><b>Estado:</b> activada para todos los perfiles de la cuenta.</p>
+        <button class="boton" type="submit" name="decision" value="revocar">Desactivar la ayuda con IA</button>
+        {% else %}
+        <p role="status"><b>Estado:</b> desactivada.</p>
+        <button class="boton" type="submit" name="decision" value="aceptar">Acepto y activo la ayuda con IA</button>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
     <div class="tarjeta">
       <h2>Tus datos</h2>
       <p>Podés descargar todo lo que TortuScript guarda de esta cuenta y de sus perfiles: correo, perfiles, progreso y
