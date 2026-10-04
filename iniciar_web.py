@@ -5,7 +5,8 @@ Uso:  python iniciar_web.py                  (abre el navegador solo)
       python iniciar_web.py --puerto 8080    (si no querés el puerto de siempre)
 
 También sirven los lanzadores de la carpeta lanzadores/ (doble clic en Windows, acceso directo en Linux).
-Corre solo en tu compu (127.0.0.1), sin internet y sin cuentas. Se cierra con Ctrl+C o cerrando la ventana.
+Corre solo en tu compu (127.0.0.1), sin internet. Las cuentas y el correo se configuran con .env (ver .env.example).
+Se cierra con Ctrl+C o cerrando la ventana.
 """
 import argparse
 import logging

@@ -2,7 +2,7 @@
 
 TortuScript es el núcleo de una futura plataforma progresiva de aprendizaje tecnológico para niños y adolescentes. La V1 actual se concentra en programación con Python y está evolucionando hacia un itinerario que incluye alfabetización tecnológica, Web esencial (HTML/CSS/JS), SQL y proyectos integradores. La edad exacta de cada itinerario sigue siendo una decisión curricular pendiente de validación.
 
-El producto local actual enseña Python usando **TortuScript**, un pseudolenguaje en español que se traduce solo a Python real. Se usa en el navegador, **corre en tu compu** (sin internet, sin cuentas y sin anuncios) y se parece a las apps de lecciones cortas: explicación, práctica, feedback al instante, racha, logros y una liga de amigos.
+El producto local actual enseña Python usando **TortuScript**, un pseudolenguaje en español que se traduce solo a Python real. Se usa en el navegador, **corre en tu compu** (sin internet y sin anuncios; la cuenta del adulto y los perfiles de los chicos se guardan en la misma máquina) y se parece a las apps de lecciones cortas: explicación, práctica, feedback al instante, racha, logros y una liga de amigos.
 
 ```
 # TortuScript               →     Python
@@ -19,12 +19,22 @@ funcion saludar(n):         →     def saludar(n):
 ---
 
 
-## Acceso administrativo local
+## Cuentas, perfiles y correo
 
-Para pruebas de la futura capa comercial existe un bootstrap de desarrollo que
-no contiene ninguna contraseña en el código. Ejecutá \`python herramientas/crear_admin.py\`
-y cargá la contraseña cuando la solicite. La cuenta queda verificada, con rol
-\`admin\` y bypass comercial. Detalles en [docs/ADMIN_LOCAL.md](docs/ADMIN_LOCAL.md).
+Para entrar hace falta una **cuenta adulta** (correo y contraseña) y, dentro de ella, hasta tres **perfiles** de chicos;
+cada perfil tiene su propio progreso. Todo se guarda en la máquina donde corre TortuScript. Hay tres formas de crear
+la primera cuenta, según `TORTU_EMAIL_MODO` (se configura en un archivo `.env` junto a `iniciar_web.py`; ver
+[`.env.example`](.env.example)):
+
+| Modo | Qué pasa al registrarse | Para qué sirve |
+|---|---|---|
+| *(vacío, por defecto)* | El registro y la recuperación de contraseña responden «no disponible» | Instalación sin correo: la cuenta se crea con `python herramientas/crear_admin.py` |
+| `consola` | El enlace de verificación aparece en la terminal donde corre el servidor | Uso local en una sola compu |
+| `smtp` | El enlace llega por correo desde el servidor SMTP configurado | Despliegue con un proveedor de correo |
+
+`crear_admin.py` pide la contraseña por teclado (nunca queda en el código) y deja la cuenta verificada con rol `admin`,
+que además saltea los bloqueos comerciales para pruebas. Detalles en [docs/ADMIN_LOCAL.md](docs/ADMIN_LOCAL.md).
+«Olvidé mi contraseña» necesita el modo `consola` o `smtp`.
 
 ## Cómo se usa
 
@@ -170,6 +180,15 @@ Instalado con el paquete de tu sistema, en la carpeta de datos del usuario: `~/.
 `%APPDATA%\TortuScript` (Windows) o `~/Library/Application Support/TortuScript` (macOS). Desde el código, como siempre:
 
 En `progreso_<perfil>.json`, junto al programa (el perfil inicial es `default`). Cada guardado es atómico y deja una copia `.bak`; si el archivo se daña se aparta como `.corrupto-<fecha>` y se recupera desde la copia: nunca se pisa en silencio. El esquema es **aditivo**: los archivos de versiones anteriores se abren y se completan solos (hoy es la versión 10). Para empezar de cero un perfil, borrá su `progreso_<perfil>.json` (y el `.bak`).
+
+Con cuentas, la base (`cuentas.sqlite3`) y el progreso de cada perfil (`progreso_perfiles/progreso_child_<id>.json`,
+con el mismo guardado atómico, `.bak` y recuperación) viven en `instance/` dentro de esa misma carpeta de datos. El
+nombre del chico no aparece en el nombre del archivo.
+
+**Respaldo.** `python herramientas/respaldar_datos.py crear` copia la base y el progreso de todos los perfiles a
+`respaldos/respaldo-<fecha>/` con un manifiesto de hashes; `verificar <carpeta>` comprueba que esté íntegro y
+`restaurar <carpeta> --confirmar` lo vuelve a poner (con TortuScript cerrado), dejando lo que había en
+`instance.antes-de-restaurar-<fecha>`. Nada se borra nunca.
 
 Los logs de errores internos van a `logs/tortuscript.log` y nunca se muestran al chico.
 
