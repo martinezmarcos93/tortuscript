@@ -1175,5 +1175,15 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertIn("Retry-After", bloqueado.headers)
 
 
+    def test_endpoints_de_cuenta_rechazan_json_no_objeto_sin_500(self):
+        login = self.client.post("/cuenta/login", json=["email", "password"])
+        registro = self.client.post("/cuenta/registro", json=["email", "password"])
+        reset = self.client.post("/cuenta/restablecer-password", json=["token", "password"])
+
+        self.assertEqual(login.status_code, 401)
+        self.assertEqual(registro.status_code, 400)
+        self.assertEqual(reset.status_code, 400)
+
+
 if __name__ == "__main__":
     unittest.main()
