@@ -6,9 +6,12 @@ La ejecución local del proyecto exportado ocurre fuera de TortuScript.
 """
 import ast
 import json
+import logging
 import re
 from datetime import date
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 RAIZ = Path(__file__).resolve().parent.parent
 CATALOGO = RAIZ / "contenido" / "proyectos" / "catalogo.json"
@@ -60,8 +63,9 @@ def contexto(progreso):
     try:
         from .progreso import calcular_nivel
         nivel = calcular_nivel(progreso.get("xp_total", 0))[0]
-    except Exception:
-        pass
+    except (TypeError, ValueError) as e:
+        # XP mal tipado en un progreso viejo: se sigue con el nivel inicial, pero queda registrado.
+        logger.error("No se pudo calcular el nivel para los proyectos integradores: %s", e, exc_info=True)
     return {
         "bloques": sorted(bloques_completados(progreso)),
         "nivel": nivel,
