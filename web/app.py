@@ -772,6 +772,8 @@ def create_app(token=None):
     @app.post("/api/traducir")
     def api_traducir():
         fuente = (_json_objeto()).get("codigo", "")
+        if not isinstance(fuente, str):
+            abort(400)
         tipo = detectar_tipo(fuente)
         python = fuente if tipo == "python" else TraductorTortuScript().traducir_codigo(fuente)
         return jsonify(tipo=tipo, python=python)
@@ -1142,6 +1144,8 @@ def create_app(token=None):
         if crudo and not progreso.sanitizar_perfil(crudo):
             return jsonify(ok=False, mensaje="Usá letras o números para el nombre."), 400
         entrada = datos.get("entrada")                   # diagnóstico (ADR-004): solo el punto que le toca
+        if entrada and not isinstance(entrada, str):
+            return jsonify(ok=False, mensaje="Alguna respuesta no es válida."), 400
         if entrada and entrada not in diagnostico.entradas_permitidas(datos.get("experiencia")):
             return jsonify(ok=False, mensaje="Alguna respuesta no es válida."), 400
         p = _cargar_progreso()

@@ -21,6 +21,10 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
 - **Datos de cuentas en la app instalada:** la base de cuentas y el progreso por perfil se guardan en la carpeta de
   datos del usuario (`<datos>/instance`), no dentro de la carpeta del programa, que el desinstalador borra. Desde el
   código fuente la ubicación no cambia.
+- **Errores 500 por tipos inesperados:** un barrido de 18.442 pedidos con cuerpos mal tipados encontró errores
+  internos en `/api/onboarding`, `/api/traducir`, `/cuenta/perfil`, `/cuenta/perfiles` y `/cuenta/verificar-email`;
+  ahora responden 4xx. `tests/test_robustez_http.py` repite el barrido (reducido) sobre todas las rutas registradas,
+  incluidas las futuras.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para

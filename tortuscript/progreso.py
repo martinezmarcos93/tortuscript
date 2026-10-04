@@ -198,13 +198,17 @@ def saltear_hasta(progreso, lecciones_en_orden, entrada, hoy=None):
 def guardar_config(progreso, experiencia=None, meta_min=None, nombre=None, onboarding=None):
     """Valida y guarda la configuración. Devuelve False si algún valor no es válido."""
     cfg = progreso.setdefault("config", copy.deepcopy(PROGRESO_INICIAL["config"]))
+    # Los valores llegan de JSON del navegador: se exige el tipo exacto antes de buscarlos
+    # (una lista no se puede buscar en un dict, y True == 1 pasaría por una meta de 1 minuto).
+    if experiencia is not None and (not isinstance(experiencia, str) or experiencia not in EXPERIENCIAS):
+        return False
+    if meta_min is not None and (type(meta_min) is not int or meta_min not in METAS_MIN):
+        return False
+    if nombre is not None and not isinstance(nombre, str):
+        return False
     if experiencia is not None:
-        if experiencia not in EXPERIENCIAS:
-            return False
         cfg["experiencia"] = experiencia
     if meta_min is not None:
-        if meta_min not in METAS_MIN:
-            return False
         cfg["meta_min"] = meta_min
     if nombre is not None:
         cfg["nombre"] = nombre[:30]

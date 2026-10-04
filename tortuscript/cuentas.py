@@ -68,14 +68,18 @@ def _id(prefijo: str, valor: str) -> str:
 
 
 def _normalizar_email(email: str) -> str:
-    email = (email or "").strip().lower()
+    if not isinstance(email, str):
+        raise CuentaError("El correo electrónico no es válido.")
+    email = email.strip().lower()
     if not EMAIL_RE.fullmatch(email):
         raise CuentaError("El correo electrónico no es válido.")
     return email
 
 
 def _normalizar_nombre(nombre: str) -> str:
-    nombre = " ".join((nombre or "").split())
+    if not isinstance(nombre, str):
+        raise CuentaError("El nombre del perfil debe tener entre 1 y 30 caracteres.")
+    nombre = " ".join(nombre.split())
     if not 1 <= len(nombre) <= 30:
         raise CuentaError("El nombre del perfil debe tener entre 1 y 30 caracteres.")
     return nombre
