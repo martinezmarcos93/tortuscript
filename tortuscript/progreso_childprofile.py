@@ -138,7 +138,8 @@ class ProgresoChildProfile:
         """Supresión (ADR-046): borra todo lo que hay en disco de un perfil —progreso, respaldo, copias apartadas
         por daño y estado en curso—. Devuelve cuántos archivos borró. Los respaldos externos no se tocan."""
         profile_id = self._validar(profile_id)
-        candidatos = [self._archivo(profile_id), self.directory / f"en_curso_{profile_id}.json"]
+        candidatos = [self._archivo(profile_id), self.directory / f"en_curso_{profile_id}.json",
+                      self.directory / f".candado_{profile_id}"]
         candidatos += [p for p in self.directory.glob(f"progreso_{profile_id}.json.*") if p.is_file()]
         borrados = 0
         for archivo in candidatos:
