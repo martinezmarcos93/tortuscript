@@ -34,6 +34,9 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   publicar; ahora se reserva el nombre con creación exclusiva, que tampoco sobrescribe.
 - **Accesibilidad de los editores de código (Barrido 2):** el campo de CodeMirror no tenía nombre accesible (un
   lector de pantalla solo anunciaba «cuadro de edición»); ahora cada editor se anuncia con su función y sus atajos.
+- **Objetivos táctiles en la Zona Tortuga (Barrido 2):** la casilla del depurador y el control de velocidad medían
+  menos de 24 px; ahora cumplen WCAG 2.5.8. La auditoría de teclado y táctil da 0 hallazgos y pasa a ser bloqueante
+  en CI (`--estricto`).
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para

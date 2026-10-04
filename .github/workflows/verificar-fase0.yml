@@ -86,9 +86,9 @@ jobs:
       - name: Auditoría de contraste WCAG AA
         if: always()
         run: python herramientas/revisar_contraste.py --url http://127.0.0.1:5077
-      - name: Auditoría diagnóstica de teclado y nombres accesibles
+      - name: Auditoría de teclado, foco, nombres accesibles y objetivos táctiles
         if: always()
-        run: python herramientas/revisar_teclado.py --url http://127.0.0.1:5077
+        run: python herramientas/revisar_teclado.py --url http://127.0.0.1:5077 --estricto
       - name: Guardar capturas de diagnóstico
         if: always()
         uses: actions/upload-artifact@v7
