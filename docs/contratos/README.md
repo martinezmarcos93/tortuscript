@@ -9,7 +9,7 @@ código de TortuScript**: implementa estos contratos y debe pasar los mismos vec
 | `Entitlement.v1` | Estado de acceso a un producto | `acceso_v1` + `GET /cuenta/acceso?producto=` |
 | `Authorization.v1` | Token firmado para pasar de un producto al otro | `emitir_autorizacion` / `validar_autorizacion` |
 | `Progress.v1` | Resumen de progreso por curso que publica cada producto | `progreso_v1` |
-| `Curriculum.v1` | Identificador de curso, versión y prerrequisitos | `docs/catalogo_avanzado_v1.json` (pendiente de fijar) |
+| `Curriculum.v1` | Identificadores de itinerarios y unidades que se pueden nombrar como prerrequisito | `curriculum-v1.json` (lo genera `herramientas/publicar_contratos.py`) |
 
 ## Authorization.v1 — transición autenticada
 
@@ -51,9 +51,29 @@ Un secreto de al menos 32 caracteres compartido entre los dos servidores, identi
 receptor acepta la clave nueva y la vieja a la vez, TortuScript empieza a firmar con la nueva y, pasado un minuto, el
 receptor descarta la vieja. La clave nunca va al navegador ni al repositorio.
 
+## Curriculum.v1 — prerrequisitos entre productos
+
+`curriculum-v1.json` lista los itinerarios de TortuScript y, en orden, las unidades de cada uno:
+
+```
+{"contrato": "Curriculum.v1", "producto": "tortuscript", "version_curricular": "1",
+ "itinerarios": [{"id": "sql-fundamentos", "unidades": ["sql-tablas", "sql-select", …]}, …]}
+```
+
+- Un curso de Croco-Script declara sus prerrequisitos con esos identificadores: un `id` de itinerario (hay que
+  completarlo entero) o un `id` de unidad. Ningún identificador se repite entre itinerarios y unidades.
+- Solo lleva identificadores y orden: ni títulos, ni contenido, ni reglas comerciales.
+- No se edita a mano: sale del catálogo curricular (`docs/catalogo_curricular_v1.json`). Un test de TortuScript
+  falla si lo publicado quedó desactualizado.
+- Croco-Script lo copia a su repositorio y valida su catálogo contra él (el equivalente de
+  `federacion.prerrequisitos_desconocidos_v1`): un prerrequisito desconocido es un error de publicación. Si un
+  perfil cumple o no un prerrequisito lo dice `Progress.v1` de TortuScript.
+- `version_curricular` cambia cuando se quita o renombra un identificador; agregar unidades no la cambia.
+
+Los prerrequisitos de las tres fuentes del nivel avanzado (`docs/catalogo_avanzado_v1.json`) ya se validan así.
+
 ## Decisiones abiertas (de Marcos)
 
 - Dominios definitivos (`croco.tortuscript.com` u otro) y la URL de entrada de Croco-Script.
 - Si Croco-Script consultará el acceso en línea (`Entitlement.v1`) además de confiar en el token al entrar: hace
   falta si una suscripción cancelada debe cortar una sesión ya abierta de Croco-Script.
-- El formato definitivo de `Curriculum.v1`.

@@ -116,6 +116,47 @@ class TestDocumentos(unittest.TestCase):
         self.assertNotIn("Ana", json.dumps(p))
 
 
+class TestCurriculumV1(unittest.TestCase):
+    """Curriculum.v1: los identificadores que Croco-Script puede nombrar como prerrequisito."""
+
+    def setUp(self):
+        from tortuscript import catalogo_producto
+        self.publicado = catalogo_producto.curriculo_publicado()
+
+    def test_lo_publicado_en_docs_coincide_con_el_catalogo(self):
+        from herramientas import publicar_contratos
+        self.assertEqual(publicar_contratos.DESTINO.read_text(encoding="utf-8"), publicar_contratos.texto_publicable(),
+                         "corré herramientas/publicar_contratos.py")
+        self.assertEqual(publicar_contratos.main(["--comprobar"]), 0)
+
+    def test_solo_lleva_identificadores(self):
+        self.assertEqual(set(self.publicado), {"contrato", "producto", "version_curricular", "itinerarios"})
+        self.assertEqual((self.publicado["contrato"], self.publicado["producto"]), ("Curriculum.v1", "tortuscript"))
+        for itinerario in self.publicado["itinerarios"]:
+            self.assertEqual(set(itinerario), {"id", "unidades"})
+            self.assertTrue(itinerario["unidades"])
+            self.assertTrue(all(isinstance(u, str) for u in itinerario["unidades"]))
+
+    def test_los_prerrequisitos_del_nivel_avanzado_existen(self):
+        avanzado = json.loads((RAIZ / "docs" / "catalogo_avanzado_v1.json").read_text(encoding="utf-8"))
+        for fuente in avanzado["fuentes"]:
+            with self.subTest(fuente=fuente["id"]):
+                self.assertEqual(federacion.prerrequisitos_desconocidos_v1(self.publicado, fuente["prerrequisitos"]), [])
+
+    def test_un_prerrequisito_inventado_se_detecta(self):
+        self.assertEqual(
+            federacion.prerrequisitos_desconocidos_v1(self.publicado, ["sql-fundamentos", "sql-join", "no-existe"]),
+            ["no-existe"])
+        with self.assertRaises(FederacionError):
+            federacion.prerrequisitos_desconocidos_v1({"contrato": "Otro.v1"}, [])
+
+    def test_un_identificador_repetido_no_se_publica(self):
+        with self.assertRaises(FederacionError):
+            federacion.curriculo_v1("tortuscript", "1", [{"id": "a", "unidades": ["u1"]}, {"id": "b", "unidades": ["u1"]}])
+        with self.assertRaises(FederacionError):
+            federacion.curriculo_v1("tortuscript", "1", [{"id": "a", "unidades": ["a"]}])
+
+
 class TestTransicionHTTP(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

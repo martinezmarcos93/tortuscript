@@ -141,3 +141,34 @@ def progreso_v1(perfil_id: str, producto: str, version_curricular: str, cursos: 
         })
     return {"contrato": "Progress.v1", "perfil": perfil_id, "producto": producto,
             "version_curricular": version_curricular, "actualizado": actualizado, "cursos": limpio}
+
+
+def curriculo_v1(producto: str, version_curricular: str, itinerarios: list) -> dict:
+    """Curriculum.v1: los identificadores estables que otro producto puede nombrar como prerrequisito.
+
+    Solo identificadores y orden: ni títulos, ni contenido, ni reglas comerciales. Un itinerario se nombra por su
+    `id`; una unidad, por el suyo. El orden de las unidades dentro del itinerario es el del recorrido.
+    """
+    limpios, vistos = [], set()
+    for itinerario in itinerarios:
+        itinerario_id = str(itinerario["id"])
+        unidades = [str(u) for u in itinerario["unidades"]]
+        for identificador in [itinerario_id, *unidades]:
+            if identificador in vistos:
+                raise FederacionError(f"Identificador curricular repetido: {identificador}")
+            vistos.add(identificador)
+        limpios.append({"id": itinerario_id, "unidades": unidades})
+    return {"contrato": "Curriculum.v1", "producto": producto, "version_curricular": str(version_curricular),
+            "itinerarios": limpios}
+
+
+def prerrequisitos_desconocidos_v1(curriculo: dict, prerrequisitos: list) -> list:
+    """Los prerrequisitos que no nombran ni un itinerario ni una unidad publicados (vacío: todos existen).
+    Lo usa quien consume el contrato para validar su propio catálogo contra el de quien lo publica."""
+    if not isinstance(curriculo, dict) or curriculo.get("contrato") != "Curriculum.v1":
+        raise FederacionError("El documento no es un Curriculum.v1.")
+    conocidos = set()
+    for itinerario in curriculo.get("itinerarios", []):
+        conocidos.add(itinerario["id"])
+        conocidos.update(itinerario["unidades"])
+    return [p for p in prerrequisitos if p not in conocidos]
