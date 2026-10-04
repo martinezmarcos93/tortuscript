@@ -1,6 +1,7 @@
 """Rate limiting mínimo para endpoints sensibles durante la transición web.
-La implementación es deliberadamente process-local; en producción debe sustituirse por
-un almacén compartido antes de escalar a múltiples workers.
+El limitador en memoria es process-local. Para varios workers en una misma máquina puede
+optarse por SQLite compartido mediante ACCOUNT_RATE_LIMIT_DB; entre hosts se requiere un
+almacén distribuido.
 """
 from __future__ import annotations
 
