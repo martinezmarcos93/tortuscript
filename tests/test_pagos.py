@@ -236,6 +236,40 @@ class TestEsquema(Base):
         self.assertTrue(viejo.tiene_entitlement(cuenta.id, PREMIUM))
 
 
+class TestHerramientaDeRevision(Base):
+    def _correr(self, *args):
+        import contextlib
+        import io
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "herramientas"))
+        import revisar_pagos
+        salida = io.StringIO()
+        with contextlib.redirect_stdout(salida), contextlib.redirect_stderr(salida):
+            codigo = revisar_pagos.main(["--db", str(self.tmp / "cuentas.sqlite3"), *args])
+        return codigo, salida.getvalue()
+
+    def test_sin_nada_pendiente_sale_con_cero_y_con_revision_con_dos(self):
+        self.pagos.aplicar(self.evento("payment_succeeded", dias(0), dias(30)), ahora=T0)
+        codigo, texto = self._correr("--suscripciones")
+        self.assertEqual(codigo, 0)
+        self.assertIn("Eventos en revisión: 0", texto)
+        self.assertIn("active", texto)
+        self.pagos.aplicar(self.evento("refund", dias(1), suscripcion="sub_fantasma"), ahora=dias(1))
+        codigo, texto = self._correr()
+        self.assertEqual(codigo, 2)
+        self.assertIn("suscripción que no se conoce", texto)
+        self.assertNotIn("familia@example.com", texto)              # identificadores opacos, sin correos
+
+    def test_base_inexistente_es_un_error_claro(self):
+        import contextlib
+        import io
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "herramientas"))
+        import revisar_pagos
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(revisar_pagos.main(["--db", str(self.tmp / "no-existe.sqlite3")]), 1)
+
+
 class TestFirma(unittest.TestCase):
     CUERPO = b'{"id": "evt_1"}'
 
