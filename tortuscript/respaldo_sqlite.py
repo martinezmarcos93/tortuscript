@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from contextlib import closing
 import tempfile
 from pathlib import Path
 
@@ -21,7 +22,7 @@ def _validar_sqlite(path: Path) -> None:
         raise ErrorRespaldo("El archivo SQLite no existe.")
     try:
         uri = path.resolve().as_uri() + "?mode=ro"
-        with sqlite3.connect(uri, uri=True) as con:
+        with closing(sqlite3.connect(uri, uri=True)) as con:
             resultado = con.execute("PRAGMA integrity_check").fetchone()
             if not resultado or resultado[0] != "ok":
                 raise ErrorRespaldo("La base SQLite no superó la comprobación de integridad.")
@@ -36,7 +37,7 @@ def crear_respaldo(origen: str | Path, destino: str | Path) -> Path:
     """Crea una copia consistente usando la API de backup de SQLite.
 
     No sobrescribe destinos existentes. La copia temporal y el destino deben
-    estar en el mismo directorio para que os.replace sea atómico.
+    estar en el mismo directorio para publicar la copia completa atómicamente.
     """
     src, dst = Path(origen), Path(destino)
     if not src.is_file():
@@ -50,7 +51,7 @@ def crear_respaldo(origen: str | Path, destino: str | Path) -> Path:
     os.close(fd)
     temporal = Path(temporal_nombre)
     try:
-        with sqlite3.connect(src) as origen_con, sqlite3.connect(temporal) as destino_con:
+        with closing(sqlite3.connect(src)) as origen_con, closing(sqlite3.connect(temporal)) as destino_con:
             origen_con.backup(destino_con)
         _validar_sqlite(temporal)
         # link() publica el archivo completo de forma atómica y falla si dst ya existe,
@@ -94,7 +95,7 @@ def restaurar_respaldo(
     os.close(fd)
     temporal = Path(temporal_nombre)
     try:
-        with sqlite3.connect(src) as respaldo_con, sqlite3.connect(temporal) as destino_con:
+        with closing(sqlite3.connect(src)) as respaldo_con, closing(sqlite3.connect(temporal)) as destino_con:
             respaldo_con.backup(destino_con)
         _validar_sqlite(temporal)
         if dst.exists() and not permitir_sobrescritura:
