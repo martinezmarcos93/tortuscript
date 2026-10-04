@@ -429,8 +429,17 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertEqual(created.status_code, 201)
         self.assertEqual(created.json["perfil"]["nombre"], "Ana")
 
+        # El formulario HTML debe poder crear perfiles sin depender de JavaScript.
+        created_html = self.client.post(
+            "/cuenta/perfiles",
+            data={"nombre": "Bruno", "csrf": csrf},
+            follow_redirects=False,
+        )
+        self.assertEqual(created_html.status_code, 302)
+        self.assertIn("/cuenta/seleccionar-perfil", created_html.headers["Location"])
+
         me2 = self.client.get("/cuenta/me")
-        self.assertEqual([p["nombre"] for p in me2.json["perfiles"]], ["Ana"])
+        self.assertEqual([p["nombre"] for p in me2.json["perfiles"]], ["Ana", "Bruno"])
 
         selected = self.client.post(
             "/cuenta/perfil",
