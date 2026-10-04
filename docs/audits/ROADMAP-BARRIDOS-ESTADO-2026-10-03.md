@@ -82,3 +82,5 @@ Esta secuencia operativa conserva la hoja de ruta general acordada (0–12). Los
 - **Documentación de despliegue:** corregido el docstring de `tortuscript/rate_limit.py` para distinguir el limitador local, SQLite compartido en una máquina y la necesidad de un almacén distribuido entre hosts.
 - **Estado:** los cambios están comprometidos en la rama remota. No se marca cerrado el Barrido 5 hasta que CI confirme las nuevas pruebas; backup/restore de datos reales, migración sobre copia local y cualquier validación dependiente de la PC siguen expresamente diferidos por instrucción del usuario.
 
+
+- **Barrido 1 — recuperación de progreso ante JSON mal tipado:** la migración local ahora normaliza campos anidados cuyo tipo no coincide con el esquema (por ejemplo, `config.ajustes` como lista o `xp_por_dia` como nulo), preserva los datos válidos como XP y agrega una regresión que carga un archivo sintácticamente válido pero estructuralmente defectuoso. El objetivo es evitar errores 500 o perfiles inutilizables por corrupción parcial; no sustituye backups ni la verificación de integridad del archivo. La validación de CI corresponde al head que incluye este cambio.

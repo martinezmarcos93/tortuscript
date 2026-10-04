@@ -71,6 +71,26 @@ class TestGuardado(BaseTemporal):
         self.assertEqual(p["xp_total"], 10)
         self.assertIn("sesion_hoy", p)
 
+    def test_migra_json_valido_con_tipos_anidados_danados(self):
+        # Un JSON sintácticamente válido no debe romper el perfil por config/lecciones mal tipadas.
+        persistencia_local.get_archivo_progreso().write_text(
+            json.dumps({
+                "xp_total": 17,
+                "ejercicios": {},
+                "config": {"ajustes": []},
+                "lecciones": [],
+                "xp_por_dia": None,
+            }),
+            encoding="utf-8",
+        )
+        p = persistencia_local.cargar_progreso()
+        self.assertEqual(p["xp_total"], 17)
+        self.assertIsInstance(p["config"], dict)
+        self.assertIsInstance(p["config"]["ajustes"], dict)
+        self.assertIsInstance(p["lecciones"], dict)
+        self.assertIsInstance(p["xp_por_dia"], dict)
+        self.assertEqual(p["config"]["ajustes"]["tam"], "normal")
+
 
 class TestPerfiles(BaseTemporal):
     def test_ventana_abierta_no_mezcla_perfiles(self):

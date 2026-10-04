@@ -53,13 +53,30 @@ PROGRESO_INICIAL = {
 
 
 def _migrar(data):
+    # Los archivos históricos pueden ser JSON válido pero contener tipos incorrectos
+    # en campos anidados. Normalizarlos evita que un ajuste roto inutilice el perfil.
     for campo, valor in PROGRESO_INICIAL.items():
-        if campo not in data:
+        actual = data.get(campo)
+        if campo not in data or (
+            isinstance(valor, (dict, list)) and not isinstance(actual, type(valor))
+        ):
             data[campo] = copy.deepcopy(valor)
-    for clave, valor in PROGRESO_INICIAL["config"].items():      # config de versiones anteriores, a medias
-        data["config"].setdefault(clave, copy.deepcopy(valor))
+
+    # Configuración y ajustes se migran por separado porque pueden venir de esquemas
+    # antiguos parcialmente completos. No reemplazar los valores válidos del alumno.
+    if not isinstance(data.get("config"), dict):
+        data["config"] = copy.deepcopy(PROGRESO_INICIAL["config"])
+    for clave, valor in PROGRESO_INICIAL["config"].items():
+        actual = data["config"].get(clave)
+        if clave not in data["config"] or (
+            isinstance(valor, (dict, list)) and not isinstance(actual, type(valor))
+        ):
+            data["config"][clave] = copy.deepcopy(valor)
+    if not isinstance(data["config"].get("ajustes"), dict):
+        data["config"]["ajustes"] = copy.deepcopy(PROGRESO_INICIAL["config"]["ajustes"])
     for clave, valor in PROGRESO_INICIAL["config"]["ajustes"].items():
-        data["config"]["ajustes"].setdefault(clave, valor)
+        data["config"]["ajustes"].setdefault(clave, copy.deepcopy(valor))
+
     data["version"] = VERSION_ESQUEMA
     return data
 
