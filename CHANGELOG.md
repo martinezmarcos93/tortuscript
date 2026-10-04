@@ -25,6 +25,10 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   internos en `/api/onboarding`, `/api/traducir`, `/cuenta/perfil`, `/cuenta/perfiles` y `/cuenta/verificar-email`;
   ahora responden 4xx. `tests/test_robustez_http.py` repite el barrido (reducido) sobre todas las rutas registradas,
   incluidas las futuras.
+- **Progreso de perfil dañado (Barrido 5):** un archivo de progreso ilegible dejaba al perfil con error 500 en todas
+  las páginas aunque existiera el `.bak`. Ahora se aparta como `.corrupto-<fecha>` (nunca se borra), se restaura el
+  respaldo si es válido y del mismo perfil, y si no lo hay el perfil vuelve a la bienvenida. Un archivo escrito por
+  una versión más nueva se rechaza sin tocarlo.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para

@@ -53,7 +53,7 @@ class PerfilEducativoService:
 
     def cargar_progreso(self, raw_session: str | None) -> ProgresoSnapshot | None:
         contexto = self.contexto(raw_session)
-        snapshot = self.progreso.cargar(contexto.perfil.id)
+        snapshot = self.progreso.cargar_o_recuperar(contexto.perfil.id)
         if snapshot is not None and snapshot.profile_id != contexto.perfil.id:
             raise ContextoEducativoError("El progreso no pertenece al perfil activo.")
         return snapshot
