@@ -5,7 +5,8 @@ versión publicada de la app web: los cambios de versión se consultan antes de 
 
 ## Sin publicar — barridos de consolidación (desde 03/10/2026)
 
-Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
+PR #5 (`plan/barridos-pendientes-2026-10-03`, fusionada a `main` el 03/10) y rama `work/barridos-2026-10-04`.
+Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 
 ### Corregido
 - **Migración de progreso local (ADR-044):** la importación lee el archivo de origen de forma estricta. Un archivo

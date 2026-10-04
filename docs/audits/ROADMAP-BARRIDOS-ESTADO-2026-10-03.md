@@ -66,7 +66,7 @@ Esta secuencia operativa conserva la hoja de ruta general acordada (0–12). Los
 ## Avance remoto posterior al corte
 
 **Rama de trabajo de la PR:** `plan/barridos-pendientes-2026-10-03` (también existe la rama de respaldo `work/barridos-maximo-2026-10-03`).  
-**PR activa:** [#5 — Barrido 1 y trabajo de seguimiento](https://github.com/martinezmarcos93/tortuscript/pull/5), en borrador; no fusionada a `main`.
+**PR activa:** [#5 — Barrido 1 y trabajo de seguimiento](https://github.com/martinezmarcos93/tortuscript/pull/5), **fusionada a `main` el 03/10/2026** (`1312dc0`) con CI verde en Python 3.9, 3.12 y navegador (run `37172324278`).
 
 - **Barrido 4 — diseño:** creado `docs/architecture/CONTRATOS-DOMINIO-PRIVACIDAD-Y-ROADMAP.md` con límites Account / Authentication / Consent / Subscription / Entitlement / ChildProfile, propiedad de datos, consentimiento de menores, contratos de pagos, sandbox, sync, tutor IA y Croco-Script. Es una decisión de diseño, no una declaración de implementación terminada.
 - **Barrido 5 — respaldo/restauración:** agregado `tortuscript/respaldo_sqlite.py` con backup de SQLite, comprobación `integrity_check`, publicación atómica, rechazo de destino existente y restauración con confirmación explícita para sobrescribir. Las utilidades no se invocan automáticamente ni se ejecutaron contra bases reales.
@@ -84,3 +84,21 @@ Esta secuencia operativa conserva la hoja de ruta general acordada (0–12). Los
 
 
 - **Barrido 1 — recuperación de progreso ante JSON mal tipado:** la migración local ahora normaliza campos anidados cuyo tipo no coincide con el esquema (por ejemplo, `config.ajustes` como lista o `xp_por_dia` como nulo), preserva los datos válidos como XP y agrega una regresión que carga un archivo sintácticamente válido pero estructuralmente defectuoso. El objetivo es evitar errores 500 o perfiles inutilizables por corrupción parcial; no sustituye backups ni la verificación de integridad del archivo. La validación de CI corresponde al head que incluye este cambio.
+
+
+## Avance del 03–04/10/2026 (sesión local, fusionado a `main` en `1312dc0`)
+
+A diferencia de las tandas remotas, esta sesión corrió en la máquina de Marcos: se pudo ejecutar la suite completa
+(709 tests), las auditorías de navegador y un ensayo de respaldo sobre una copia de los datos reales.
+
+| Barrido | Qué se cerró | Qué sigue abierto |
+|---|---|---|
+| 1 | Fuzz de 18.442 pedidos sobre todas las rutas (errores 500 corregidos en 6 rutas) y regresión permanente `tests/test_robustez_http.py`; `next` conservado en todo el flujo de cuenta; formularios de cuenta responden HTML; script en línea muerto eliminado; contrato de migración de progreso alineado. | Revisión lingüística y de contenido huérfano. |
+| 2 | Editores de código con nombre accesible; auditoría de teclado ampliada (recorrido con Tab, trampas, indicador de foco, páginas de cuenta, objetivos táctiles) con 0 hallazgos de teclado. | Dos objetivos táctiles chicos en `/tortuga`; prueba manual con lector de pantalla y en dispositivos físicos. |
+| 3 | `tests/test_ciclo_alumno.py`: recorrido completo de una familia por HTTP con dos perfiles, reinicio del servidor, aislamiento entre familias y exportación. | La importación de progreso exportado no existe en la capa de cuentas (un snapshot del cliente permitiría falsificar XP): decisión de producto pendiente. |
+| 5 | Costo por pedido (inicio 118→9 ms, mapa 366→7 ms); recuperación automática de progreso dañado desde `.bak`; respaldo completo `herramientas/respaldar_datos.py` ensayado sobre copia de datos reales; datos de cuentas en la carpeta del usuario cuando la app está instalada. | La base local real ya está en esquema v3: el ensayo v2→v3 solo aplica a instalaciones más viejas (cubierto por tests sintéticos). |
+| 6 | Enviador de correo real (`tortuscript/correo.py`, SMTP o consola, configurable por `.env`); pantallas de recuperación de contraseña; `Cache-Control: no-store` en `/cuenta/*`. | Probar la entrega con un proveedor SMTP real (requiere credenciales); limitador distribuido entre hosts. |
+
+Ramas: se eliminaron `plan/…`, `work/barridos-maximo-…`, `sweep/consolidacion-ux-v1` y `mobile/validation-v1`
+(su único commit propio, `44d0205`, quedó superado por el bootstrap de pruebas ya integrado). El backup pasó a
+`backup/main-2026-10-03` (`1312dc0`).
