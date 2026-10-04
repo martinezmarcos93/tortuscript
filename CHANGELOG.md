@@ -31,6 +31,8 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   una versión más nueva se rechaza sin tocarlo.
 - **Respaldo SQLite en discos sin enlaces duros:** en un pendrive FAT/exFAT `link()` falla y el respaldo no se podía
   publicar; ahora se reserva el nombre con creación exclusiva, que tampoco sobrescribe.
+- **Accesibilidad de los editores de código (Barrido 2):** el campo de CodeMirror no tenía nombre accesible (un
+  lector de pantalla solo anunciaba «cuadro de edición»); ahora cada editor se anuncia con su función y sus atajos.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
@@ -52,6 +54,9 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   perfil o de un perfil inexistente; restaurar exige confirmación y conserva lo anterior en `instance.antes-de-
   restaurar-<fecha>`. Ensayado sobre una copia de datos reales en el disco del proyecto: restauración idéntica y
   originales intactos.
+- **Auditoría de teclado ampliada:** `herramientas/revisar_teclado.py` recorre cada página con Tab (trampas de foco,
+  salida del editor con Escape, indicador de foco visible), incluye las páginas de cuenta con y sin sesión y mide
+  los objetivos táctiles en 360 px. `--estricto` la convierte en puerta de CI.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

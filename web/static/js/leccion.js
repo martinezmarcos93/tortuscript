@@ -400,6 +400,7 @@
     const resultado = el("div", "sql-resultado");
     zona.appendChild(el("div", "rotulo-zona", "Resultado de tu consulta:")); zona.appendChild(resultado); cont.appendChild(zona);
     editor = CodeMirror.fromTextArea(area, {mode:"text/plain", lineNumbers:true, indentUnit:2, tabSize:2, autofocus:true, extraKeys:{"Ctrl-Enter":()=>ejecutar(),"Cmd-Enter":()=>ejecutar(),Esc:()=>run.focus()}});
+    Tortu.nombrarEditor(editor, "Editor de código de este paso. Control más Enter comprueba; Escape sale del editor.");
     editor.setSize(null, 220);
     const acciones = el("div", "acciones");
     const run = el("button", "boton verde", "▶ Ejecutar consulta"); run.type = "button";
@@ -476,6 +477,7 @@
       extraKeys: { "Ctrl-Enter": () => ejecutar(), "Cmd-Enter": () => ejecutar(),
                    Esc: () => run.focus() },
     });
+    Tortu.nombrarEditor(editor, "Editor de código de este paso. Control más Enter comprueba; Escape sale del editor.");
     editor.setSize(null, 220);
 
     const acciones = el("div", "acciones");
@@ -589,6 +591,7 @@
       extraKeys: { "Ctrl-Enter": () => ejecutar(), "Cmd-Enter": () => ejecutar(), Tab: (cm) => cm.replaceSelection("    "),
                    Esc: () => run.focus() },
     });
+    Tortu.nombrarEditor(editor, "Editor de código de este paso. Control más Enter comprueba; Escape sale del editor.");
     editor.setSize(null, dibuja || esJuego ? 260 : 180);
     if (paso.inicial) {                                    // proyectos guiados: se sigue desde lo que ya estaba armado
       editor.setValue(paso.inicial + "\n");

@@ -52,9 +52,82 @@ AUDITAR = r"""
 """
 
 
+RUTAS_DE_CUENTA = [
+    "/cuenta/ingresar", "/cuenta/registrar", "/cuenta/recuperar", "/cuenta/restablecer-password?token=x",
+    "/cuenta/verificar-email?token=x",
+]
+RUTAS_DE_CUENTA_CON_SESION = ["/cuenta/seleccionar-perfil", "/cuenta/configuracion"]
+
+FOCO = r"""
+() => {
+  const e = document.activeElement;
+  if (!e || e === document.body || e === document.documentElement) return null;
+  const r = e.getBoundingClientRect(), s = getComputedStyle(e);
+  const editor = e.closest('.CodeMirror');
+  const marco = editor ? getComputedStyle(editor) : s;
+  const indicador = (parseFloat(marco.outlineWidth) > 0 && marco.outlineStyle !== 'none') || marco.boxShadow !== 'none';
+  if (!e.dataset.tecladoId) e.dataset.tecladoId = String(++window.__tecladoN || (window.__tecladoN = 1));
+  return {clave: e.dataset.tecladoId, tag: e.tagName, id: e.id, texto: (e.innerText || e.value || '').trim().slice(0, 40),
+          editor: !!editor, indicador, visible: s.visibility !== 'hidden' && r.width > 0 && r.height > 0,
+          enPantalla: r.bottom > 0 && r.top < innerHeight};
+}
+"""
+
+TACTILES = r"""
+() => {
+  const visible = e => { const s = getComputedStyle(e), r = e.getBoundingClientRect();
+    return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && r.height > 0; };
+  // WCAG 2.5.8 (AA): 24×24 px CSS como mínimo. Los enlaces dentro de un párrafo están exceptuados.
+  return [...document.querySelectorAll('a[href],button,input:not([type=hidden]),select,[role="button"]')]
+    .filter(visible)
+    .filter(e => !(e.tagName === 'A' && e.closest('p,li,td,.tenue')) && !e.closest('.CodeMirror') && !e.classList.contains('saltar'))
+    .map(e => ({e, r: e.getBoundingClientRect()}))
+    .filter(({r}) => r.width < 24 || r.height < 24)
+    .map(({e, r}) => ({tag: e.tagName, id: e.id, clase: String(e.className || '').slice(0, 40),
+                       texto: (e.innerText || e.getAttribute('aria-label') || '').trim().slice(0, 30),
+                       ancho: Math.round(r.width), alto: Math.round(r.height)}));
+}
+"""
+
+
+def recorrer_con_tab(page, ruta, tabulables):
+    """Recorre la página con Tab: detecta trampas de foco y controles sin indicador de foco visible.
+    Del editor de código se sale con Escape (Tab ahí escribe sangría, a propósito)."""
+    hallazgos, vistos, anterior, repetidos = [], {}, None, 0
+    for _ in range(min(tabulables + 6, 90)):
+        page.keyboard.press("Tab")
+        foco = page.evaluate(FOCO)
+        if foco is None:
+            anterior = None                      # el foco salió del documento (barra del navegador): fin del ciclo
+            continue
+        if foco["editor"]:
+            page.keyboard.press("Escape")
+            salio = page.evaluate(FOCO)
+            if salio is None or salio["clave"] == foco["clave"]:
+                hallazgos.append(f"TECLADO {ruta}: no se puede salir del editor de código con Escape")
+                break
+        if anterior == foco["clave"]:
+            repetidos += 1
+            if repetidos >= 2:
+                hallazgos.append(f"TECLADO {ruta}: el foco queda atrapado en {foco['tag']}#{foco['id']} «{foco['texto']}»")
+                break
+        else:
+            repetidos = 0
+        anterior = foco["clave"]
+        if foco["clave"] in vistos:
+            continue
+        vistos[foco["clave"]] = foco
+        if not foco["visible"]:
+            hallazgos.append(f"TECLADO {ruta}: el foco cae en un control invisible: {foco['tag']}#{foco['id']}")
+        elif not foco["indicador"]:
+            hallazgos.append(f"FOCO {ruta}: sin indicador de foco visible: {foco['tag']}#{foco['id']} «{foco['texto']}»")
+    return hallazgos
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:5077")
+    parser.add_argument("--estricto", action="store_true", help="devolver 1 si hay hallazgos (puerta de CI)")
     args = parser.parse_args()
     from playwright.sync_api import sync_playwright
 
@@ -91,10 +164,39 @@ def main():
             if data["tabulables"] and (not foco or not foco["visible"] or foco["tabIndex"] < 0):
                 hallazgos += 1
                 print(f"TECLADO {route}: el primer Tab no aterriza en un control visible: {foco}")
+            page.goto(args.url + route)
+            page.wait_for_timeout(100)
+            for linea in recorrer_con_tab(page, route, data["tabulables"]):
+                hallazgos += 1
+                print(linea)
+
+        # Páginas de cuenta con sesión, y después sin sesión (otro contexto, sin cookies).
+        sin_sesion = browser.new_context(viewport={"width": 1280, "height": 900}).new_page()
+        for pagina, rutas in ((page, RUTAS_DE_CUENTA_CON_SESION), (sin_sesion, RUTAS_DE_CUENTA)):
+            for route in rutas:
+                pagina.goto(args.url + route)
+                pagina.wait_for_timeout(100)
+                data = pagina.evaluate(AUDITAR)
+                for item in data["sinNombre"]:
+                    hallazgos += 1
+                    print(f"ACCESIBILIDAD {route}: control sin nombre accesible: {item}")
+                for linea in recorrer_con_tab(pagina, route, data["tabulables"]):
+                    hallazgos += 1
+                    print(linea)
+
+        # Tamaño de los objetivos táctiles en un teléfono angosto.
+        movil = browser.new_context(viewport={"width": 360, "height": 740}, has_touch=True).new_page()
+        movil.goto(args.url + "/cuenta/__test__/bootstrap")
+        for route in RUTAS + RUTAS_DE_CUENTA_CON_SESION:
+            movil.goto(args.url + route)
+            movil.wait_for_timeout(100)
+            for item in movil.evaluate(TACTILES):
+                hallazgos += 1
+                print(f"TACTIL {route}: objetivo menor a 24×24 px: {item}")
         browser.close()
     print(f"Auditoría diagnóstica de teclado: {hallazgos} hallazgos en las rutas inspeccionadas.")
-    # Diagnóstico informativo hasta revisar controles personalizados y falsos positivos.
-    return 0
+    # Sin --estricto es un diagnóstico informativo; con --estricto es una puerta de aceptación.
+    return 1 if (hallazgos and args.estricto) else 0
 
 
 if __name__ == "__main__":
