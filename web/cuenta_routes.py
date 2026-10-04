@@ -489,7 +489,14 @@ def crear_perfil():
             return render_template("cuenta/perfiles.html", perfiles=cuentas.listar_child_profiles(row["account_id"]), csrf=request.cookies.get("tortu_csrf", ""), perfil_activo=row["active_profile_id"], next_url=_safe_next_url(request.args.get("next", "/")), error=str(exc)), 400
         return jsonify(ok=False, mensaje=str(exc)), 400
     if request.form:
-        return redirect(url_for("cuenta.seleccionar_perfil_pagina"))
+        # La acción del formulario promete crear y entrar al perfil; no dejar al
+        # usuario en el selector como si la creación no hubiese terminado.
+        try:
+            auth.select_profile(raw, perfil.id)
+        except AuthError:
+            return redirect(url_for("cuenta.seleccionar_perfil_pagina")), 403
+        destino = _safe_next_url(request.form.get("next"), url_for("inicio"))
+        return redirect(destino)
     return jsonify(ok=True, perfil={"id": perfil.id, "nombre": perfil.display_name}), 201
 
 
