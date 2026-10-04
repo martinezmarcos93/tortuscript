@@ -20,6 +20,7 @@ if str(RAIZ) not in sys.path:
 
 from tortuscript.auth import AuthRepository
 from tortuscript.cuentas import CuentaError, CuentaRepository
+from tortuscript import rutas
 
 
 EMAIL_PREDETERMINADO = "admin@tortuscript.local"
@@ -31,8 +32,8 @@ def main(argv=None):
     parser.add_argument(
         "--db",
         type=Path,
-        default=RAIZ / "instance" / "cuentas.sqlite3",
-        help="SQLite de cuentas (por defecto, la misma que usa Flask).",
+        default=rutas.carpeta_de_cuentas() / "cuentas.sqlite3",
+        help="SQLite de cuentas (por defecto, la misma que usa iniciar_web.py).",
     )
     args = parser.parse_args(argv)
 

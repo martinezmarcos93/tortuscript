@@ -18,12 +18,20 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
 - **Selector de perfiles:** se quitó un `<script>` en línea que la CSP bloqueaba (código muerto y error de consola)
   y el límite de perfiles sale de `MAX_CHILD_PROFILES` en vez de estar repetido a mano en plantillas y rutas.
 - **Validación HTTP:** `perfil_id` y el token de verificación que no son texto se rechazan con 4xx.
+- **Datos de cuentas en la app instalada:** la base de cuentas y el progreso por perfil se guardan en la carpeta de
+  datos del usuario (`<datos>/instance`), no dentro de la carpeta del programa, que el desinstalador borra. Desde el
+  código fuente la ubicación no cambia.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
   pedir el enlace y formulario para elegir la clave nueva. Abrir el enlace no consume el token; una clave corta o
   mal repetida se corrige sin pedir otro enlace; al cambiarla se cierran las sesiones abiertas. La respuesta es la
   misma exista o no la cuenta.
+- **Correo transaccional real (Barrido 6):** `tortuscript/correo.py` arma y envía los correos de verificación y
+  recuperación por SMTP (biblioteca estándar, sin dependencias nuevas) o los muestra en la terminal para uso local.
+  Se configura por entorno o `.env` (`TORTU_EMAIL_MODO`, ver `.env.example`); sin configuración el registro sigue
+  fallando cerrado, y una configuración a medias impide arrancar con un mensaje claro. Antes ningún enviador estaba
+  conectado al arranque: no se podía crear una cuenta fuera de `crear_admin.py`.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

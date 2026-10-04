@@ -72,6 +72,56 @@ class TestEntorno(unittest.TestCase):
             crear.assert_not_called()
 
 
+class TestEnv(unittest.TestCase):
+    def test_lee_claves_sin_pisar_el_entorno_ni_fallar_si_falta(self):
+        with tempfile.TemporaryDirectory() as d:
+            archivo = Path(d) / ".env"
+            self.assertEqual(iniciar_web.cargar_env(archivo), [])
+            archivo.write_text(
+                "# comentario\n\nTORTU_PRUEBA_A=uno\nTORTU_PRUEBA_B = \"dos tres\"\nTORTU_PRUEBA_C=\nsin_igual\n",
+                encoding="utf-8")
+            with mock.patch.dict("os.environ", {"TORTU_PRUEBA_A": "ya-estaba"}, clear=False):
+                import os
+                agregadas = iniciar_web.cargar_env(archivo)
+                self.assertEqual(agregadas, ["TORTU_PRUEBA_B", "TORTU_PRUEBA_C"])
+                self.assertEqual(os.environ["TORTU_PRUEBA_A"], "ya-estaba")
+                self.assertEqual(os.environ["TORTU_PRUEBA_B"], "dos tres")
+                self.assertEqual(os.environ["TORTU_PRUEBA_C"], "")
+
+
+@unittest.skipUnless(HAY_FLASK, "Flask no instalado")
+class TestAplicacion(unittest.TestCase):
+    def test_cuentas_y_progreso_viven_en_la_carpeta_de_datos(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict("os.environ", {}, clear=False) as entorno:
+            entorno.pop("TORTU_EMAIL_MODO", None)
+            app = iniciar_web.crear_aplicacion(Path(d), "http://127.0.0.1:5057/")
+            self.assertEqual(app.config["ACCOUNT_DB"], Path(d) / "instance" / "cuentas.sqlite3")
+            self.assertEqual(app.config["PROGRESS_DIR"], Path(d) / "instance" / "progreso_perfiles")
+            # Sin configuración explícita el correo queda deshabilitado (las rutas fallan cerradas).
+            self.assertIsNone(app.config["ACCOUNT_EMAIL_SENDER"])
+
+    def test_desde_el_codigo_fuente_coincide_con_la_carpeta_instance_de_flask(self):
+        from tortuscript import rutas
+        from web.app import create_app
+        self.assertEqual(rutas.carpeta_de_cuentas(rutas.RAIZ), Path(create_app(token="t").instance_path))
+
+    def test_modo_consola_arma_enlaces_con_la_url_local(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict("os.environ", {"TORTU_EMAIL_MODO": "consola"}):
+            app = iniciar_web.crear_aplicacion(Path(d), "http://127.0.0.1:5099/")
+            self.assertEqual(app.config["ACCOUNT_EMAIL_SENDER"].url_base, "http://127.0.0.1:5099")
+
+    def test_correo_mal_configurado_impide_arrancar_con_mensaje_claro(self):
+        salida = io.StringIO()
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.dict("os.environ", {"TORTU_EMAIL_MODO": "smtp", "TORTUSCRIPT_DATOS": d}), \
+                mock.patch.object(iniciar_web, "configurar_logs"), \
+                mock.patch.object(iniciar_web, "crear_servidor") as crear, \
+                contextlib.redirect_stdout(salida):
+            self.assertEqual(iniciar_web.main(["--sin-navegador", "--puerto", "5098"]), 1)
+            crear.assert_not_called()
+        self.assertIn("No pude arrancar", salida.getvalue())
+
+
 class TestLogs(unittest.TestCase):
     def test_crea_la_carpeta_y_el_archivo(self):
         import logging
