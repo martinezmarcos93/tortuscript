@@ -481,7 +481,7 @@ def crear_perfil():
     cuentas, auth, row = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    nombre = (_json_dict()).get("nombre")
+    nombre = _form_or_json_dict().get("nombre")
     try:
         perfil = cuentas.crear_child_profile(row["account_id"], nombre)
     except CuentaError as exc:
