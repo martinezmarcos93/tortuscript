@@ -9,6 +9,11 @@ progreso_*.json
 progreso_*.json.bak
 progreso_*.corrupto-*
 
+# Datos locales de la capa de cuentas (base SQLite y progreso por ChildProfile)
+instance/
+*.sqlite3
+*.db
+
 # Logs
 logs/
 
