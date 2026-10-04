@@ -76,6 +76,9 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   al cancelar, hasta el fin de lo pagado; al reembolsar, se corta) y se evalúa al consultar. `POST
   /pagos/webhook/<proveedor>` exige firma HMAC del cuerpo con ventana de 5 minutos y está apagado por defecto (sin
   secreto configurado responde 404). La configuración de cuenta muestra el estado de la suscripción.
+- **Contrato del trabajo del worker (ADR-033):** antes de lanzar un proceso se valida y acota lo que manda el
+  navegador (operación conocida, código de hasta 20.000 caracteres sin nulos, hasta 100 respuestas de 1.000
+  caracteres, semilla en rango). Un pedido fuera de contrato se rechaza sin crear ningún proceso.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

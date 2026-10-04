@@ -54,6 +54,53 @@ def _falla(tipo, detalle=""):
             "mensaje": _explicacion(tipo, detalle)}
 
 
+# ── contrato del trabajo (ADR-033) ──
+# Lo que llega del navegador se valida y se acota ANTES de lanzar un proceso. `solucion`, `laberinto`
+# y `usar` los pone el servidor desde el contenido del curso; no vienen del cliente.
+OPERACIONES = ("ejecutar", "evaluar", "tortuga", "evaluar_tortuga", "juego", "evaluar_juego")
+FUENTE_MAX = 20_000            # caracteres de código
+ENTRADAS_MAX = 100             # respuestas a preguntar()
+ENTRADA_MAX = 1_000            # caracteres por respuesta
+
+
+class TrabajoInvalido(ValueError):
+    """El pedido no cumple el contrato; el mensaje se le puede mostrar al chico."""
+
+
+def normalizar_pedido(pedido):
+    """Devuelve un pedido nuevo que cumple el contrato, o lanza TrabajoInvalido."""
+    if not isinstance(pedido, dict) or pedido.get("op") not in OPERACIONES:
+        raise TrabajoInvalido("Ese pedido no se entiende.")
+    fuente = pedido.get("fuente", "")
+    if not isinstance(fuente, str):
+        raise TrabajoInvalido("El código tiene que ser texto.")
+    if len(fuente) > FUENTE_MAX:
+        raise TrabajoInvalido(f"Tu programa es demasiado largo (más de {FUENTE_MAX} letras).")
+    if "\x00" in fuente:
+        raise TrabajoInvalido("Tu programa tiene un carácter que no se puede usar. Borralo y probá de nuevo.")
+    entradas = pedido.get("entradas")
+    if entradas is None:
+        entradas = []
+    if not isinstance(entradas, list) or len(entradas) > ENTRADAS_MAX:
+        raise TrabajoInvalido("Las respuestas a las preguntas no son válidas.")
+    limpias = []
+    for entrada in entradas:
+        if isinstance(entrada, bool) or not isinstance(entrada, (str, int, float)):
+            raise TrabajoInvalido("Las respuestas a las preguntas no son válidas.")
+        entrada = str(entrada)
+        if len(entrada) > ENTRADA_MAX:
+            raise TrabajoInvalido("Una de las respuestas es demasiado larga.")
+        limpias.append(entrada)
+    semilla = pedido.get("semilla")
+    if isinstance(semilla, bool) or not isinstance(semilla, int) or not 0 <= semilla < 2 ** 31:
+        semilla = None                                       # el worker elige una al azar
+    limpio = {"op": pedido["op"], "fuente": fuente, "entradas": limpias, "semilla": semilla}
+    for clave in ("solucion", "laberinto", "usar"):
+        if clave in pedido:
+            limpio[clave] = pedido[clave]
+    return limpio
+
+
 def comando_worker():
     """Cómo lanzar el worker: con Python (`-m tortuscript.worker`) o, si la app está instalada como ejecutable
     (PyInstaller, ADR-015), el mismo ejecutable con `--worker` (no hay otro Python para lanzar)."""
@@ -64,6 +111,10 @@ def comando_worker():
 
 def correr(pedido):
     """Ejecuta el pedido en un proceso hijo y devuelve el dict de respuesta."""
+    try:
+        pedido = normalizar_pedido(pedido)
+    except TrabajoInvalido as e:
+        return _falla("CodigoNoPermitido", str(e))             # sin lanzar ningún proceso
     opciones = {}
     if sys.platform != "win32":
         opciones["preexec_fn"] = _limitar

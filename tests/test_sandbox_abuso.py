@@ -121,6 +121,40 @@ class TestRecursos(unittest.TestCase):
         self.assertIn("sigo vivo", r["salida"])
 
 
+class TestContratoDelTrabajo(unittest.TestCase):
+    def test_pedidos_fuera_de_contrato_no_lanzan_ningun_proceso(self):
+        malos = (
+            None, [], "ejecutar", {}, {"op": "borrar_todo", "fuente": "x"}, {"op": "ejecutar", "fuente": ["x"]},
+            {"op": "ejecutar", "fuente": 7}, {"op": "ejecutar", "fuente": "x" * (proceso.FUENTE_MAX + 1)},
+            {"op": "ejecutar", "fuente": "mostrar 1\x00"}, {"op": "ejecutar", "fuente": "x", "entradas": "abc"},
+            {"op": "ejecutar", "fuente": "x", "entradas": {"a": 1}},
+            {"op": "ejecutar", "fuente": "x", "entradas": [["anidada"]]},
+            {"op": "ejecutar", "fuente": "x", "entradas": [True]},
+            {"op": "ejecutar", "fuente": "x", "entradas": ["a"] * (proceso.ENTRADAS_MAX + 1)},
+            {"op": "ejecutar", "fuente": "x", "entradas": ["a" * (proceso.ENTRADA_MAX + 1)]},
+        )
+        with mock.patch.object(proceso.subprocess, "run", side_effect=AssertionError("no debe lanzarse")):
+            for pedido in malos:
+                with self.subTest(pedido=str(pedido)[:50]):
+                    r = correr(pedido)
+                    self.assertTrue(r["error"])
+                    self.assertTrue(r["mensaje"])
+
+    def test_normaliza_sin_cambiar_lo_valido(self):
+        limpio = proceso.normalizar_pedido({"op": "evaluar", "fuente": "mostrar 1", "entradas": ["a", 3, 2.5],
+                                            "semilla": 2 ** 40, "solucion": "mostrar 1", "sobra": "x"})
+        self.assertEqual(limpio, {"op": "evaluar", "fuente": "mostrar 1", "entradas": ["a", "3", "2.5"],
+                                  "semilla": None, "solucion": "mostrar 1"})
+        self.assertEqual(proceso.normalizar_pedido({"op": "juego", "semilla": 7})["semilla"], 7)
+        for semilla in (True, -1, "7", 1.5, [7]):
+            self.assertIsNone(proceso.normalizar_pedido({"op": "juego", "semilla": semilla})["semilla"])
+
+    def test_las_respuestas_numericas_llegan_como_texto(self):
+        r = correr({"op": "ejecutar", "fuente": 'n es preguntar("?")\nmostrar n + "!"', "entradas": [5]})
+        self.assertFalse(r["error"], r.get("mensaje"))
+        self.assertIn("5!", r["salida"])
+
+
 @unittest.skipUnless(UNIX, "los límites de resource solo existen en Linux/macOS")
 class TestLimitesDelProceso(unittest.TestCase):
     """Los límites que pone el padre valen para CUALQUIER código que corra en el worker, no solo el validado."""
