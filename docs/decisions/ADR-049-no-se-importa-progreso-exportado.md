@@ -1,7 +1,8 @@
 # ADR-049 — El progreso exportado no se vuelve a importar
 
-- Estado: **Propuesta** (no autoriza implementación; la decide Marcos)
-- Fecha: 2026-10-04
+- Estado: Aceptada
+- Fecha: 2026-10-04 (propuesta y aceptada el mismo día)
+- Decisor: Marcos
 - Relacionadas: ADR-026, ADR-041, ADR-044, ADR-048
 
 ## Contexto
@@ -10,7 +11,7 @@ El barrido 3 dejó abierta una decisión de producto: el adulto puede descargar 
 (`GET /cuenta/datos/exportar`), pero no existe una importación de ese archivo. La prueba de ciclo completo
 (`tests/test_ciclo_alumno.py`) verifica la exportación y documenta la ausencia.
 
-## Propuesta
+## Decisión
 
 **Mantener el comportamiento actual: la exportación es de solo lectura y no hay importación desde el
 navegador.**

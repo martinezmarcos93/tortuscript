@@ -3,6 +3,12 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Los cambios de versión se
 consultan antes de fijarlos.
 
+## Sin publicar
+
+### Cambiado
+- **ADR-048 y ADR-049 aceptadas** por Marcos el 04/10/2026 (modelo de sincronización y no importar el progreso
+  exportado). No cambian código.
+
 ## [1.0.0] — 04/10/2026 — primera versión estable
 
 Marcos fijó esta versión el 04/10/2026 (etiqueta `v1.0.0`). Es la primera versión estable del producto:

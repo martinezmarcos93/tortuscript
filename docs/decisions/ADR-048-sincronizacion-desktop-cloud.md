@@ -1,7 +1,8 @@
 # ADR-048 — Modelo de sincronización Desktop ↔ Cloud
 
-- Estado: **Propuesta** (no autoriza implementación; la decide Marcos)
-- Fecha: 2026-10-04
+- Estado: Aceptada
+- Fecha: 2026-10-04 (propuesta y aceptada el mismo día)
+- Decisor: Marcos
 - Relacionadas: ADR-013, ADR-026, ADR-041, ADR-044, ADR-046
 
 ## Contexto
@@ -14,7 +15,7 @@ tiene sentido cuando exista un servidor desplegado y una familia use TortuScript
 Todo cambio de progreso lo produce el servidor al evaluar una respuesta; el navegador nunca envía progreso
 (un snapshot del cliente permitiría falsificar XP). La sincronización no puede abrir esa puerta.
 
-## Propuesta
+## Decisión
 
 1. **Unidad de sincronización: el perfil.** Se sincroniza el progreso de un `ChildProfile` entre una
    instalación local y la cuenta en la nube. Nunca entre perfiles ni entre cuentas.
@@ -45,6 +46,8 @@ Todo cambio de progreso lo produce el servidor al evaluar una respuesta; el nave
    contenido con la que se resolvió.
 7. **Contenido de otra versión.** Un hecho sobre una lección que la nube no conoce (o cambió) se guarda
    como pendiente y no suma hasta que las versiones coincidan. No se descarta.
+
+La aceptación fija el diseño; no hay nada que implementar hasta que exista un servidor desplegado.
 
 ## Lo que queda sin decidir
 

@@ -145,13 +145,13 @@ agrupado al final como «al evaluar el lanzamiento».
 | 0 | **Cerrado** | — |
 | 1 | **Cerrado** | `tests/test_coherencia_repo.py`: plantillas, estáticos, módulos, contenido y herramientas sin referencias (ninguno), índice de ADR completo y con el mismo estado que cada ADR (faltaban seis enlaces y había dos estados mal escritos) y registro de lengua (todo en «vos», sin hallazgos). |
 | 2 | **Cerrado en lo automatizable** | La página de suscripción entra en las auditorías de teclado, responsive y contraste. |
-| 3 | **Cerrado** | La importación del progreso exportado no se implementa: ADR-049 (Propuesta) deja escrito por qué. |
+| 3 | **Cerrado** | La importación del progreso exportado no se implementa: ADR-049 deja escrito por qué. |
 | 4 | **Cerrado** | Supresión definitiva de perfiles y de cuenta (ADR-046, aceptada por Marcos). |
 | 5 | **Cerrado** | — (la migración v2→v3 solo aplica a instalaciones viejas y está cubierta por tests). |
 | 6 | **Cerrado en lo automatizable** | Tests de vencimiento, uso único y anulación de los enlaces de cuenta; `herramientas/probar_correo.py` para comprobar la entrega real cuando haya credenciales. |
 | 7 | **Cerrado para transferencia** | Órdenes de pago, página de suscripción, confirmación manual y ventana lista para otros medios (ADR-047, aceptada por Marcos). |
 | 8 | **Cerrado para una máquina** | Tope de ejecuciones simultáneas con cola acotada, compartido entre procesos (`tortuscript/cupos.py`). |
-| 9 | **Diseñado** | ADR-048 (Propuesta): modelo de conflictos por tipo de dato. Sin código, a propósito. |
+| 9 | **Diseñado** | ADR-048: modelo de conflictos por tipo de dato. Sin código, a propósito. |
 | 10 | **Código completo, sin probar contra el modelo real** | — |
 | 11 | **Contratos completos** | `Curriculum.v1` fijado y publicado (`docs/contratos/curriculum-v1.json`); los prerrequisitos del nivel avanzado se validan contra él. |
 | 12 | **Pendiente** | No corresponde hasta decidir el lanzamiento. |
@@ -172,7 +172,7 @@ agrupado al final como «al evaluar el lanzamiento».
 | Cola de correo (6) | Reintentos automáticos (outbox). Hoy, si el envío falla, la familia pide otro enlace desde la misma página. | Complejidad que solo se justifica con volumen. |
 | Pagos (7) | Poner el alias y el importe en el `.env`; decidir qué contenido es premium (hoy ninguno); procesador de tarjetas con su adaptador y su sandbox; facturación y reembolsos. | Decisiones comerciales y un tercero. |
 | Sandbox (8) | Separar el servidor web del daemon de Docker, cola entre máquinas, gVisor o microVM, revisión independiente. | Es arquitectura de despliegue. |
-| Sincronización (9) | Aceptar ADR-048 e implementarla. | Necesita un servidor desplegado. |
+| Sincronización (9) | Implementar ADR-048. | Necesita un servidor desplegado. |
 | Tutor (10) | Pasar el SDK `anthropic` por dependency-auditor, instalarlo y probar contra el modelo real (calidad, costo, respuestas que resuelven de más). | Necesita credencial y cada prueba se paga. |
 | Croco-Script (11) | Dominios y URL de entrada; si consulta el acceso en línea. | Depende del otro repositorio. |
 | Accesibilidad (2) | Prueba manual con lector de pantalla y en teléfonos y tabletas reales. | Manual. |
@@ -182,5 +182,5 @@ agrupado al final como «al evaluar el lanzamiento».
 
 ### Pendientes de decisión (ADR en Propuesta)
 
-ADR-048 (sincronización) y ADR-049 (no importar progreso exportado), además de las que ya estaban: 016, 017, 018,
-019 y 022.
+Marcos aceptó ADR-048 (sincronización) y ADR-049 (no importar progreso exportado) el 04/10/2026. Siguen en
+Propuesta las que ya estaban: 016, 017, 018, 019 y 022.
