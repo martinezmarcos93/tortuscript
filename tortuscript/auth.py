@@ -174,6 +174,33 @@ class AuthRepository:
         with self._db() as db:
             db.execute("UPDATE accounts SET password_hash=? WHERE id=?", (encoded, account_id))
 
+    def actualizar_password(self, account_id, actual, nueva, conservar_sesion=None):
+        """Cambio de contraseña con sesión iniciada: exige la actual y cierra las demás sesiones."""
+        self.validar_password(nueva)
+        with self._db() as db:
+            row = db.execute("SELECT password_hash FROM accounts WHERE id=?", (account_id,)).fetchone()
+        if not row or not row["password_hash"] or not isinstance(actual, str) \
+                or not check_password_hash(row["password_hash"], actual):
+            raise AuthError("La contraseña actual no es correcta.")
+        self.set_password(account_id, nueva)
+        conservar = _digest(conservar_sesion) if conservar_sesion else ""
+        with self._db() as db:
+            db.execute("UPDATE sessions SET revoked_at=? WHERE account_id=? AND revoked_at IS NULL AND id_hash<>?",
+                       (_iso(_now()), account_id, conservar))
+            # Un enlace de recuperación pedido antes del cambio ya no debe servir.
+            db.execute("UPDATE account_tokens SET consumed_at=? WHERE account_id=? AND kind='recovery' AND consumed_at IS NULL",
+                       (_iso(_now()), account_id))
+
+    def listar_sesiones(self, account_id):
+        """Metadatos de las sesiones vigentes (sin identificadores ni hashes) para la exportación de datos."""
+        ahora = _iso(_now())
+        with self._db() as db:
+            rows = db.execute(
+                "SELECT created_at,expires_at FROM sessions WHERE account_id=? AND revoked_at IS NULL AND expires_at>? ORDER BY created_at",
+                (account_id, ahora),
+            ).fetchall()
+        return [{"creada": r["created_at"], "expira": r["expires_at"]} for r in rows]
+
     def verify_password(self, email, password):
         email = (email or "").strip().lower()
         with self._db() as db:

@@ -12,6 +12,7 @@ from flask import Blueprint, abort, current_app, jsonify, make_response, redirec
 from tortuscript.acceso import AccesoProducto
 from tortuscript.auth import AuthError, AuthRepository
 from tortuscript.cuentas import MAX_CHILD_PROFILES, CuentaError, CuentaRepository
+from tortuscript.progreso_childprofile import ProgresoPerfilError
 from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProgresoLocal
 from tortuscript.perfil_educativo import ContextoEducativoError, PerfilEducativoService
 from tortuscript.progreso_childprofile import ProgresoChildProfile
@@ -117,7 +118,7 @@ def _next_pedido(default="/"):
 def _pagina_perfiles(cuentas, row, estado=200, error=None):
     return render_template(
         "cuenta/perfiles.html",
-        perfiles=cuentas.listar_child_profiles(row["account_id"]),
+        perfiles=cuentas.listar_child_profiles(row["account_id"], solo_activos=True),
         csrf=request.cookies.get("tortu_csrf", ""),
         perfil_activo=row["active_profile_id"],
         next_url=_next_pedido(),
@@ -203,20 +204,145 @@ def ingresar():
     return render_template("cuenta/ingresar.html", next_url=destino)
 
 
+AVISOS_CONFIGURACION = {
+    "renombrado": "El nombre del perfil se cambió.",
+    "archivado": "El perfil se archivó. Su progreso queda guardado y se puede restaurar.",
+    "restaurado": "El perfil volvió a estar disponible.",
+    "password": "La contraseña se cambió. Cerramos las demás sesiones abiertas.",
+}
+# Versión del texto que acepta el adulto al registrarse (web/templates/cuenta/registrar.html).
+VERSION_AVISO_RESPONSABLE = "2026-10-04"
+
+
+def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
+    perfiles = cuentas.listar_child_profiles(row["account_id"])
+    return render_template(
+        "cuenta/configuracion.html",
+        cuenta=cuentas.obtener_account(row["account_id"]),
+        perfiles=[p for p in perfiles if p.active],
+        archivados=[p for p in perfiles if not p.active],
+        max_perfiles=MAX_CHILD_PROFILES,
+        csrf=request.cookies.get("tortu_csrf", ""),
+        consentimientos=cuentas.listar_consentimientos(row["account_id"]),
+        aviso=AVISOS_CONFIGURACION.get(request.args.get("ok", "")),
+        error=error,
+    ), estado
+
+
 @bp.get("/configuracion")
 def configuracion():
     resultado = _require_session()
     if not resultado:
-        return redirect(url_for("cuenta.ingresar"))
-    cuentas, _, row = resultado
+        return redirect(url_for("cuenta.ingresar", next=url_for("cuenta.configuracion")))
+    cuentas, auth, row = resultado
+    return _pagina_configuracion(cuentas, auth, row)
+
+
+def _adulto_con_csrf():
+    """(cuentas, auth, row, raw) de una sesión válida con CSRF correcto, o la respuesta de rechazo."""
+    raw = request.cookies.get("tortu_session")
+    resultado = _require_session()
+    if not resultado:
+        return None, (jsonify(ok=False, mensaje="Sesión requerida."), 401)
+    cuentas, auth, row = resultado
+    if not _require_csrf(auth, raw):
+        return None, (jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403)
+    return (cuentas, auth, row, raw), None
+
+
+def _gestionar_perfil(accion, aviso):
+    """Aplica una operación del adulto sobre un perfil de SU cuenta y responde según formulario o JSON."""
+    sesion, rechazo = _adulto_con_csrf()
+    if rechazo:
+        return rechazo
+    cuentas, auth, row, _ = sesion
+    try:
+        accion(cuentas, row["account_id"])
+    except CuentaError as exc:
+        if request.form:
+            return _pagina_configuracion(cuentas, auth, row, 400, str(exc))
+        return jsonify(ok=False, mensaje=str(exc)), 400
+    if request.form:
+        return redirect(url_for("cuenta.configuracion", ok=aviso))
+    return jsonify(ok=True)
+
+
+@bp.post("/perfiles/<profile_id>/renombrar")
+def renombrar_perfil(profile_id):
+    nombre = _form_or_json_dict().get("nombre")
+    return _gestionar_perfil(
+        lambda cuentas, cuenta_id: cuentas.actualizar_nombre_child_profile(cuenta_id, profile_id, nombre), "renombrado")
+
+
+@bp.post("/perfiles/<profile_id>/archivar")
+def archivar_perfil(profile_id):
+    return _gestionar_perfil(lambda cuentas, cuenta_id: cuentas.archivar_child_profile(cuenta_id, profile_id), "archivado")
+
+
+@bp.post("/perfiles/<profile_id>/restaurar")
+def restaurar_perfil(profile_id):
+    return _gestionar_perfil(lambda cuentas, cuenta_id: cuentas.restaurar_child_profile(cuenta_id, profile_id), "restaurado")
+
+
+@bp.post("/password")
+def cambiar_password():
+    sesion, rechazo = _adulto_con_csrf()
+    if rechazo:
+        return rechazo
+    cuentas, auth, row, raw = sesion
+    limite = _limit_or_429(f"change-password:{row['account_id']}", 10, 900)
+    if limite:
+        return limite
+    datos = _form_or_json_dict()
+    actual, nueva = datos.get("actual"), datos.get("nueva")
+    try:
+        if not isinstance(actual, str) or not isinstance(nueva, str):
+            raise AuthError("Completá la contraseña actual y la nueva.")
+        if request.form and nueva != datos.get("nueva2", nueva):
+            raise AuthError("Las dos contraseñas nuevas no coinciden.")
+        auth.actualizar_password(row["account_id"], actual, nueva, conservar_sesion=raw)
+    except AuthError as exc:
+        if request.form:
+            return _pagina_configuracion(cuentas, auth, row, 400, str(exc))
+        return jsonify(ok=False, mensaje=str(exc)), 400
+    if request.form:
+        return redirect(url_for("cuenta.configuracion", ok="password"))
+    return jsonify(ok=True)
+
+
+@bp.get("/datos/exportar")
+def exportar_datos():
+    """Derecho de acceso: todo lo que TortuScript guarda de la cuenta y sus perfiles, en un archivo legible.
+    No incluye secretos (hash de contraseña, tokens, identificadores de sesión)."""
+    resultado = _require_session()
+    if not resultado:
+        return jsonify(ok=False, mensaje="Sesión requerida."), 401
+    cuentas, auth, row = resultado
     cuenta = cuentas.obtener_account(row["account_id"])
-    perfiles = cuentas.listar_child_profiles(row["account_id"])
-    return render_template(
-        "cuenta/configuracion.html",
-        cuenta=cuenta,
-        perfiles=perfiles,
-        max_perfiles=MAX_CHILD_PROFILES,
-    )
+    store = _educativo().progreso
+    perfiles = []
+    for perfil in cuentas.listar_child_profiles(cuenta.id):
+        try:
+            snapshot = store.cargar(perfil.id)
+            progreso = None if snapshot is None else {"actualizado": snapshot.updated_at, "datos": snapshot.data}
+        except ProgresoPerfilError:
+            progreso = {"error": "El archivo de progreso de este perfil está dañado."}
+        perfiles.append({"id": perfil.id, "nombre": perfil.display_name, "creado": perfil.created_at,
+                         "en_uso": perfil.active, "progreso": progreso})
+    documento = {
+        "formato": "tortuscript-datos-de-cuenta", "version": 1,
+        "cuenta": {"id": cuenta.id, "correo": cuenta.email, "creada": cuenta.created_at, "rol": cuenta.role},
+        "perfiles": perfiles,
+        "consentimientos": [
+            {"finalidad": c.finalidad, "version": c.version, "otorgado": c.otorgado, "fecha": c.created_at}
+            for c in cuentas.listar_consentimientos(cuenta.id)
+        ],
+        "sesiones_abiertas": auth.listar_sesiones(cuenta.id),
+        "accesos": [{"producto": p, "activo": a} for p, a in cuentas.listar_entitlements(cuenta.id)],
+    }
+    respuesta = jsonify(documento)
+    respuesta.headers["Content-Disposition"] = 'attachment; filename="tortuscript-mis-datos.json"'
+    return respuesta
 
 
 @bp.get("/seleccionar-perfil")
@@ -238,6 +364,11 @@ def registrar_post():
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
         return render_template("cuenta/registrar.html", error="Correo y contraseña son obligatorios."), 400
+    if datos.get("responsable") != "si":
+        return render_template(
+            "cuenta/registrar.html", email=email,
+            error="Para crear la cuenta tenés que confirmar que sos la persona adulta responsable.",
+        ), 400
     if not _email_sender_configurado():
         return render_template(
             "cuenta/registrar.html",
@@ -252,6 +383,7 @@ def registrar_post():
         return render_template("cuenta/registrar.html", error=str(exc)), 400
     except AuthError as exc:
         return render_template("cuenta/registrar.html", error=str(exc)), 400
+    cuentas.registrar_consentimiento(cuenta.id, "responsable_adulto", VERSION_AVISO_RESPONSABLE, True)
     token, expires = auth.create_verification_token(cuenta.id)
     if not _intentar_emitir_email("verification", cuenta.email, token, expires):
         return render_template(
@@ -287,6 +419,8 @@ def registro():
         return jsonify(ok=False, mensaje=str(exc)), 400
     except AuthError as exc:
         return jsonify(ok=False, mensaje=str(exc)), 400
+    if datos.get("responsable") is True:
+        cuentas.registrar_consentimiento(cuenta.id, "responsable_adulto", VERSION_AVISO_RESPONSABLE, True)
     token, expires = auth.create_verification_token(cuenta.id)
     if not _intentar_emitir_email("verification", cuenta.email, token, expires):
         return jsonify(
@@ -523,7 +657,7 @@ def me():
         return jsonify(autenticado=False), 401
     cuentas, auth, row = resultado
     cuenta = cuentas.obtener_account(row["account_id"])
-    perfiles = cuentas.listar_child_profiles(row["account_id"])
+    perfiles = cuentas.listar_child_profiles(row["account_id"], solo_activos=True)
     return jsonify(
         autenticado=True,
         cuenta={"id": cuenta.id, "email": cuenta.email, "role": cuenta.role},

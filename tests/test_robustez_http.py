@@ -20,7 +20,7 @@ except ImportError:
 from web.app import create_app
 
 CAMPOS = ("codigo entradas semilla respuesta respuestas nombre tipo id experiencia meta_min entrada leccion paso "
-          "omitir email password password2 token perfil_id perfil_local reemplazar proyecto_id next "
+          "omitir email password password2 actual nueva nueva2 responsable token perfil_id perfil_local reemplazar proyecto_id next "
           "tam contraste movimiento letra voz velocidad").split()
 VALORES = (None, True, -1, 1e308, 2 ** 70, "", "\u0000", "x" * 5000, [], [[]], ["a", 1, None], {}, {"a": {"b": []}})
 # Estos estados son respuestas deliberadas, no errores internos.
@@ -57,6 +57,8 @@ class TestRobustezHTTP(unittest.TestCase):
             "<leccion_id>": [leccion["id"]], "<int:i>": sorted(set(tipos.values())) + ["99"],
             "<int:n>": ["1"], "<int:pos>": ["1"], "<modo>": ["todo"], "<curso_id>": ["x"],
             "<proyecto_id>": ["x"], "<etapa_id>": ["x"], "<ayuda_id>": ["x"], "<encuesta_id>": ["curso-terminado"],
+            # Un perfil inexistente: archivar el perfil activo dejaría sin sesión educativa al resto del barrido.
+            "<profile_id>": ["child_000000000000000000000000"],
         }
 
     @classmethod

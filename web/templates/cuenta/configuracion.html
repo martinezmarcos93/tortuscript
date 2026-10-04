@@ -16,6 +16,9 @@
       <p class="texto-grande">Administrá tu cuenta familiar.</p>
     </div>
 
+    {% if aviso %}<p class="aviso-ok" role="status">{{ aviso }}</p>{% endif %}
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
     <div class="tarjeta">
       <h2>Cuenta</h2>
       <p><b>Correo:</b> {{ cuenta.email }}</p>
@@ -24,14 +27,66 @@
 
     <div class="tarjeta">
       <h2>Perfiles educativos</h2>
-      <p>{{ perfiles|length }}/{{ max_perfiles }} perfiles utilizados.</p>
-      <ul>
-        {% for perfil in perfiles %}
-        <li>{{ perfil.display_name }}</li>
-        {% endfor %}
-      </ul>
+      <p>{{ perfiles|length }}/{{ max_perfiles }} perfiles en uso.</p>
+      {% for perfil in perfiles %}
+      <div class="fila-perfil">
+        <form method="post" action="{{ url_for('cuenta.renombrar_perfil', profile_id=perfil.id) }}" class="fila-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="etiqueta" for="nombre-{{ loop.index }}">Nombre del perfil {{ loop.index }}</label>
+          <input class="campo" id="nombre-{{ loop.index }}" name="nombre" maxlength="30" required value="{{ perfil.display_name }}" autocomplete="off">
+          <button class="boton chico" type="submit">Guardar nombre</button>
+        </form>
+        <form method="post" action="{{ url_for('cuenta.archivar_perfil', profile_id=perfil.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="boton chico" type="submit" aria-label="Archivar el perfil {{ perfil.display_name }}">Archivar</button>
+        </form>
+      </div>
+      {% else %}
+      <p class="tenue">Todavía no hay perfiles.</p>
+      {% endfor %}
+      <p class="tenue">Archivar saca el perfil de la lista sin borrar su progreso. Se puede restaurar cuando quieras.</p>
       {% if perfiles|length >= max_perfiles %}
       <p class="tenue">Para agregar más perfiles será necesario contratar el plan que amplía el límite.</p>
+      {% endif %}
+      {% if archivados %}
+      <h3>Perfiles archivados</h3>
+      {% for perfil in archivados %}
+      <form method="post" action="{{ url_for('cuenta.restaurar_perfil', profile_id=perfil.id) }}" class="fila-perfil">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <span>{{ perfil.display_name }}</span>
+        <button class="boton chico" type="submit" aria-label="Restaurar el perfil {{ perfil.display_name }}">Restaurar</button>
+      </form>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    <div class="tarjeta">
+      <h2>Cambiar contraseña</h2>
+      <form method="post" action="{{ url_for('cuenta.cambiar_password') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="etiqueta" for="actual">Contraseña actual</label>
+        <input class="campo" id="actual" name="actual" type="password" autocomplete="current-password" required>
+        <label class="etiqueta" for="nueva">Contraseña nueva</label>
+        <input class="campo" id="nueva" name="nueva" type="password" autocomplete="new-password" minlength="12" required>
+        <label class="etiqueta" for="nueva2">Repetila</label>
+        <input class="campo" id="nueva2" name="nueva2" type="password" autocomplete="new-password" minlength="12" required>
+        <p><button class="boton" type="submit">Cambiar contraseña</button></p>
+      </form>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Tus datos</h2>
+      <p>Podés descargar todo lo que TortuScript guarda de esta cuenta y de sus perfiles: correo, perfiles, progreso y
+        las decisiones registradas. El archivo no incluye contraseñas.</p>
+      <p><a class="boton" href="{{ url_for('cuenta.exportar_datos') }}" download>Descargar mis datos</a></p>
+      {% if consentimientos %}
+      <h3>Decisiones registradas</h3>
+      <ul>
+        {% for c in consentimientos %}
+        <li>{{ {"responsable_adulto": "Soy la persona adulta responsable", "analitica": "Analítica", "tutor_ia": "Tutor con IA", "sincronizacion": "Sincronización"}.get(c.finalidad, c.finalidad) }}:
+          {{ "aceptado" if c.otorgado else "revocado" }} el {{ c.created_at[:10] }} (aviso {{ c.version }})</li>
+        {% endfor %}
+      </ul>
       {% endif %}
     </div>
 
@@ -43,7 +98,7 @@
 
     <hr>
     <form method="post" action="{{ url_for('cuenta.logout') }}" class="centrado">
-      <input type="hidden" name="csrf" value="{{ request.cookies.get('tortu_csrf', '') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
       <button class="boton chico" type="submit">Cerrar sesión</button>
     </form>
   </section>

@@ -26,6 +26,9 @@ from typing import Optional
 
 SCHEMA_VERSION = 3
 MAX_CHILD_PROFILES = 3
+# Finalidades para las que se registra una decisión del adulto (docs/architecture/CONTRATOS-DOMINIO-…).
+# El consentimiento de una finalidad nunca habilita otra.
+FINALIDADES_CONSENTIMIENTO = ("responsable_adulto", "analitica", "tutor_ia", "sincronizacion")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -48,6 +51,15 @@ class ChildProfile:
     display_name: str
     created_at: str
     active: bool = True
+
+
+@dataclass(frozen=True)
+class Consentimiento:
+    account_id: str
+    finalidad: str
+    version: str
+    otorgado: bool
+    created_at: str
 
 
 @dataclass(frozen=True)
@@ -175,6 +187,19 @@ class CuentaRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_subscriptions_account
                     ON subscriptions(account_id);
+
+                -- Bitácora de decisiones del adulto: solo se agregan filas, nunca se editan.
+                CREATE TABLE IF NOT EXISTS consents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    purpose TEXT NOT NULL,
+                    policy_version TEXT NOT NULL,
+                    granted INTEGER NOT NULL CHECK (granted IN (0, 1)),
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_consents_account_purpose
+                    ON consents(account_id, purpose, id);
 
                 CREATE TABLE IF NOT EXISTS entitlements (
                     account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -321,7 +346,7 @@ class CuentaRepository:
                 raise CuentaError("Ya existe un perfil con ese nombre.") from exc
         return ChildProfile(profile_id, account_id, display_name, now)
 
-    def listar_child_profiles(self, account_id: str) -> list[ChildProfile]:
+    def listar_child_profiles(self, account_id: str, solo_activos: bool = False) -> list[ChildProfile]:
         with self._conexion() as con:
             rows = con.execute(
                 """SELECT id,account_id,display_name,created_at,active
@@ -330,8 +355,98 @@ class CuentaRepository:
             ).fetchall()
         return [
             ChildProfile(r["id"], r["account_id"], r["display_name"], r["created_at"], bool(r["active"]))
-            for r in rows
+            for r in rows if r["active"] or not solo_activos
         ]
+
+    def _perfil_de_la_cuenta(self, con, account_id: str, profile_id: str):
+        """La fila del perfil solo si pertenece a la cuenta: nunca se opera sobre un perfil ajeno."""
+        if not isinstance(profile_id, str) or not isinstance(account_id, str):
+            raise CuentaError("El perfil no pertenece a la cuenta.")
+        row = con.execute(
+            "SELECT id,account_id,display_name,created_at,active FROM child_profiles WHERE id=? AND account_id=?",
+            (profile_id, account_id),
+        ).fetchone()
+        if not row:
+            raise CuentaError("El perfil no pertenece a la cuenta.")
+        return row
+
+    def actualizar_nombre_child_profile(self, account_id: str, profile_id: str, display_name: str) -> ChildProfile:
+        """Rectificación del alias. El identificador y el progreso no cambian."""
+        display_name = _normalizar_nombre(display_name)
+        clave = _clave_nombre(display_name)
+        with self._conexion() as con:
+            row = self._perfil_de_la_cuenta(con, account_id, profile_id)
+            duplicado = con.execute(
+                "SELECT 1 FROM child_profiles WHERE account_id=? AND display_name_key=? AND id<>?",
+                (account_id, clave, profile_id),
+            ).fetchone()
+            if duplicado:
+                raise CuentaError("Ya existe un perfil con ese nombre.")
+            try:
+                con.execute("UPDATE child_profiles SET display_name=?, display_name_key=? WHERE id=?",
+                            (display_name, clave, profile_id))
+            except sqlite3.IntegrityError as exc:
+                raise CuentaError("Ya existe un perfil con ese nombre.") from exc
+        return ChildProfile(row["id"], row["account_id"], display_name, row["created_at"], bool(row["active"]))
+
+    def archivar_child_profile(self, account_id: str, profile_id: str) -> None:
+        """Saca el perfil de uso sin borrar nada: su progreso queda guardado y se puede restaurar.
+        Las sesiones que lo tenían elegido vuelven al selector."""
+        with self._conexion() as con:
+            self._perfil_de_la_cuenta(con, account_id, profile_id)
+            con.execute("UPDATE child_profiles SET active=0 WHERE id=?", (profile_id,))
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'").fetchone():
+                con.execute("UPDATE sessions SET active_profile_id=NULL WHERE active_profile_id=?", (profile_id,))
+
+    def restaurar_child_profile(self, account_id: str, profile_id: str) -> None:
+        with self._conexion() as con:
+            row = self._perfil_de_la_cuenta(con, account_id, profile_id)
+            if row["active"]:
+                return
+            cantidad = con.execute(
+                "SELECT COUNT(*) AS n FROM child_profiles WHERE account_id=? AND active=1", (account_id,)
+            ).fetchone()["n"]
+            if cantidad >= MAX_CHILD_PROFILES:
+                raise CuentaError(f"Una cuenta admite como máximo {MAX_CHILD_PROFILES} perfiles en uso.")
+            con.execute("UPDATE child_profiles SET active=1 WHERE id=?", (profile_id,))
+
+    # ── consentimiento ──
+    def registrar_consentimiento(self, account_id: str, finalidad: str, version: str, otorgado: bool) -> Consentimiento:
+        """Agrega una decisión a la bitácora. Revocar es registrar `otorgado=False`: nada se edita ni se borra."""
+        if finalidad not in FINALIDADES_CONSENTIMIENTO:
+            raise CuentaError("Finalidad de consentimiento desconocida.")
+        if not isinstance(version, str) or not version.strip() or len(version) > 40:
+            raise CuentaError("La versión del aviso no es válida.")
+        if not isinstance(otorgado, bool):
+            raise CuentaError("La decisión debe ser explícita.")
+        now = _ahora()
+        with self._conexion() as con:
+            if not con.execute("SELECT 1 FROM accounts WHERE id=?", (account_id,)).fetchone():
+                raise CuentaError("La cuenta no existe.")
+            con.execute(
+                "INSERT INTO consents(account_id,purpose,policy_version,granted,created_at) VALUES (?,?,?,?,?)",
+                (account_id, finalidad, version.strip(), int(otorgado), now),
+            )
+        return Consentimiento(account_id, finalidad, version.strip(), otorgado, now)
+
+    def listar_consentimientos(self, account_id: str) -> list[Consentimiento]:
+        """El historial completo, del más viejo al más nuevo."""
+        with self._conexion() as con:
+            rows = con.execute(
+                "SELECT account_id,purpose,policy_version,granted,created_at FROM consents WHERE account_id=? ORDER BY id",
+                (account_id,),
+            ).fetchall()
+        return [Consentimiento(r["account_id"], r["purpose"], r["policy_version"], bool(r["granted"]), r["created_at"])
+                for r in rows]
+
+    def tiene_consentimiento(self, account_id: str, finalidad: str) -> bool:
+        """True solo si la ÚLTIMA decisión registrada para esa finalidad fue otorgarlo. Sin registro, no hay consentimiento."""
+        with self._conexion() as con:
+            row = con.execute(
+                "SELECT granted FROM consents WHERE account_id=? AND purpose=? ORDER BY id DESC LIMIT 1",
+                (account_id, finalidad),
+            ).fetchone()
+        return bool(row and row["granted"])
 
     def establecer_entitlement(self, account_id: str, product: str, active: bool, source: str) -> Entitlement:
         if not product.strip() or not source.strip():
@@ -348,6 +463,13 @@ class CuentaRepository:
                 (account_id, product.strip(), int(active), source.strip(), now),
             )
         return Entitlement(account_id, product.strip(), active, source.strip())
+
+    def listar_entitlements(self, account_id: str) -> list[tuple[str, bool]]:
+        with self._conexion() as con:
+            rows = con.execute(
+                "SELECT product,active FROM entitlements WHERE account_id=? ORDER BY product", (account_id,)
+            ).fetchall()
+        return [(r["product"], bool(r["active"])) for r in rows]
 
     def tiene_entitlement(self, account_id: str, product: str) -> bool:
         with self._conexion() as con:

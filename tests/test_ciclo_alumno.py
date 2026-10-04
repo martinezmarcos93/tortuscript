@@ -57,7 +57,7 @@ class TestCicloCompletoDelAlumno(unittest.TestCase):
         return (cliente or self.c).get_cookie("tortu_csrf").value
 
     def _registrar_y_verificar(self, email):
-        r = self.c.post("/cuenta/registrar", data={"email": email, "password": CLAVE})
+        r = self.c.post("/cuenta/registrar", data={"email": email, "password": CLAVE, "responsable": "si"})
         self.assertEqual(r.status_code, 202)
         self.assertIn("Verificá tu correo", r.get_data(as_text=True))
         # Sin verificar no se puede entrar.

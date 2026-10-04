@@ -37,6 +37,8 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 - **Objetivos táctiles en la Zona Tortuga (Barrido 2):** la casilla del depurador y el control de velocidad medían
   menos de 24 px; ahora cumplen WCAG 2.5.8. La auditoría de teclado y táctil da 0 hallazgos y pasa a ser bloqueante
   en CI (`--estricto`).
+- **Snapshot de progreso incompleto:** un progreso de perfil guardado por una versión anterior (o parcial) provocaba
+  error 500 al faltarle campos; ahora se completa al leerlo, como el progreso local.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
@@ -61,6 +63,12 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 - **Auditoría de teclado ampliada:** `herramientas/revisar_teclado.py` recorre cada página con Tab (trampas de foco,
   salida del editor con Escape, indicador de foco visible), incluye las páginas de cuenta con y sin sesión y mide
   los objetivos táctiles en 360 px. `--estricto` la convierte en puerta de CI.
+- **Privacidad: lo que el adulto puede hacer con los datos (Barrido 4, ADR-026):** desde «Configuración de cuenta»
+  se puede cambiar el nombre de un perfil (rectificación), archivarlo y restaurarlo sin perder su progreso, cambiar
+  la contraseña (cierra las demás sesiones e invalida enlaces de recuperación pendientes) y **descargar todos los
+  datos** de la cuenta y sus perfiles, sin contraseñas ni tokens. Se agrega la bitácora de consentimientos
+  (`consents`, solo se agregan filas; una finalidad no habilita otra; vale la última decisión) y el registro exige y
+  registra la declaración «soy la persona adulta responsable».
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

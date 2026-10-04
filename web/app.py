@@ -1172,7 +1172,7 @@ def create_app(token=None):
         cuentas = _educativo().cuentas
         perfiles = [
             {"id": p.id, "nombre": p.display_name}
-            for p in cuentas.listar_child_profiles(contexto.cuenta.id)
+            for p in cuentas.listar_child_profiles(contexto.cuenta.id, solo_activos=True)
         ]
         return jsonify(modo="cuenta", actual=contexto.perfil.id, perfiles=perfiles)
 

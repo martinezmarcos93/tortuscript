@@ -725,3 +725,11 @@ html[data-contraste="alto"] .opcion-ajuste[aria-checked="true"] { background: #f
   .paso-caja { padding: 1rem; }
   .leccion-titulo { align-items: flex-start; flex-direction: column; gap: .35rem; }
 }
+
+/* Configuración de cuenta: una fila por perfil, que se apila en pantallas angostas */
+.fila-perfil { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin: .6rem 0; }
+.fila-perfil .fila-form { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; flex: 1 1 16rem; }
+.fila-perfil .campo { flex: 1 1 10rem; min-width: 0; }
+.fila-perfil .etiqueta { flex-basis: 100%; }
+.aviso-ok { border: 2px solid var(--verde); border-radius: 12px; padding: .7rem 1rem; }
+p.error, div.error { border: 2px solid var(--rojo); border-radius: 12px; padding: .7rem 1rem; }
