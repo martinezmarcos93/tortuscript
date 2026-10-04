@@ -270,6 +270,8 @@ def create_app(token=None):
     def _cabeceras_de_seguridad(respuesta):
         for nombre, valor in CABECERAS_SEGURIDAD.items():
             respuesta.headers.setdefault(nombre, valor)
+        if app.config.get("HSTS"):                                # solo en modo servidor, que es siempre HTTPS
+            respuesta.headers.setdefault("Strict-Transport-Security", app.config["HSTS"])
         if request.path == RUTA_WORKER_JUEGOS:
             respuesta.headers["Content-Security-Policy"] = CSP_WORKER_JUEGOS
         return respuesta

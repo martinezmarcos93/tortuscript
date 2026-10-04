@@ -104,6 +104,11 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   paquete `anthropic` instalado aparte (opcional; no está en `requirements.txt`) **y** que el adulto lo active en
   «Configuración de cuenta», donde también puede revocarlo. Pedir ayuda cuenta como una pista y nunca aprueba un
   ejercicio.
+- **Modo servidor (bloque G del roadmap comercial), preparado y nunca desplegado:** `wsgi.py` y `web/servidor.py`
+  arman la aplicación para atender a terceros detrás de un proxy HTTPS (hosts permitidos, IP real del cliente para
+  los límites, cookies `Secure`, HSTS, límite de intentos compartido). No arranca si falta algo obligatorio: hosts,
+  URL https, carpeta de datos, sandbox de contenedores o correo SMTP. `despliegue/README.md` explica los pasos, las
+  restricciones (un proceso, un servidor) y la lista previa a abrir al público.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

@@ -25,7 +25,7 @@ CARPETA_RAIZ_DEL_ZIP = "TortuScript"
 
 # Lo que va en el paquete (carpetas completas y archivos sueltos)
 INCLUIR_CARPETAS = ("tortuscript", "web", "contenido", "lanzadores", "docs", "herramientas")
-INCLUIR_ARCHIVOS = ("iniciar_web.py", "requirements.txt", "requirements.lock", "README.md", "CHANGELOG.md")
+INCLUIR_ARCHIVOS = ("iniciar_web.py", "requirements.txt", "requirements.lock", "README.md", "CHANGELOG.md", ".env.example")
 # Lo que NUNCA va (datos privados, basura de desarrollo)
 EXCLUIR_PARTES = {"__pycache__", ".git", ".venv", "venv", "logs", "dist", ".claude", "tests", ".pytest_cache"}
 EXCLUIR_PATRONES = ("*.pyc", "*.pyo", "progreso_*.json", "progreso_*.json.*", "config_tortuscript.json", "*.bak", "*.tmp")
