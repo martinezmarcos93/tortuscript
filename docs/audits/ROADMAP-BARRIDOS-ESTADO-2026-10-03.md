@@ -30,7 +30,7 @@ La integración no significa que todos los barridos 0–4 estén completos. La r
 
 ## Deuda transversal ya identificada
 
-- El rate limiter por proceso no coordina varios workers.
+- El rate limiter predeterminado sigue siendo por proceso. Se añadió una alternativa SQLite compartida entre workers que acceden al mismo archivo, activable con `ACCOUNT_RATE_LIMIT_DB`; no coordina hosts distintos y no sustituye Redis/servicio compartido para despliegues distribuidos.
 - El manejo de correo no sustituye una cola transaccional/outbox; una respuesta HTTP 202 no prueba entrega.
 - La entrega real de verificación y recuperación necesita proveedor configurado y pruebas.
 - La migración v2→v3 debe ensayarse con una copia y un backup restaurable, nunca sobre datos reales sin autorización específica.
@@ -65,13 +65,14 @@ Esta secuencia operativa conserva la hoja de ruta general acordada (0–12). Los
 
 ## Avance remoto posterior al corte
 
-**Rama de implementación:** `work/barridos-maximo-2026-10-03`  
-**PR de trabajo:** [#6 — Barridos: respaldo SQLite y migración sin mutaciones parciales](https://github.com/martinezmarcos93/tortuscript/pull/6), en borrador y basada en la rama de planificación para mantener la PR #5 separada.
+**Rama de trabajo de la PR:** `plan/barridos-pendientes-2026-10-03` (también existe la rama de respaldo `work/barridos-maximo-2026-10-03`).  
+**PR activa:** [#5 — Barrido 1 y trabajo de seguimiento](https://github.com/martinezmarcos93/tortuscript/pull/5), en borrador; no fusionada a `main`.
 
 - **Barrido 4 — diseño:** creado `docs/architecture/CONTRATOS-DOMINIO-PRIVACIDAD-Y-ROADMAP.md` con límites Account / Authentication / Consent / Subscription / Entitlement / ChildProfile, propiedad de datos, consentimiento de menores, contratos de pagos, sandbox, sync, tutor IA y Croco-Script. Es una decisión de diseño, no una declaración de implementación terminada.
 - **Barrido 5 — respaldo/restauración:** agregado `tortuscript/respaldo_sqlite.py` con backup de SQLite, comprobación `integrity_check`, publicación atómica, rechazo de destino existente y restauración con confirmación explícita para sobrescribir. Las utilidades no se invocan automáticamente ni se ejecutaron contra bases reales.
+- **Barrido 6 — limitación compartida:** agregado `SQLiteRateLimiter` con transacción `BEGIN IMMEDIATE`, clave SHA-256 para no persistir IP/correo en claro y tests que comparten el límite entre dos instancias. Es opt-in mediante `ACCOUNT_RATE_LIMIT_DB`; el modo por proceso sigue siendo el predeterminado y la solución SQLite solo coordina procesos que comparten archivo.
 - **Barrido 5 — migración:** el repositorio ahora valida alias históricos equivalentes antes de crear tablas comerciales; los cambios de columnas, índice y versión se ejecutan dentro de una transacción. Se amplió la regresión para exigir que una migración rechazada no deje tablas `subscriptions` o `entitlements`.
-- **Regresiones añadidas:** `tests/test_respaldo_sqlite.py` cubre copia consistente, destino existente, origen ausente, archivo corrupto, confirmación de sobrescritura, restauración y rutas iguales.
+- **Regresiones añadidas:** `tests/test_respaldo_sqlite.py` cubre copia consistente, destino existente, origen ausente, archivo corrupto, confirmación de sobrescritura, restauración y rutas iguales. `tests/test_rate_limit.py` ahora cubre el límite compartido y la no persistencia de la clave original en claro.
 - **CI:** se amplió el filtro de `pull_request` del workflow para aceptar ramas `plan/**` y `work/**`, permitiendo que las PR de trabajo intermedias reciban verificación automatizada. La evidencia de CI para esta tanda debe confirmarse desde la ejecución asociada al head actual antes de declarar estos cambios validados.
 - **Estado:** los cambios están comprometidos en la rama remota. No se marca cerrado el Barrido 5 hasta que CI confirme las nuevas pruebas; backup/restore de datos reales, migración sobre copia local y cualquier validación dependiente de la PC siguen expresamente diferidos por instrucción del usuario.
 
