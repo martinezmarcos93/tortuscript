@@ -16,12 +16,18 @@ from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProg
 from tortuscript.perfil_educativo import ContextoEducativoError, PerfilEducativoService
 from tortuscript.progreso_childprofile import ProgresoChildProfile
 from tortuscript.runtime_educativo import RuntimeEducativo
-from tortuscript.rate_limit import RateLimiter
+from tortuscript.rate_limit import RateLimiter, SQLiteRateLimiter
 
 def _rate_limiter():
-    # Cada instancia Flask mantiene su propio limitador. Evita compartir estado
-    # entre aplicaciones de prueba o instancias WSGI distintas en el mismo proceso.
-    return current_app.extensions.setdefault("tortu_rate_limiter", RateLimiter())
+    # Por defecto se mantiene el limitador local, apropiado para desarrollo/pruebas.
+    # Un despliegue multi-worker puede configurar ACCOUNT_RATE_LIMIT_DB en un
+    # volumen compartido para coordinar límites entre procesos de la misma máquina.
+    limiter = current_app.extensions.get("tortu_rate_limiter")
+    if limiter is None:
+        shared_db = current_app.config.get("ACCOUNT_RATE_LIMIT_DB")
+        limiter = SQLiteRateLimiter(shared_db) if shared_db else RateLimiter()
+        current_app.extensions["tortu_rate_limiter"] = limiter
+    return limiter
 
 logger = logging.getLogger(__name__)
 
