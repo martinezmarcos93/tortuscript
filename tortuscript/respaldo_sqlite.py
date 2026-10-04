@@ -16,6 +16,25 @@ class ErrorRespaldo(ValueError):
     """El respaldo no se puede crear o restaurar de forma segura."""
 
 
+def _publicar_sin_sobrescribir(temporal: Path, dst: Path) -> None:
+    """Publica `temporal` como `dst` de forma atómica y falla si `dst` ya existe.
+
+    link() es atómico y no pisa una carrera concurrente. En sistemas de archivos sin
+    enlaces duros (FAT/exFAT de un pendrive, algunos recursos de red) se reserva el
+    nombre con O_EXCL y se reemplaza ese marcador propio, que tampoco pisa a nadie.
+    """
+    try:
+        os.link(temporal, dst)
+    except FileExistsError:
+        raise
+    except OSError:
+        fd = os.open(dst, os.O_CREAT | os.O_EXCL | os.O_WRONLY)      # FileExistsError si alguien llegó antes
+        os.close(fd)
+        os.replace(temporal, dst)
+        return
+    temporal.unlink()
+
+
 def _validar_sqlite(path: Path) -> None:
     """Rechaza archivos ausentes, bases corruptas y archivos que no son SQLite."""
     if not path.is_file():
@@ -57,10 +76,9 @@ def crear_respaldo(origen: str | Path, destino: str | Path) -> Path:
         # link() publica el archivo completo de forma atómica y falla si dst ya existe,
         # a diferencia de os.replace(), que podría sobrescribir una carrera concurrente.
         try:
-            os.link(temporal, dst)
+            _publicar_sin_sobrescribir(temporal, dst)
         except FileExistsError as exc:
             raise ErrorRespaldo("El destino apareció durante la operación; no se sobrescribió.") from exc
-        temporal.unlink()
         return dst
     except ErrorRespaldo:
         raise
@@ -103,12 +121,11 @@ def restaurar_respaldo(
         else:
             # Publicación atómica sin sobrescritura, también ante una carrera concurrente.
             try:
-                os.link(temporal, dst)
+                _publicar_sin_sobrescribir(temporal, dst)
             except FileExistsError as exc:
                 raise ErrorRespaldo(
                     "El destino apareció durante la restauración; no se sobrescribió."
                 ) from exc
-            temporal.unlink()
         return dst
     except ErrorRespaldo:
         raise

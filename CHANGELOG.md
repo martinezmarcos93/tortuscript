@@ -29,6 +29,8 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   las páginas aunque existiera el `.bak`. Ahora se aparta como `.corrupto-<fecha>` (nunca se borra), se restaura el
   respaldo si es válido y del mismo perfil, y si no lo hay el perfil vuelve a la bienvenida. Un archivo escrito por
   una versión más nueva se rechaza sin tocarlo.
+- **Respaldo SQLite en discos sin enlaces duros:** en un pendrive FAT/exFAT `link()` falla y el respaldo no se podía
+  publicar; ahora se reserva el nombre con creación exclusiva, que tampoco sobrescribe.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
@@ -44,6 +46,12 @@ Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-B
   datos por fuera de la API, el registro con enlace de correo, la verificación, el ingreso, el perfil, la
   bienvenida, una lección con error → pista → reintento, XP y cierre, mapa, abandono, reinicio del servidor y
   regreso, un segundo perfil aislado, proyectos y exportación; y que otra familia no puede elegir un perfil ajeno.
+- **Respaldo completo de los datos (Barrido 5):** `herramientas/respaldar_datos.py` (`crear`, `listar`, `verificar`,
+  `restaurar --confirmar`) respalda la base de cuentas **y** el progreso de cada perfil en una carpeta con
+  manifiesto y hash por archivo. Verificar detecta archivos alterados, faltantes o sobrantes, progreso de otro
+  perfil o de un perfil inexistente; restaurar exige confirmación y conserva lo anterior en `instance.antes-de-
+  restaurar-<fecha>`. Ensayado sobre una copia de datos reales en el disco del proyecto: restauración idéntica y
+  originales intactos.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
