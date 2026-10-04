@@ -161,30 +161,6 @@ def _require_csrf(auth, raw_session):
     return True
 
 
-@bp.before_request
-def _proteger_login_csrf():
-    """Rechaza intentos de login desde otro origen en navegadores modernos."""
-    if request.endpoint != "cuenta.login" or request.method != "POST":
-        return None
-
-    if request.headers.get("Sec-Fetch-Site", "").lower() == "cross-site":
-        return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
-
-    origen = request.headers.get("Origin") or request.headers.get("Referer")
-    if origen:
-        try:
-            parsed = urlsplit(origen)
-        except ValueError:
-            # Un Origin/Referer malformado nunca debe convertir una petición hostil en 500.
-            return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
-        if (
-            parsed.scheme.lower() != request.scheme.lower()
-            or parsed.netloc.lower() != request.host.lower()
-        ):
-            return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
-    return None
-
-
 @bp.after_request
 def _sin_cache(respuesta):
     """Las páginas de cuenta llevan tokens, correos y perfiles: no deben quedar en caché compartida ni en el historial."""

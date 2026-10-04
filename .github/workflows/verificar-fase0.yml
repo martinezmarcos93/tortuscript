@@ -91,6 +91,10 @@ jobs:
       - name: Auditoría de teclado, foco, nombres accesibles y objetivos táctiles
         if: always()
         run: python herramientas/revisar_teclado.py --url http://127.0.0.1:5077 --estricto
+      - name: Formularios de cuenta en un navegador real
+        # Va último: cierra la sesión de prueba. Detecta controles de origen que rechazan a navegadores reales.
+        if: always()
+        run: python herramientas/probar_formularios.py --url http://127.0.0.1:5077
       - name: Guardar capturas de diagnóstico
         if: always()
         uses: actions/upload-artifact@v7

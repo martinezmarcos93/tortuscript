@@ -163,7 +163,7 @@ class TestWeb(unittest.TestCase):
             with self.subTest(nombre):
                 self.assertIn("frame-ancestors 'none'", r.headers.get("Content-Security-Policy", ""))
                 self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
-                self.assertEqual(r.headers.get("Referrer-Policy"), "no-referrer")
+                self.assertEqual(r.headers.get("Referrer-Policy"), "same-origin")
                 self.assertEqual(r.headers.get("X-Frame-Options"), "DENY")
                 self.assertIn("camera=()", r.headers.get("Permissions-Policy", ""))
             r.close()

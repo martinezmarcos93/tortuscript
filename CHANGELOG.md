@@ -39,6 +39,12 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   en CI (`--estricto`).
 - **Snapshot de progreso incompleto:** un progreso de perfil guardado por una versión anterior (o parcial) provocaba
   error 500 al faltarle campos; ahora se completa al leerlo, como el progreso local.
+- **El ingreso por formulario fallaba en navegadores reales:** con `Referrer-Policy: no-referrer` Chromium manda
+  `Origin: null` en los formularios del propio sitio y el control de origen del login respondía 403 a todo el mundo
+  (los tests no lo veían porque el cliente de pruebas no manda esas cabeceras). La política pasa a `same-origin`, el
+  control se guía por `Sec-Fetch-Site` y cubre **todas** las rutas que cambian algo, no solo el login.
+  `herramientas/probar_formularios.py` recorre ingreso, perfiles, renombrado y cierre de sesión en un navegador real
+  y corre en CI.
 
 ### Agregado
 - **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
@@ -114,6 +120,8 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   valida la sesión y lee el progreso una sola vez. Una página pasaba por ~12 migraciones de esquema, 7 lecturas del
   progreso y ~80 transacciones SQLite: el inicio bajó de 118 ms a 9 ms y el mapa de 366 ms a 7 ms (medido con el
   cliente de pruebas).
+- **Candado por perfil:** los pedidos de un mismo perfil siguen yendo de a uno, pero una familia ya no espera a otra
+  (antes había un único candado para todo el servidor).
 
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 

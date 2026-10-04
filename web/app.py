@@ -15,6 +15,7 @@ import sys
 import threading
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from flask import Flask, abort, g, jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import HTTPException
@@ -77,7 +78,9 @@ CSP_WORKER_JUEGOS = "default-src 'none'; script-src 'self'"
 CABECERAS_SEGURIDAD = {
     "Content-Security-Policy": CSP,
     "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "no-referrer",
+    # same-origin y no no-referrer: con no-referrer los navegadores mandan `Origin: null` en los formularios del
+    # propio sitio y no se pueden distinguir de un marco hostil. Hacia otros sitios no sale ningún dato igual.
+    "Referrer-Policy": "same-origin",
     "X-Frame-Options": "DENY",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
@@ -95,6 +98,29 @@ ERRORES = {
 }
 
 
+def mismo_origen(pedido):
+    """¿Este pedido lo originó una página de este mismo sitio (o un cliente que no es un navegador)?
+
+    1. Los navegadores actuales lo declaran en `Sec-Fetch-Site`, que una página ajena no puede falsear:
+       vale `same-origin` y `none` (el usuario escribió la dirección).
+    2. Sin esa cabecera (navegador viejo) se mira `Origin` y, si falta, `Referer`: tienen que ser de este sitio.
+       `Origin: null` (marcos aislados, redirecciones opacas) no se acepta.
+    3. Sin ninguna cabecera no es un navegador (curl, pruebas, herramientas): pasa, y lo protegen la sesión,
+       el token de la app y el CSRF de cada ruta.
+    """
+    sitio = pedido.headers.get("Sec-Fetch-Site", "").lower()
+    if sitio:
+        return sitio in ("same-origin", "none")
+    origen = pedido.headers.get("Origin") or pedido.headers.get("Referer")
+    if not origen:
+        return True
+    try:
+        partes = urlsplit(origen)
+    except ValueError:
+        return False
+    return partes.scheme.lower() == pedido.scheme.lower() and partes.netloc.lower() == pedido.host.lower()
+
+
 def codigo_de_referencia():
     """Código corto para cruzar lo que vio el chico con el log (p. ej. 8F72A1)."""
     return secrets.token_hex(3).upper()
@@ -104,6 +130,8 @@ def create_app(token=None):
     app = Flask(__name__)
     app.config["TOKEN"] = token or secrets.token_urlsafe(24)
     app.config["JSON_AS_ASCII"] = False
+    # Nombres de host que atiende esta instancia. Local: solo la propia máquina (frena el «DNS rebinding»).
+    app.config["HOSTS_PERMITIDOS"] = set(HOSTS_PERMITIDOS)
     app.config["ACCOUNT_DB"] = Path(app.instance_path) / "cuentas.sqlite3"
     app.config["ACCOUNT_COOKIE_SECURE"] = False
     app.config["ACCOUNT_COOKIE_SAMESITE"] = "Lax"
@@ -127,7 +155,9 @@ def create_app(token=None):
     intentos = {}    # errores y respuesta vista por (perfil, lección, paso); se reinicia al abrir la lección
     practicas = {}   # sesión de práctica del día por perfil: {"dia", "pasos": [(lección, paso)]}
     colas = {}       # colas de repaso fijadas al empezar: (perfil, modo, semilla) -> [índices]
-    turno = threading.RLock()     # los pedidos van de a uno: cargar → modificar → guardar el progreso no se pisa
+    # Un candado por perfil: cargar → modificar → guardar el progreso de un chico no se pisa entre pestañas,
+    # y una familia no espera a otra. (Antes había un único candado para todo el servidor.)
+    turnos, turnos_guardia = {}, threading.Lock()
 
     # ─────────────── errores ───────────────
     def _respuesta_de_error(estado, codigo=None):
@@ -246,7 +276,13 @@ def create_app(token=None):
 
     @app.before_request
     def _proteger():
-        if request.host.split(":")[0] not in HOSTS_PERMITIDOS:
+        if request.host.split(":")[0] not in app.config["HOSTS_PERMITIDOS"]:
+            abort(403)
+        # Ningún pedido que cambie algo se acepta desde otro sitio (CSRF), venga a la ruta que venga.
+        if request.method not in ("GET", "HEAD", "OPTIONS") and not request.path.startswith("/pagos/webhook/") \
+                and not mismo_origen(request):
+            if request.path.startswith(("/api/", "/cuenta")) and not request.form:
+                return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
             abort(403)
         if request.path.startswith("/api/") and \
                 request.headers.get("X-Tortu-Token") != app.config["TOKEN"]:
@@ -275,19 +311,35 @@ def create_app(token=None):
             return redirect(url_for("cuenta.ingresar", next=request.full_path))
         return None
 
+    def _perfil_del_pedido():
+        """El perfil sobre el que opera este pedido, o None si no toca progreso de nadie."""
+        if "tortu_contexto" in g:
+            return g.tortu_contexto.perfil.id
+        raw_session = request.cookies.get("tortu_session")
+        if not raw_session:
+            return None
+        sesion = _educativo().auth.get_session(raw_session)       # rutas de cuenta: perfil activo de la sesión
+        return sesion["active_profile_id"] if sesion else None
+
     @app.before_request
     def _de_a_uno():
-        """Dos pestañas (o dos toques seguidos) no pueden leer el mismo progreso y pisarse al guardar.
-        Todo pedido de página o de API espera su turno; los archivos estáticos no."""
+        """Dos pestañas (o dos toques seguidos) del mismo perfil no pueden leer el mismo progreso y pisarse al
+        guardar: cada pedido espera el turno de SU perfil. Los archivos estáticos y los pedidos sin perfil no esperan."""
         if request.endpoint in (None, "static"):
             return None
+        perfil = _perfil_del_pedido()
+        if perfil is None:
+            return None
+        with turnos_guardia:
+            turno = turnos.setdefault(perfil, threading.RLock())
         turno.acquire()
-        g.con_turno = True
+        g.con_turno = turno
         return None
 
     @app.teardown_request
     def _soltar_turno(_error):
-        if g.pop("con_turno", False):
+        turno = g.pop("con_turno", None)
+        if turno is not None:
             turno.release()
 
     @app.before_request
