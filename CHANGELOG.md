@@ -1,11 +1,23 @@
 # Cambios
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Todavía no hay una
-versión publicada de la app web: los cambios de versión se consultan antes de fijarlos.
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Los cambios de versión se
+consultan antes de fijarlos.
 
-## Sin publicar — barridos de consolidación (desde 03/10/2026)
+## [1.0.0] — 04/10/2026 — primera versión estable
 
-PR #5 (`plan/barridos-pendientes-2026-10-03`, fusionada a `main` el 03/10) y rama `work/barridos-2026-10-04`.
+Marcos fijó esta versión el 04/10/2026 (etiqueta `v1.0.0`). Es la primera versión estable del producto:
+**todavía no se distribuye ni se hospeda**; el lanzamiento se evaluará aparte. Reúne todo lo que figura en las
+secciones «1.0.0 — …» de más abajo, desde la migración a aplicación web hasta el cierre de los barridos de
+consolidación. Lo que queda para cuando se decida publicar está en
+`docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md` («Al evaluar el lanzamiento»).
+
+### Corregido (al cerrar la versión)
+- **Página de suscripción con una cuenta administradora:** decía «esta cuenta todavía no tiene acceso» aunque el
+  rol administrador entra a todo sin suscripción. Ahora lo dice, y deja armar una orden para probar el circuito.
+
+## 1.0.0 — barridos de consolidación (desde 03/10/2026)
+
+PR #5 (`plan/barridos-pendientes-2026-10-03`, fusionada a `main` el 03/10) y PR #7 (`work/barridos-2026-10-04`, fusionada el 04/10).
 Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
 
 ### Corregido
@@ -163,7 +175,7 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   (`tortuscript/en_curso.py`): sobreviven a un reinicio, no crecen sin límite y, con un candado de archivo por
   perfil, permiten correr más de un proceso web. No forman parte del progreso, los respaldos ni las exportaciones.
 
-## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
+## 1.0.0 — TortuGame: crear juegos de rol (26/09/2026)
 
 Rama `feat/tortugame`. Fase 3 del roadmap; implementa ADR-006, 007 y 008 (aceptadas).
 
@@ -184,7 +196,7 @@ Rama `feat/tortugame`. Fase 3 del roadmap; implementa ADR-006, 007 y 008 (acepta
 ### Cambiado
 - Menú: "Juegos" junto a "Tortuga". Seis cursos, 69 lecciones.
 
-## Sin publicar — instaladores para familias, en cualquier sistema (26/09/2026)
+## 1.0.0 — instaladores para familias, en cualquier sistema (26/09/2026)
 
 Rama `feat/instalador-agnostico`. Implementa ADR-015 (aceptada).
 
@@ -204,7 +216,7 @@ Rama `feat/instalador-agnostico`. Implementa ADR-015 (aceptada).
 - `requirements-dev.txt` suma `pyinstaller==6.22.3` (auditado: licencia con excepción para distribuir, sin CVE).
 - README: instalación para familias, dónde se guardan los datos, versión del esquema (10) y enlace al índice de ADR.
 
-## Sin publicar — tests que ejecutan el JavaScript de la tortuga (26/09/2026)
+## 1.0.0 — tests que ejecutan el JavaScript de la tortuga (26/09/2026)
 
 ### Agregado
 - `tests/js/tortuga.test.mjs` ejecuta de verdad `web/static/js/tortuga.js` (con `node:test` y un canvas falso, sin
@@ -212,13 +224,13 @@ Rama `feat/instalador-agnostico`. Implementa ADR-015 (aceptada).
   lápiz, y el laberinto. Una prueba de mutación (volver a pintar el cuerpo con el color del lápiz) los hace fallar.
 - `tests/test_js.py` los corre dentro de la suite (se saltean si no hay Node).
 
-## Sin publicar — privacidad explicada en la Ayuda (26/09/2026)
+## 1.0.0 — privacidad explicada en la Ayuda (26/09/2026)
 
 ### Agregado
 - Pregunta 🔒 "¿Qué guarda TortuScript y quién lo ve?": el apodo, el progreso, los proyectos, los ajustes y los
   intereses; todo en un archivo por perfil en esta compu, sin envíos a internet; cómo lo borra un adulto.
 
-## Sin publicar — lockfile con hashes y auditoría de dependencias (26/09/2026)
+## 1.0.0 — lockfile con hashes y auditoría de dependencias (26/09/2026)
 
 Rama `chore/lockfile-dependencias`.
 
@@ -234,7 +246,7 @@ Rama `chore/lockfile-dependencias`.
 - Se quitó del `.venv` del proyecto un paquete (`typing_extensions`) que había quedado de un intento de instalar
   Playwright ahí.
 
-## Sin publicar — prueba de nivel en la bienvenida (26/09/2026)
+## 1.0.0 — prueba de nivel en la bienvenida (26/09/2026)
 
 Rama `feat/prueba-de-nivel`. Segunda versión de ADR-004 (aceptada).
 
@@ -245,19 +257,19 @@ Rama `feat/prueba-de-nivel`. Segunda versión de ADR-004 (aceptada).
 - Las preguntas son datos (`contenido/diagnostico.json`) y los tests comprueban que la opción correcta sea lo que
   muestra el código, que ninguna otra lo sea y que los textos cumplan las reglas de estilo.
 
-## Sin publicar — textos más cortos (26/09/2026)
+## 1.0.0 — textos más cortos (26/09/2026)
 
 ### Cambiado
 - Consigna del jefe final de Tortuaria (188 → 140 caracteres; el detalle de contar turnos pasa a la nota) y
   explicación del techo en *Proyecto casa* (166 → 150). La auditoría ya no marca textos de más de 160 caracteres.
 
-## Sin publicar — verificación de las páginas nuevas (26/09/2026)
+## 1.0.0 — verificación de las páginas nuevas (26/09/2026)
 
 ### Cambiado
 - `revisar_responsive.py` y `revisar_contraste.py` también revisan Ayuda, la bienvenida (contraste), un laberinto,
   Tortuaria y la página 404. Resultado: sin desbordes y contraste AA en modo normal y alto.
 
-## Sin publicar — pistas propias en todos los pasos (26/09/2026)
+## 1.0.0 — pistas propias en todos los pasos (26/09/2026)
 
 Rama `content/pistas-propias`.
 
@@ -272,7 +284,7 @@ Rama `content/pistas-propias`.
 - Consigna de *Texto o cuenta* con tuteo y sin tildes ("Utiliza… renglon… veras") → voseo y ortografía correctos.
 - Informe de la prueba simulada actualizado: 0 pasos sin pista propia.
 
-## Sin publicar — Tortuaria, el curso piloto de juego de rol (26/09/2026)
+## 1.0.0 — Tortuaria, el curso piloto de juego de rol (26/09/2026)
 
 Rama `feat/tortuaria`. Fase 2 del roadmap maestro.
 
@@ -288,7 +300,7 @@ Rama `feat/tortuaria`. Fase 2 del roadmap maestro.
 - Las encuestas aparecen **como mucho una por curso terminado**: nunca dos seguidas.
 - El test del paquete toma la lista de cursos de `ORDEN_CURSOS` en vez de tenerla escrita a mano.
 
-## Sin publicar — prueba simulada con chicos (26/09/2026)
+## 1.0.0 — prueba simulada con chicos (26/09/2026)
 
 Rama `feat/simulacion-chicos`.
 
@@ -301,7 +313,7 @@ Rama `feat/simulacion-chicos`.
   respuesta** (una simulación no los mide). Hallazgo real de la auditoría de contenido: 137 pasos usan la pista
   genérica en vez de una propia.
 
-## Sin publicar — intereses locales (26/09/2026)
+## 1.0.0 — intereses locales (26/09/2026)
 
 Rama `feat/intereses`. Implementa ADR-005 (aceptada). Esquema del progreso **v10** (aditivo: campo `intereses`).
 
@@ -313,7 +325,7 @@ Rama `feat/intereses`. Implementa ADR-005 (aceptada). Esquema del progreso **v10
   exportación del progreso (y al importar se descarta lo que no corresponda).
 - Las encuestas son datos (`contenido/encuestas/*.json`) y un test les aplica las reglas de estilo de los cursos.
 
-## Sin publicar — diagnóstico: elegir dónde empezar (26/09/2026)
+## 1.0.0 — diagnóstico: elegir dónde empezar (26/09/2026)
 
 Rama `feat/diagnostico`. Implementa ADR-004 (aceptada). Esquema del progreso **v9** (aditivo: campo `salteadas`).
 
@@ -324,7 +336,7 @@ Rama `feat/diagnostico`. Implementa ADR-004 (aceptada). Esquema del progreso **v
   logros, liga ni certificado, se pueden hacer cuando se quiera y, al hacerlas, pasan a hechas normalmente.
 - El servidor solo acepta el punto de entrada que corresponde a la experiencia elegida.
 
-## Sin publicar — azar con dado() (26/09/2026)
+## 1.0.0 — azar con dado() (26/09/2026)
 
 Rama `feat/dado`. Implementa ADR-009 (aceptada).
 
@@ -336,7 +348,7 @@ Rama `feat/dado`. Implementa ADR-009 (aceptada).
   y, si el programa pregunta algo, la página repite la semilla para que las tiradas no cambien entre vueltas.
 - `dado` en la Referencia (Operaciones matemáticas) y resaltado en el editor.
 
-## Sin publicar — herramientas de verificación con Playwright (26/09/2026)
+## 1.0.0 — herramientas de verificación con Playwright (26/09/2026)
 
 Rama `chore/playwright-dev`.
 
@@ -350,7 +362,7 @@ Rama `chore/playwright-dev`.
 - Pantallas de 320–360 px: las tres casillas de estadísticas del inicio y los botones de certificado de *Logros* se
   salían de la pantalla (las detectó `revisar_responsive.py`).
 
-## Sin publicar — cierre de lección reforzado (26/09/2026)
+## 1.0.0 — cierre de lección reforzado (26/09/2026)
 
 Rama `feat/cierre-de-leccion`.
 
@@ -366,7 +378,7 @@ Rama `feat/cierre-de-leccion`.
 - `translator.palabras_usadas()` concentra el cálculo de palabras que antes estaba solo en el validador.
 - README: coma mal puesta en la lista de herramientas.
 
-## Sin publicar — página de ayuda (26/09/2026)
+## 1.0.0 — página de ayuda (26/09/2026)
 
 Rama `feat/ayuda`.
 
@@ -378,7 +390,7 @@ Rama `feat/ayuda`.
 - La ayuda es dato (`contenido/ayuda.json`) y un test le aplica las mismas reglas de estilo que a los cursos.
 - No guarda reportes ni opiniones: eso es feedback local y depende de ADR-005, que sigue en Propuesta.
 
-## Sin publicar — pantalla de retorno (26/09/2026)
+## 1.0.0 — pantalla de retorno (26/09/2026)
 
 Rama `feat/pantalla-de-retorno`.
 
@@ -387,7 +399,7 @@ Rama `feat/pantalla-de-retorno`.
   "Ayer ganaste 40 XP. Hoy te espera «Dos líneas». Y tenés 3 tarjetas para repasar", con el botón **▶ Continuar**.
   Solo cuenta lo bueno: si faltó varios días, no lo reta. Usa datos que el progreso ya guardaba (sin cambio de esquema).
 
-## Sin publicar — exportar e importar el progreso (26/09/2026)
+## 1.0.0 — exportar e importar el progreso (26/09/2026)
 
 Rama `feat/exportar-importar`.
 
@@ -399,7 +411,7 @@ Rama `feat/exportar-importar`.
   campo, sin números negativos, meta/experiencia/ajustes válidos, proyectos con las mismas reglas que al guardarlos,
   tope de 1 MB y nombre de perfil saneado. Los campos desconocidos se descartan.
 
-## Sin publicar — páginas de error humanas (26/09/2026)
+## 1.0.0 — páginas de error humanas (26/09/2026)
 
 Rama `feat/pagina-de-error`.
 
@@ -410,7 +422,7 @@ Rama `feat/pagina-de-error`.
   (p. ej. `8F72A1`) que queda en `logs/tortuscript.log` junto con la traza. Nunca se muestran trazas ni rutas.
 - La página de error no depende del progreso: se muestra aunque lo que falló sea cargarlo.
 
-## Sin publicar — cabeceras de seguridad y CSP (26/09/2026)
+## 1.0.0 — cabeceras de seguridad y CSP (26/09/2026)
 
 Rama `feat/security-headers`. Era el único punto en FAIL de la auditoría de seguridad
 (`docs/experimental/SEGURIDAD_SITIO_PROFESIONAL.md` §22).
@@ -428,7 +440,7 @@ Rama `feat/security-headers`. Era el único punto en FAIL de la auditoría de se
   imprimir del certificado y la lista de *Mis proyectos* se inician desde sus `.js`.
 - El confeti se dibuja sin Worker (antes lo creaba desde `blob:`), así la CSP no necesita abrir `blob:`.
 
-## Sin publicar — color de la tortuga por nivel (26/09/2026)
+## 1.0.0 — color de la tortuga por nivel (26/09/2026)
 
 Rama `feat/color-por-nivel`.
 
@@ -441,7 +453,7 @@ Rama `feat/color-por-nivel`.
 - El **cuerpo** de la tortuga ya no toma el color del lápiz: muestra el progreso del chico. El **lápiz** arranca siempre
   en verde y solo cambia con `color`, así que los dibujos que se comparan en los ejercicios no se ven afectados.
 
-## Sin publicar — laberintos de la tortuga (26/09/2026)
+## 1.0.0 — laberintos de la tortuga (26/09/2026)
 
 Rama `feat/laberinto`.
 
@@ -457,7 +469,7 @@ Rama `feat/laberinto`.
 - El paso final de *12. Reto: la espiral* ya no dice "¡Terminaste!": anuncia los laberintos. El cierre del curso pasó
   al final de *15. Laberinto III*. No se borró ni se movió ningún paso, así que el progreso guardado no cambia.
 
-## Sin publicar — migración a aplicación web (25/09/2026)
+## 1.0.0 — migración a aplicación web (25/09/2026)
 
 Rama `feature/migracion-web-paridad`. Fases F0 a F9 del roadmap (`docs/ROADMAP_MIMO_KIDS.md`).
 
