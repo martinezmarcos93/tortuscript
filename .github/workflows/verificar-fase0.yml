@@ -7,6 +7,8 @@ on:
       - main
       - audit/ux-v1-2026-09-30
       - sweep/consolidacion-ux-v1
+      - 'plan/**'
+      - 'work/**'
   pull_request:
     branches:
       - main
