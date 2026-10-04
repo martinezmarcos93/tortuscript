@@ -43,7 +43,7 @@ class TestRobustezHTTP(unittest.TestCase):
         cls.app = create_app(token="t")
         cls.app.config.update(
             TESTING=True, ACCOUNT_DB=cls.tmp / "cuentas.sqlite3", PROGRESS_DIR=cls.tmp / "progreso_perfiles",
-            ENABLE_LOCAL_PROGRESS_MIGRATION=True,
+            ENABLE_LOCAL_PROGRESS_MIGRATION=True, PAYMENT_WEBHOOK_SECRETS={"prueba": "secreto"},
         )
         cls.app.extensions["tortu_rate_limiter"] = Libre()
         cls.c = cls.app.test_client()
@@ -59,6 +59,7 @@ class TestRobustezHTTP(unittest.TestCase):
             "<proyecto_id>": ["x"], "<etapa_id>": ["x"], "<ayuda_id>": ["x"], "<encuesta_id>": ["curso-terminado"],
             # Un perfil inexistente: archivar el perfil activo dejaría sin sesión educativa al resto del barrido.
             "<profile_id>": ["child_000000000000000000000000"],
+            "<proveedor>": ["prueba"],
         }
 
     @classmethod

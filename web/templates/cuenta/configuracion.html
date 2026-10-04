@@ -25,6 +25,20 @@
       <p><b>Rol:</b> {{ "Administrador" if cuenta.role == "admin" else "Adulto" }}</p>
     </div>
 
+    {% if suscripciones %}
+    <div class="tarjeta">
+      <h2>Suscripción</h2>
+      {% set estados = {"incomplete": "pago pendiente", "active": "activa", "past_due": "con un pago rechazado", "canceled": "cancelada", "refunded": "reembolsada"} %}
+      {% set productos = {"tortuscript-premium": "TortuScript Premium", "croco-script": "Croco-Script"} %}
+      <ul>
+        {% for sub in suscripciones %}
+        <li><b>{{ productos.get(sub.producto, sub.producto) }}:</b> {{ estados.get(sub.estado, sub.estado) }}{% if sub.periodo_hasta %} · período hasta el {{ sub.periodo_hasta[:10] }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+      <p class="tenue">Una suscripción cubre todos los perfiles de la cuenta. Cancelarla no borra el progreso de nadie.</p>
+    </div>
+    {% endif %}
+
     <div class="tarjeta">
       <h2>Perfiles educativos</h2>
       <p>{{ perfiles|length }}/{{ max_perfiles }} perfiles en uso.</p>

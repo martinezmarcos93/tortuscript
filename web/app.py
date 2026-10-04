@@ -39,9 +39,12 @@ from tortuscript.runtime_educativo import RuntimeEducativo, ContextoEducativoErr
 from tortuscript.repaso import MODOS, cola_repaso, contar  # noqa: E402
 from tortuscript.translator import TraductorTortuScript, detectar_tipo  # noqa: E402
 from web.cuenta_routes import bp as cuenta_bp, _educativo  # noqa: E402
+from web.pagos_routes import bp as pagos_bp  # noqa: E402
 
 logger = logging.getLogger("tortuscript.web")
 HOSTS_PERMITIDOS = {"127.0.0.1", "localhost"}
+# Rutas que no operan sobre un perfil educativo: cuenta del adulto y eventos del proveedor de pagos.
+SIN_PERFIL = ("/cuenta", "/pagos")
 
 
 def _json_objeto():
@@ -108,7 +111,10 @@ def create_app(token=None):
     # cuentas en una instalación compartida. Solo habilitar en modo local,
     # de un único usuario, mediante configuración explícita.
     app.config["ENABLE_LOCAL_PROGRESS_MIGRATION"] = False
+    # Secretos de webhook por proveedor de pagos. Vacío: no se acepta ningún evento (ADR-032).
+    app.config["PAYMENT_WEBHOOK_SECRETS"] = {}
     app.register_blueprint(cuenta_bp)
+    app.register_blueprint(pagos_bp)
     # Pistas vistas por (perfil, lección, paso): se reinician al abrir el ejercicio o la lección.
     pistas_vistas = {}
     INDICES_POR_LECCION = {}
@@ -244,7 +250,7 @@ def create_app(token=None):
 
     @app.before_request
     def _requiere_contexto_educativo():
-        if request.endpoint in (None, "static") or request.path.startswith("/cuenta"):
+        if request.endpoint in (None, "static") or request.path.startswith(SIN_PERFIL):
             return None
         raw_session = request.cookies.get("tortu_session")
         if not raw_session:
@@ -284,7 +290,7 @@ def create_app(token=None):
     def _bienvenida():
         """Un perfil nuevo empieza por la bienvenida (nombre, experiencia y meta diaria)."""
         if request.method != "GET" or request.endpoint in (None, "static", "bienvenida") \
-                or request.path.startswith("/api/") or request.path.startswith("/cuenta"):
+                or request.path.startswith("/api/") or request.path.startswith(SIN_PERFIL):
             return None
         if progreso.necesita_onboarding(_cargar_progreso()):
             return redirect(url_for("bienvenida"))
@@ -294,7 +300,7 @@ def create_app(token=None):
     def _semana_de_la_liga():
         """Al cambiar de semana se resuelve la liga anterior (¿subió?) una sola vez."""
         if request.method != "GET" or request.endpoint in (None, "static") \
-                or request.path.startswith("/api/") or request.path.startswith("/cuenta"):
+                or request.path.startswith("/api/") or request.path.startswith(SIN_PERFIL):
             return None
         p = _cargar_progreso()
         viejo = dict(p.get("liga") or {})
@@ -309,7 +315,7 @@ def create_app(token=None):
     @app.context_processor
     def _globales():
         # Las páginas de cuenta no tienen contexto educativo.
-        if request.path.startswith("/cuenta"):
+        if request.path.startswith(SIN_PERFIL):
             return {"token": app.config["TOKEN"]}
         contexto = _contexto()
         avisos = _tomar_avisos(_cargar_progreso())

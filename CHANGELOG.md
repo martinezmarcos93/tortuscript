@@ -69,6 +69,13 @@ Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
   datos** de la cuenta y sus perfiles, sin contraseñas ni tokens. Se agrega la bitácora de consentimientos
   (`consents`, solo se agregan filas; una finalidad no habilita otra; vale la última decisión) y el registro exige y
   registra la declaración «soy la persona adulta responsable».
+- **Pagos y acceso (Barrido 7, ADR-032), sin proveedor real ni cobros:** `tortuscript/pagos.py` aplica eventos del
+  proveedor (checkout, pago, pago rechazado, actualización, cancelación, reembolso) sobre `Subscription` y
+  `Entitlement` en una sola transacción, de forma idempotente y resistente a eventos fuera de orden; los
+  inconsistentes quedan en revisión sin dar acceso. El acceso ahora tiene vencimiento (período + 7 días de gracia;
+  al cancelar, hasta el fin de lo pagado; al reembolsar, se corta) y se evalúa al consultar. `POST
+  /pagos/webhook/<proveedor>` exige firma HMAC del cuerpo con ventana de 5 minutos y está apagado por defecto (sin
+  secreto configurado responde 404). La configuración de cuenta muestra el estado de la suscripción.
 
 ### Seguridad
 - Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).

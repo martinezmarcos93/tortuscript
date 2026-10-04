@@ -102,6 +102,14 @@ def _clave_nombre(nombre: str) -> str:
     return unicodedata.normalize("NFKC", _normalizar_nombre(nombre)).casefold()
 
 
+def _vigente(row) -> bool:
+    """Un entitlement vale si está activo y no venció. El vencimiento se evalúa al consultar:
+    no depende de que corra ningún proceso periódico."""
+    if not row or not row["active"]:
+        return False
+    return row["expires_at"] is None or row["expires_at"] > _ahora()
+
+
 class CuentaRepository:
     """Repositorio SQLite pequeño y explícito; no conoce Flask ni la sesión HTTP."""
 
@@ -207,6 +215,7 @@ class CuentaRepository:
                     active INTEGER NOT NULL DEFAULT 0 CHECK (active IN (0, 1)),
                     source TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
+                    expires_at TEXT,
                     PRIMARY KEY(account_id, product)
                 );
                 """
@@ -235,6 +244,9 @@ class CuentaRepository:
             # No alterar ninguna tabla existente hasta validar todo el historial.
             if "role" not in cols:
                 con.execute("ALTER TABLE accounts ADD COLUMN role TEXT NOT NULL DEFAULT 'adult'")
+            # Vencimiento del acceso pago (ADR-032): NULL significa sin vencimiento (concesión manual).
+            if "expires_at" not in {r["name"] for r in con.execute("PRAGMA table_info(entitlements)")}:
+                con.execute("ALTER TABLE entitlements ADD COLUMN expires_at TEXT")
             if "display_name_key" not in profile_cols:
                 con.execute("ALTER TABLE child_profiles ADD COLUMN display_name_key TEXT")
             for perfil_id, clave in claves_por_id.items():
@@ -459,7 +471,8 @@ class CuentaRepository:
                 """INSERT INTO entitlements(account_id,product,active,source,updated_at)
                    VALUES (?,?,?,?,?)
                    ON CONFLICT(account_id,product) DO UPDATE SET
-                     active=excluded.active, source=excluded.source, updated_at=excluded.updated_at""",
+                     active=excluded.active, source=excluded.source, updated_at=excluded.updated_at,
+                     expires_at=NULL""",
                 (account_id, product.strip(), int(active), source.strip(), now),
             )
         return Entitlement(account_id, product.strip(), active, source.strip())
@@ -467,25 +480,25 @@ class CuentaRepository:
     def listar_entitlements(self, account_id: str) -> list[tuple[str, bool]]:
         with self._conexion() as con:
             rows = con.execute(
-                "SELECT product,active FROM entitlements WHERE account_id=? ORDER BY product", (account_id,)
+                "SELECT product,active,expires_at FROM entitlements WHERE account_id=? ORDER BY product", (account_id,)
             ).fetchall()
-        return [(r["product"], bool(r["active"])) for r in rows]
+        return [(r["product"], _vigente(r)) for r in rows]
 
     def tiene_entitlement(self, account_id: str, product: str) -> bool:
         with self._conexion() as con:
             row = con.execute(
-                "SELECT active FROM entitlements WHERE account_id=? AND product=?",
+                "SELECT active,expires_at FROM entitlements WHERE account_id=? AND product=?",
                 (account_id, product),
             ).fetchone()
-        return bool(row and row["active"])
+        return _vigente(row)
 
     def tiene_entitlement_por_perfil(self, profile_id: str, product: str) -> bool:
         with self._conexion() as con:
             row = con.execute(
-                """SELECT e.active
+                """SELECT e.active, e.expires_at
                    FROM child_profiles p
                    JOIN entitlements e ON e.account_id=p.account_id
                    WHERE p.id=? AND e.product=? AND p.active=1""",
                 (profile_id, product),
             ).fetchone()
-        return bool(row and row["active"])
+        return _vigente(row)

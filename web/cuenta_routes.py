@@ -214,6 +214,11 @@ AVISOS_CONFIGURACION = {
 VERSION_AVISO_RESPONSABLE = "2026-10-04"
 
 
+def _suscripciones(account_id):
+    from web.pagos_routes import servicio_de_pagos
+    return servicio_de_pagos().listar_suscripciones(account_id)
+
+
 def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
     perfiles = cuentas.listar_child_profiles(row["account_id"])
     return render_template(
@@ -224,6 +229,7 @@ def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
         max_perfiles=MAX_CHILD_PROFILES,
         csrf=request.cookies.get("tortu_csrf", ""),
         consentimientos=cuentas.listar_consentimientos(row["account_id"]),
+        suscripciones=_suscripciones(row["account_id"]),
         aviso=AVISOS_CONFIGURACION.get(request.args.get("ok", "")),
         error=error,
     ), estado
@@ -338,6 +344,7 @@ def exportar_datos():
             for c in cuentas.listar_consentimientos(cuenta.id)
         ],
         "sesiones_abiertas": auth.listar_sesiones(cuenta.id),
+        "suscripciones": [{k: v for k, v in sub.items() if k != "proveedor"} for sub in _suscripciones(cuenta.id)],
         "accesos": [{"producto": p, "activo": a} for p, a in cuentas.listar_entitlements(cuenta.id)],
     }
     respuesta = jsonify(documento)
