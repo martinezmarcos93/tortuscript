@@ -94,19 +94,14 @@ class TestComprobar(unittest.TestCase):
         # mostrar antes de definir → error → no vale
         self.assertFalse(leccion.comprobar(ORDEN_LIBRE, ["mostrar a + b", "a es 1", "b es 2"], ejecutar_real)["ok"])
 
-    def test_tres_ordenamientos_equivalentes_del_curso_se_aceptan(self):
-        # El validador editorial avisa de permutaciones que conservan la salida.
-        # El contrato de evaluación acepta esas alternativas si ejecutan lo mismo.
+    def test_dos_ordenamientos_equivalentes_del_curso_se_aceptan(self):
+        # Las dos asignaciones independientes pueden permutarse sin cambiar la salida.
         curso = contenido.cargar_curso()
         alternativas = {
             "dos-variables": ["b es 2", "a es 1", "mostrar a", "mostrar b"],
             "tabla-del-2": [
                 "contador es 1", "n es 2", "repetir 3 veces:",
                 "    mostrar n * contador", "    contador es contador + 1",
-            ],
-            "solo-los-pares": [
-                "n es 1", "repetir 4 veces:", "    n es n + 1",
-                "    si n % 2 == 0:", "        mostrar n",
             ],
         }
         for leccion_id, lineas in alternativas.items():
@@ -115,6 +110,17 @@ class TestComprobar(unittest.TestCase):
             with self.subTest(leccion=leccion_id):
                 resultado = leccion.comprobar(paso, lineas, ejecutar_real)
                 self.assertTrue(resultado["ok"], resultado)
+
+    def test_solo_los_pares_rechaza_incrementar_antes_de_comprobar(self):
+        curso = contenido.cargar_curso()
+        _, leccion_data, _ = leccion.buscar_leccion(curso, "solo-los-pares")
+        paso = next(p for p in leccion_data["pasos"] if p["tipo"] == "ordenar")
+        alternativa = [
+            "n es 1", "repetir 5 veces:", "    n es n + 1",
+            "    si n % 2 == 0:", "        mostrar n",
+        ]
+        resultado = leccion.comprobar(paso, alternativa, ejecutar_real)
+        self.assertFalse(resultado["ok"], resultado)
 
     def test_explicacion_siempre_ok_y_escribir_no_se_comprueba_aca(self):
         self.assertTrue(leccion.comprobar(EXPLICACION, None)["ok"])

@@ -147,6 +147,12 @@ class CuentaRepositoryTests(unittest.TestCase):
         self.assertEqual(profiles, [("child_1", "Ana"), ("child_2", "ANA")])
         self.assertNotIn("display_name_key", columns)
         self.assertNotIn("role", account_columns)
+        with sqlite3.connect(legacy_path) as con:
+            tables = {row[0] for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )}
+        self.assertNotIn("subscriptions", tables)
+        self.assertNotIn("entitlements", tables)
 
     def test_esquema_futuro_se_rechaza_sin_alterar_tablas_existentes(self):
         future_path = self.tmp / "future.sqlite3"

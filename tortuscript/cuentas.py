@@ -68,14 +68,18 @@ def _id(prefijo: str, valor: str) -> str:
 
 
 def _normalizar_email(email: str) -> str:
-    email = (email or "").strip().lower()
+    if not isinstance(email, str):
+        raise CuentaError("El correo electrónico no es válido.")
+    email = email.strip().lower()
     if not EMAIL_RE.fullmatch(email):
         raise CuentaError("El correo electrónico no es válido.")
     return email
 
 
 def _normalizar_nombre(nombre: str) -> str:
-    nombre = " ".join((nombre or "").split())
+    if not isinstance(nombre, str):
+        raise CuentaError("El nombre del perfil debe tener entre 1 y 30 caracteres.")
+    nombre = " ".join(nombre.split())
     if not 1 <= len(nombre) <= 30:
         raise CuentaError("El nombre del perfil debe tener entre 1 y 30 caracteres.")
     return nombre
@@ -114,6 +118,26 @@ class CuentaRepository:
                     raise CuentaError("La versión del esquema de cuentas no es compatible.") from exc
                 if version_actual and version_actual["version"] not in (1, 2, SCHEMA_VERSION):
                     raise CuentaError("Versión de esquema de cuentas no compatible.")
+            # Validar los alias heredados ANTES de crear tablas comerciales o índices:
+            # una migración abortada no debe dejar objetos nuevos en una base v1/v2.
+            existe_perfiles = con.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='child_profiles'"
+            ).fetchone()
+            if existe_perfiles:
+                filas_previas = con.execute(
+                    "SELECT id,account_id,display_name FROM child_profiles ORDER BY created_at,id"
+                ).fetchall()
+                claves_previas = {}
+                for perfil in filas_previas:
+                    clave = (perfil["account_id"], _clave_nombre(perfil["display_name"]))
+                    anterior = claves_previas.get(clave)
+                    if anterior is not None and anterior != perfil["id"]:
+                        raise CuentaError(
+                            "Hay perfiles existentes con nombres equivalentes por mayúsculas o Unicode; "
+                            "resolvé esos duplicados antes de actualizar el esquema."
+                        )
+                    claves_previas[clave] = perfil["id"]
+
             con.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS schema_version (
@@ -162,6 +186,8 @@ class CuentaRepository:
                 );
                 """
             )
+            # Desde aquí, las alteraciones y la actualización de versión son atómicas.
+            con.execute("BEGIN IMMEDIATE")
             cols = {r["name"] for r in con.execute("PRAGMA table_info(accounts)")}
             profile_cols = {r["name"] for r in con.execute("PRAGMA table_info(child_profiles)")}
             # Validar todos los alias históricos antes de tocar el esquema: ALTER TABLE

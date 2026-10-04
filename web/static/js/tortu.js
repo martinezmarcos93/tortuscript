@@ -38,6 +38,13 @@ const Tortu = (() => {
     meta: { lineComment: "#" },
   });
 
+  // CodeMirror escribe en un <textarea> propio sin etiqueta: un lector de pantalla solo decía "cuadro de edición".
+  function nombrarEditor(cm, nombre) {
+    const campo = cm && cm.getInputField && cm.getInputField();
+    if (campo) campo.setAttribute("aria-label", nombre);
+    return cm;
+  }
+
   function crearEditores(alEjecutar) {
     const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
       mode: "tortuscript", lineNumbers: true, indentUnit: 4, tabSize: 4,
@@ -48,16 +55,22 @@ const Tortu = (() => {
         Esc: () => { const b = document.getElementById("btn-ejecutar"); if (b) b.focus(); },   // sale del editor con el teclado
       },
     });
+    nombrarEditor(editor, "Editor de código. Control más Enter ejecuta; Escape sale del editor.");
     const campoPython = document.getElementById("python");
     const python = campoPython && CodeMirror.fromTextArea(campoPython, {
       mode: "python", lineNumbers: true, readOnly: true,
     });
+    if (python) nombrarEditor(python, "Tu código traducido a Python (solo lectura)");
     let espera = null;
     if (python) editor.on("change", () => {
       clearTimeout(espera);
       espera = setTimeout(async () => {
-        try { python.setValue((await api("/api/traducir", { codigo: editor.getValue() })).python); }
-        catch (e) { console.warn(e); }
+        try {
+          python.setValue((await api("/api/traducir", { codigo: editor.getValue() })).python);
+        } catch (e) {
+          // No dejar una traducción anterior visible como si correspondiera al código actual.
+          python.setValue("# No se pudo actualizar la traducción. Revisá la conexión.");
+        }
       }, 250);
     });
     // ?codigo=... precarga el editor (lo usa "Probarlo" de la Referencia)
@@ -461,6 +474,6 @@ const Tortu = (() => {
     else if (!abierta.contains(document.activeElement)) { ev.preventDefault(); primero.focus(); }
   });
 
-  return { api, leer, callar, leerSolo, hayVoz, crearEditores, ejecutarConPreguntas, pedirRespuesta, mostrarConsola, veredicto,
+  return { api, leer, callar, leerSolo, hayVoz, crearEditores, nombrarEditor, ejecutarConPreguntas, pedirRespuesta, mostrarConsola, veredicto,
            limpiarResultado, actualizarEstado, celebrar, tocar, avisos };
 })();

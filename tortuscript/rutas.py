@@ -58,6 +58,13 @@ def carpeta_de_datos(entorno=None):
     return carpeta_de_usuario(entorno=entorno) if congelado() else RAIZ
 
 
+def carpeta_de_cuentas(datos=None):
+    """Donde viven la base de cuentas y el progreso por ChildProfile: `instance/` dentro de la carpeta de datos.
+    Desde el código fuente coincide con la carpeta `instance/` de Flask; instalado, queda en la carpeta del usuario
+    (la del programa puede ser de solo lectura y el desinstalador la borra)."""
+    return Path(datos if datos is not None else carpeta_de_datos()) / "instance"
+
+
 def copiar_datos_viejos(origen, destino):
     """Si `destino` todavía no tiene progreso y `origen` sí, copia lo del chico (nunca pisa ni borra nada).
     Devuelve los nombres copiados."""

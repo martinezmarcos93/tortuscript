@@ -7,12 +7,21 @@ on:
       - main
       - audit/ux-v1-2026-09-30
       - sweep/consolidacion-ux-v1
+      - 'plan/**'
+      - 'work/**'
   pull_request:
     branches:
       - main
+      - 'plan/**'
+      - 'work/**'
 
 permissions:
   contents: read
+
+# Evita ejecutar en paralelo varios barridos obsoletos al actualizar una rama.
+concurrency:
+  group: tortuscript-verificacion-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   verificar:
@@ -22,11 +31,11 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Dependencias
@@ -50,8 +59,8 @@ jobs:
     if: ${{ !startsWith(github.event.head_commit.message, 'docs:') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Dependencias de la aplicación
@@ -77,9 +86,12 @@ jobs:
       - name: Auditoría de contraste WCAG AA
         if: always()
         run: python herramientas/revisar_contraste.py --url http://127.0.0.1:5077
+      - name: Auditoría diagnóstica de teclado y nombres accesibles
+        if: always()
+        run: python herramientas/revisar_teclado.py --url http://127.0.0.1:5077
       - name: Guardar capturas de diagnóstico
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: auditoria-navegador
           path: artifacts/

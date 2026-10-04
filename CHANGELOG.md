@@ -3,6 +3,70 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Todavía no hay una
 versión publicada de la app web: los cambios de versión se consultan antes de fijarlos.
 
+## Sin publicar — barridos de consolidación (desde 03/10/2026)
+
+Rama `plan/barridos-pendientes-2026-10-03` (PR #5). Sigue `docs/audits/ROADMAP-BARRIDOS-ESTADO-2026-10-03.md`.
+
+### Corregido
+- **Migración de progreso local (ADR-044):** la importación lee el archivo de origen de forma estricta. Un archivo
+  ilegible (JSON roto, raíz que no es objeto, `ejercicios` mal tipado) se rechaza sin apartarlo ni reescribirlo; antes
+  se convertía en un progreso vacío que, con reemplazo explícito, podía pisar el progreso comercial. Los campos
+  anidados mal tipados de un JSON válido se normalizan y se conserva lo válido.
+- **Navegación de cuenta:** el destino pedido (`next`) se conserva al ingresar, al elegir perfil y al crear el
+  primer perfil; antes se perdía y siempre se caía en el inicio. Los formularios HTML de login y perfiles responden
+  con una página y un mensaje (límite de intentos, perfil inválido) en vez de JSON crudo o un 403 en blanco.
+- **Selector de perfiles:** se quitó un `<script>` en línea que la CSP bloqueaba (código muerto y error de consola)
+  y el límite de perfiles sale de `MAX_CHILD_PROFILES` en vez de estar repetido a mano en plantillas y rutas.
+- **Validación HTTP:** `perfil_id` y el token de verificación que no son texto se rechazan con 4xx.
+- **Datos de cuentas en la app instalada:** la base de cuentas y el progreso por perfil se guardan en la carpeta de
+  datos del usuario (`<datos>/instance`), no dentro de la carpeta del programa, que el desinstalador borra. Desde el
+  código fuente la ubicación no cambia.
+- **Errores 500 por tipos inesperados:** un barrido de 18.442 pedidos con cuerpos mal tipados encontró errores
+  internos en `/api/onboarding`, `/api/traducir`, `/cuenta/perfil`, `/cuenta/perfiles` y `/cuenta/verificar-email`;
+  ahora responden 4xx. `tests/test_robustez_http.py` repite el barrido (reducido) sobre todas las rutas registradas,
+  incluidas las futuras.
+- **Progreso de perfil dañado (Barrido 5):** un archivo de progreso ilegible dejaba al perfil con error 500 en todas
+  las páginas aunque existiera el `.bak`. Ahora se aparta como `.corrupto-<fecha>` (nunca se borra), se restaura el
+  respaldo si es válido y del mismo perfil, y si no lo hay el perfil vuelve a la bienvenida. Un archivo escrito por
+  una versión más nueva se rechaza sin tocarlo.
+- **Respaldo SQLite en discos sin enlaces duros:** en un pendrive FAT/exFAT `link()` falla y el respaldo no se podía
+  publicar; ahora se reserva el nombre con creación exclusiva, que tampoco sobrescribe.
+- **Accesibilidad de los editores de código (Barrido 2):** el campo de CodeMirror no tenía nombre accesible (un
+  lector de pantalla solo anunciaba «cuadro de edición»); ahora cada editor se anuncia con su función y sus atajos.
+
+### Agregado
+- **Recuperación de contraseña con pantallas (Barrido 6):** «Olvidé mi contraseña» en el ingreso, formulario para
+  pedir el enlace y formulario para elegir la clave nueva. Abrir el enlace no consume el token; una clave corta o
+  mal repetida se corrige sin pedir otro enlace; al cambiarla se cierran las sesiones abiertas. La respuesta es la
+  misma exista o no la cuenta.
+- **Correo transaccional real (Barrido 6):** `tortuscript/correo.py` arma y envía los correos de verificación y
+  recuperación por SMTP (biblioteca estándar, sin dependencias nuevas) o los muestra en la terminal para uso local.
+  Se configura por entorno o `.env` (`TORTU_EMAIL_MODO`, ver `.env.example`); sin configuración el registro sigue
+  fallando cerrado, y una configuración a medias impide arrancar con un mensaje claro. Antes ningún enviador estaba
+  conectado al arranque: no se podía crear una cuenta fuera de `crear_admin.py`.
+- **Prueba de ciclo completo del alumno (Barrido 3):** `tests/test_ciclo_alumno.py` recorre por HTTP, sin sembrar
+  datos por fuera de la API, el registro con enlace de correo, la verificación, el ingreso, el perfil, la
+  bienvenida, una lección con error → pista → reintento, XP y cierre, mapa, abandono, reinicio del servidor y
+  regreso, un segundo perfil aislado, proyectos y exportación; y que otra familia no puede elegir un perfil ajeno.
+- **Respaldo completo de los datos (Barrido 5):** `herramientas/respaldar_datos.py` (`crear`, `listar`, `verificar`,
+  `restaurar --confirmar`) respalda la base de cuentas **y** el progreso de cada perfil en una carpeta con
+  manifiesto y hash por archivo. Verificar detecta archivos alterados, faltantes o sobrantes, progreso de otro
+  perfil o de un perfil inexistente; restaurar exige confirmación y conserva lo anterior en `instance.antes-de-
+  restaurar-<fecha>`. Ensayado sobre una copia de datos reales en el disco del proyecto: restauración idéntica y
+  originales intactos.
+- **Auditoría de teclado ampliada:** `herramientas/revisar_teclado.py` recorre cada página con Tab (trampas de foco,
+  salida del editor con Escape, indicador de foco visible), incluye las páginas de cuenta con y sin sesión y mide
+  los objetivos táctiles en 360 px. `--estricto` la convierte en puerta de CI.
+
+### Seguridad
+- Las respuestas de `/cuenta/*` llevan `Cache-Control: no-store` (contienen tokens, correos y nombres de perfiles).
+
+### Cambiado
+- **Costo por pedido (Barrido 5):** el esquema de cuentas se asegura una vez por archivo y proceso, y cada pedido
+  valida la sesión y lee el progreso una sola vez. Una página pasaba por ~12 migraciones de esquema, 7 lecturas del
+  progreso y ~80 transacciones SQLite: el inicio bajó de 118 ms a 9 ms y el mapa de 366 ms a 7 ms (medido con el
+  cliente de pruebas).
+
 ## Sin publicar — TortuGame: crear juegos de rol (26/09/2026)
 
 Rama `feat/tortugame`. Fase 3 del roadmap; implementa ADR-006, 007 y 008 (aceptadas).

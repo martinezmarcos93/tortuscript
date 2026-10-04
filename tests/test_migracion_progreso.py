@@ -66,15 +66,28 @@ class MigracionProgresoTests(unittest.TestCase):
             self.migracion.importar_local(self.session, "perfil_que_no_existe")
         self.assertIsNone(self.service.cargar_progreso(self.session))
 
-    def test_rechaza_progreso_local_malformado_sin_persistirlo(self):
+    def test_rechaza_progreso_local_ilegible_sin_persistirlo_ni_apartarlo(self):
+        archivo = self.local / "progreso_ana.json"
+        for contenido in ("{no es json", "[]", '{"ejercicios": []}'):
+            with self.subTest(contenido=contenido):
+                archivo.write_text(contenido, encoding="utf-8")
+                with self.assertRaises(MigracionProgresoError):
+                    self.migracion.importar_local(self.session, "ana")
+                self.assertIsNone(self.service.cargar_progreso(self.session))
+                # La migración no debe apartar ni reescribir el archivo de origen.
+                self.assertEqual(archivo.read_text(encoding="utf-8"), contenido)
+                self.assertFalse(list(self.local.glob("*.corrupto-*")))
+
+    def test_normaliza_campos_anidados_mal_tipados_y_conserva_lo_valido(self):
         archivo = self.local / "progreso_ana.json"
         archivo.write_text(
-            '{"ejercicios": {}, "config": []}',
+            '{"ejercicios": {}, "config": [], "xp_total": 41}',
             encoding="utf-8",
         )
-        with self.assertRaises(MigracionProgresoError):
-            self.migracion.importar_local(self.session, "ana")
-        self.assertIsNone(self.service.cargar_progreso(self.session))
+        snapshot = self.migracion.importar_local(self.session, "ana")
+        self.assertEqual(snapshot.data["xp_total"], 41)
+        self.assertIsInstance(snapshot.data["config"], dict)
+        self.assertIsInstance(snapshot.data["config"]["ajustes"], dict)
 
     def test_no_reemplaza_progreso_comercial_sin_confirmacion(self):
         self.service.guardar_progreso(self.session, nuevo_snapshot(self.perfil.id, {"xp_total": 999}))

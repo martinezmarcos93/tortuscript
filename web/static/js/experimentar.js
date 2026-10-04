@@ -32,7 +32,7 @@
       else if (r.error) { Tortu.veredicto("error", "🔧 Hay algo para arreglar", [["mensaje", r.mensaje]]); Tortu.tocar("error"); }
       else if (r.tipo === "python") Tortu.veredicto("info", "🐍 Detecté Python directo: lo ejecuté sin traducir", []);
     } catch (e) {
-      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", String(e)]]);
+      Tortu.veredicto("error", "😵 No pude comunicarme con TortuScript", [["mensaje", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente."]]);
     } finally {
       btn.disabled = false;
     }

@@ -12,13 +12,17 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import os
 import re
 import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
-from .progreso_contrato import ProgresoSnapshot, importar_snapshot, nuevo_snapshot
+from .progreso_contrato import PROGRESS_CONTRACT_VERSION, ProgresoSnapshot, importar_snapshot, nuevo_snapshot
+
+logger = logging.getLogger(__name__)
 
 
 _PROFILE_ID_RE = re.compile(r"^child_[a-f0-9]{24}$")
@@ -46,15 +50,60 @@ class ProgresoChildProfile:
         if not archivo.exists():
             return None
         try:
-            documento = json.loads(archivo.read_text(encoding="utf-8"))
-            snapshot = importar_snapshot(documento)
-            if snapshot.profile_id != profile_id:
-                raise ProgresoPerfilError(
-                    "El identificador del progreso no coincide con el archivo propietario."
-                )
-            return snapshot
-        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            return self._leer(archivo, profile_id)
+        except ProgresoPerfilError:
+            raise
+        except (OSError, ValueError, TypeError) as exc:
             raise ProgresoPerfilError("El progreso asociado al perfil no es válido.") from exc
+
+    def _leer(self, archivo: Path, profile_id: str) -> ProgresoSnapshot:
+        snapshot = importar_snapshot(json.loads(archivo.read_text(encoding="utf-8")))
+        if snapshot.profile_id != profile_id:
+            raise ProgresoPerfilError("El identificador del progreso no coincide con el archivo propietario.")
+        return snapshot
+
+    def _es_de_version_futura(self, archivo: Path) -> bool:
+        try:
+            version = json.loads(archivo.read_text(encoding="utf-8")).get("contract_version")
+        except (OSError, ValueError, AttributeError):
+            return False
+        return type(version) is int and version > PROGRESS_CONTRACT_VERSION
+
+    def cargar_o_recuperar(self, profile_id: str) -> ProgresoSnapshot | None:
+        """Como `cargar`, pero un archivo dañado no deja al perfil inutilizable.
+
+        El archivo ilegible se aparta como `.corrupto-<fecha>` (nunca se borra) y se
+        restaura el `.bak` si es válido y del mismo perfil; si no hay respaldo válido
+        devuelve None y el perfil empieza de cero. Un archivo escrito por una versión
+        más nueva del programa NO se considera dañado: se rechaza sin tocarlo.
+        """
+        archivo = self._archivo(profile_id)
+        try:
+            return self.cargar(profile_id)
+        except ProgresoPerfilError as exc:
+            if self._es_de_version_futura(archivo):
+                raise
+            marca = datetime.now().strftime("%Y%m%d-%H%M%S")
+            apartado = archivo.with_name(f"{archivo.name}.corrupto-{marca}")
+            # Sin datos del alumno en el log: solo el identificador opaco y la causa.
+            logger.error("Progreso dañado del perfil %s (%s): se aparta como %s", profile_id, exc.__cause__ or exc,
+                         apartado.name)
+            try:
+                os.replace(archivo, apartado)
+            except OSError as e:
+                logger.error("No se pudo apartar el progreso dañado: %s", e, exc_info=True)
+                raise ProgresoPerfilError("El progreso asociado al perfil no es válido.") from e
+        respaldo = archivo.with_name(archivo.name + ".bak")
+        if not respaldo.exists():
+            return None
+        try:
+            snapshot = self._leer(respaldo, profile_id)
+        except (OSError, ValueError, TypeError) as e:
+            logger.error("El respaldo del perfil %s también está dañado: %s", profile_id, e)
+            return None
+        shutil.copy2(respaldo, archivo)
+        logger.warning("Progreso del perfil %s recuperado desde %s", profile_id, respaldo.name)
+        return snapshot
 
     def guardar(self, snapshot: ProgresoSnapshot) -> None:
         snapshot.validar()

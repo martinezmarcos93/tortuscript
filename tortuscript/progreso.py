@@ -53,13 +53,30 @@ PROGRESO_INICIAL = {
 
 
 def _migrar(data):
+    # Los archivos históricos pueden ser JSON válido pero contener tipos incorrectos
+    # en campos anidados. Normalizarlos evita que un ajuste roto inutilice el perfil.
     for campo, valor in PROGRESO_INICIAL.items():
-        if campo not in data:
+        actual = data.get(campo)
+        if campo not in data or (
+            isinstance(valor, (dict, list)) and not isinstance(actual, type(valor))
+        ):
             data[campo] = copy.deepcopy(valor)
-    for clave, valor in PROGRESO_INICIAL["config"].items():      # config de versiones anteriores, a medias
-        data["config"].setdefault(clave, copy.deepcopy(valor))
+
+    # Configuración y ajustes se migran por separado porque pueden venir de esquemas
+    # antiguos parcialmente completos. No reemplazar los valores válidos del alumno.
+    if not isinstance(data.get("config"), dict):
+        data["config"] = copy.deepcopy(PROGRESO_INICIAL["config"])
+    for clave, valor in PROGRESO_INICIAL["config"].items():
+        actual = data["config"].get(clave)
+        if clave not in data["config"] or (
+            isinstance(valor, (dict, list)) and not isinstance(actual, type(valor))
+        ):
+            data["config"][clave] = copy.deepcopy(valor)
+    if not isinstance(data["config"].get("ajustes"), dict):
+        data["config"]["ajustes"] = copy.deepcopy(PROGRESO_INICIAL["config"]["ajustes"])
     for clave, valor in PROGRESO_INICIAL["config"]["ajustes"].items():
-        data["config"]["ajustes"].setdefault(clave, valor)
+        data["config"]["ajustes"].setdefault(clave, copy.deepcopy(valor))
+
     data["version"] = VERSION_ESQUEMA
     return data
 
@@ -181,13 +198,17 @@ def saltear_hasta(progreso, lecciones_en_orden, entrada, hoy=None):
 def guardar_config(progreso, experiencia=None, meta_min=None, nombre=None, onboarding=None):
     """Valida y guarda la configuración. Devuelve False si algún valor no es válido."""
     cfg = progreso.setdefault("config", copy.deepcopy(PROGRESO_INICIAL["config"]))
+    # Los valores llegan de JSON del navegador: se exige el tipo exacto antes de buscarlos
+    # (una lista no se puede buscar en un dict, y True == 1 pasaría por una meta de 1 minuto).
+    if experiencia is not None and (not isinstance(experiencia, str) or experiencia not in EXPERIENCIAS):
+        return False
+    if meta_min is not None and (type(meta_min) is not int or meta_min not in METAS_MIN):
+        return False
+    if nombre is not None and not isinstance(nombre, str):
+        return False
     if experiencia is not None:
-        if experiencia not in EXPERIENCIAS:
-            return False
         cfg["experiencia"] = experiencia
     if meta_min is not None:
-        if meta_min not in METAS_MIN:
-            return False
         cfg["meta_min"] = meta_min
     if nombre is not None:
         cfg["nombre"] = nombre[:30]

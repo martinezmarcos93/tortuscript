@@ -90,7 +90,12 @@
         nombre: nombre.value.trim(), experiencia: respuestas.experiencia, meta_min: respuestas.meta_min,
         entrada: respuestas.entrada || undefined,
       });
-      if (r.ok) location.href = "/";
+      if (r.ok) {
+        location.href = "/";
+      } else {
+        errorFinal.textContent = r.mensaje || "No pude guardar tus respuestas. Revisá los datos y probá de nuevo.";
+        boton.disabled = false;
+      }
     } catch (e) {
       const mensaje = e?.datos?.mensaje || "No pude guardar tus respuestas. Revisá el nombre y probá de nuevo.";
       errorFinal.textContent = mensaje;

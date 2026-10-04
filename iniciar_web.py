@@ -56,6 +56,40 @@ def crear_servidor(puerto, app=None):
     return make_server("127.0.0.1", puerto, app, threaded=True)
 
 
+def cargar_env(archivo):
+    """Lee un `.env` simple (CLAVE=valor, # comentarios) sin pisar lo que ya esté en el entorno.
+    Devuelve las claves que agregó. Sin dependencias: no interpreta comillas anidadas ni variables."""
+    agregadas = []
+    try:
+        lineas = Path(archivo).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return agregadas
+    for linea in lineas:
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, _, valor = linea.partition("=")
+        clave, valor = clave.strip(), valor.strip()
+        if len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in "\"'":
+            valor = valor[1:-1]
+        if clave and clave not in os.environ:
+            os.environ[clave] = valor
+            agregadas.append(clave)
+    return agregadas
+
+
+def crear_aplicacion(datos, url):
+    """La app real: cuentas y progreso en la carpeta de datos, y correo según el entorno (o deshabilitado)."""
+    from tortuscript import correo, rutas
+    from web.app import create_app
+    app = create_app()
+    cuentas = rutas.carpeta_de_cuentas(datos)
+    app.config["ACCOUNT_DB"] = cuentas / "cuentas.sqlite3"
+    app.config["PROGRESS_DIR"] = cuentas / "progreso_perfiles"
+    app.config["ACCOUNT_EMAIL_SENDER"] = correo.desde_entorno(url_base=url)
+    return app
+
+
 def verificar_entorno():
     """Mensajes claros en español si falta algo (en vez de un traceback en inglés)."""
     if sys.version_info < PYTHON_MINIMO:
@@ -88,13 +122,18 @@ def main(argv=None):
     datos = rutas.preparar_carpeta_de_datos()          # junto al programa, o la del usuario si está instalado
     persistencia_local.DIRECTORIO = datos
     configurar_logs(datos / "logs")
+    cargar_env(datos / ".env")
     try:
         puerto = args.puerto or puerto_libre()
-        servidor = crear_servidor(puerto)
-    except (RuntimeError, OSError) as e:
+        url = f"http://127.0.0.1:{puerto}/"
+        app = crear_aplicacion(datos, url)
+        servidor = crear_servidor(puerto, app)
+    except (RuntimeError, OSError, ValueError) as e:
         print(f"❌ No pude arrancar el servidor: {e}")
         return 1
-    url = f"http://127.0.0.1:{puerto}/"
+    if app.config["ACCOUNT_EMAIL_SENDER"] is None:
+        print("✉️  El correo no está configurado: no se pueden crear cuentas nuevas ni recuperar contraseñas.")
+        print("   Ver .env.example (TORTU_EMAIL_MODO) o usar herramientas/crear_admin.py para una cuenta local.")
     if not args.sin_navegador:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     print(f"🐢 TortuScript está en {url}")

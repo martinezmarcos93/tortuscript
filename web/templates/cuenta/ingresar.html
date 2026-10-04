@@ -17,12 +17,14 @@
     </div>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="{{ url_for('cuenta.login') }}">
+      <input type="hidden" name="next" value="{{ next_url or '/' }}">
       <label class="etiqueta" for="email">Correo</label>
       <input class="campo" id="email" name="email" type="email" autocomplete="email" required>
       <label class="etiqueta" for="password">Contraseña</label>
       <input class="campo" id="password" name="password" type="password" autocomplete="current-password" required>
       <p><button class="boton verde grande" type="submit">Ingresar</button></p>
     </form>
+    <p class="centrado"><a href="{{ url_for('cuenta.recuperar') }}">Olvidé mi contraseña</a></p>
     <p class="centrado"><a href="{{ url_for('cuenta.registrar') }}">Crear una cuenta adulta</a></p>
   </section>
 </main>

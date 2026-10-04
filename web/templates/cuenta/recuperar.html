@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recuperar contraseña · TortuScript</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/tortuscript.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tortu.css') }}">
+</head>
+<body>
+<main id="contenido" class="columna-ancha pagina-error">
+  <section class="tarjeta">
+    <div class="centrado">
+      <div class="mascota gran" aria-hidden="true">🔑</div>
+      <h1>Recuperar contraseña</h1>
+    </div>
+    {% if enviado %}
+    <p class="texto-grande centrado" role="status">Si existe una cuenta con ese correo, enviamos un enlace para elegir una contraseña nueva. Vale por una hora.</p>
+    <p class="centrado"><a class="boton verde grande" href="{{ url_for('cuenta.ingresar') }}">Volver a ingresar</a></p>
+    {% else %}
+    <p class="texto-grande centrado">Escribí el correo de la cuenta adulta y te enviamos un enlace.</p>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('cuenta.solicitar_recuperacion') }}">
+      <label class="etiqueta" for="email">Correo</label>
+      <input class="campo" id="email" name="email" type="email" autocomplete="email" required>
+      <p><button class="boton verde grande" type="submit">Enviar enlace</button></p>
+    </form>
+    <p class="centrado"><a href="{{ url_for('cuenta.ingresar') }}">Volver a ingresar</a></p>
+    {% endif %}
+  </section>
+</main>
+</body>
+</html>

@@ -769,7 +769,11 @@ class TestWebCamino(Base):
         html = self.c.get("/certificado/tortuga").get_data(as_text=True)
         for texto in ("Certificado", "Lua", "Dibujá con la tortuga", ">15<", "lecciones perfectas", "puntos de experiencia"):
             self.assertIn(texto, html)
-        self.assertIn("@media print", self.c.get("/static/css/tortu.css").get_data(as_text=True))
+        respuesta_css = self.c.get("/static/css/tortu.css")
+        try:
+            self.assertIn("@media print", respuesta_css.get_data(as_text=True))
+        finally:
+            respuesta_css.close()
         self.assertIn("Ver mi certificado", self.c.get("/").get_data(as_text=True))
         self.assertIn("Mis certificados", self.c.get("/logros").get_data(as_text=True))
 

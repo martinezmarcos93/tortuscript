@@ -270,6 +270,58 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertTrue(seleccion.headers["Location"].startswith("/"))
         self.assertNotIn("evil.example", seleccion.headers["Location"])
 
+    def test_login_rechaza_post_de_origen_cruzado(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={
+                "Origin": "https://evil.example",
+                "Sec-Fetch-Site": "cross-site",
+            },
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+        self.assertEqual(self.client.get("/cuenta/me").status_code, 401)
+
+    def test_login_rechaza_fetch_metadata_cross_site_sin_origin(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={"Sec-Fetch-Site": "cross-site"},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
+    def test_login_rechaza_referer_de_otro_origen_si_falta_origin(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={"Referer": "https://evil.example/formulario"},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
+    def test_login_rechaza_origin_malformado_sin_error_500(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "atacante@example.com", "password": "una-clave-larga-123"},
+            headers={"Origin": "http://["},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
+    def test_login_acepta_origen_propio_y_sigue_validando_credenciales(self):
+        respuesta = self.client.post(
+            "/cuenta/login",
+            data={"email": "no-existe@example.com", "password": "clave-incorrecta"},
+            headers={
+                "Origin": "http://localhost",
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+        self.assertEqual(respuesta.status_code, 401)
+        self.assertNotIn("Set-Cookie", respuesta.headers)
+
     def test_login_html_no_revela_si_la_cuenta_existe_o_esta_verificada(self):
         self.client.post("/cuenta/registro", json={
             "email": "pendiente@example.com",
@@ -377,8 +429,19 @@ class CuentaRoutesTests(unittest.TestCase):
         self.assertEqual(created.status_code, 201)
         self.assertEqual(created.json["perfil"]["nombre"], "Ana")
 
+        # El formulario HTML debe poder crear perfiles sin depender de JavaScript.
+        created_html = self.client.post(
+            "/cuenta/perfiles",
+            data={"nombre": "Bruno", "csrf": csrf},
+            follow_redirects=False,
+        )
+        self.assertEqual(created_html.status_code, 302)
+        self.assertEqual(created_html.headers["Location"], "/")
+
         me2 = self.client.get("/cuenta/me")
-        self.assertEqual([p["nombre"] for p in me2.json["perfiles"]], ["Ana"])
+        self.assertEqual(sorted(p["nombre"] for p in me2.json["perfiles"]), ["Ana", "Bruno"])
+        bruno = next(p for p in me2.json["perfiles"] if p["nombre"] == "Bruno")
+        self.assertEqual(me2.json["perfil_activo"], bruno["id"])
 
         selected = self.client.post(
             "/cuenta/perfil",
@@ -391,7 +454,7 @@ class CuentaRoutesTests(unittest.TestCase):
         perfiles_api = self.client.get("/api/perfiles", headers={"X-Tortu-Token": "test-token"})
         self.assertEqual(perfiles_api.status_code, 200)
         self.assertEqual(perfiles_api.json["modo"], "cuenta")
-        self.assertEqual(perfiles_api.json["perfiles"][0]["id"], created.json["perfil"]["id"])
+        self.assertIn(created.json["perfil"]["id"], {p["id"] for p in perfiles_api.json["perfiles"]})
 
         me3 = self.client.get("/cuenta/me")
         self.assertEqual(me3.json["perfil_activo"], created.json["perfil"]["id"])
@@ -1092,6 +1155,46 @@ class CuentaRoutesTests(unittest.TestCase):
         )
         tarjeta = progreso_despues.json["progreso"]["data"]["repaso"]["hola-mundo:1"]
         self.assertEqual(tarjeta["aciertos"], 1)
+
+    def test_rate_limit_sqlite_se_comparte_entre_instancias_de_app(self):
+        rate_db = self.tmp / "rate-limit.sqlite3"
+        self.app.config["ACCOUNT_RATE_LIMIT_DB"] = rate_db
+
+        for indice in range(5):
+            respuesta = self.client.post("/cuenta/registro", json={
+                "email": f"compartido-{indice}@example.com",
+                "password": "una-clave-larga-123",
+            })
+            self.assertEqual(respuesta.status_code, 202)
+
+        # Una segunda instancia representa otro worker del mismo host.
+        segunda_app = create_app(token="test-token")
+        segunda_app.config.update(
+            TESTING=True,
+            ACCOUNT_DB=self.tmp / "cuentas.sqlite3",
+            ACCOUNT_COOKIE_SECURE=False,
+            PROGRESS_DIR=self.tmp / "progreso_perfiles",
+            ACCOUNT_RATE_LIMIT_DB=rate_db,
+            ACCOUNT_EMAIL_SENDER=lambda **payload: None,
+        )
+        segunda = segunda_app.test_client()
+        bloqueado = segunda.post("/cuenta/registro", json={
+            "email": "compartido-worker-dos@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado.headers)
+
+
+    def test_endpoints_de_cuenta_rechazan_json_no_objeto_sin_500(self):
+        login = self.client.post("/cuenta/login", json=["email", "password"])
+        registro = self.client.post("/cuenta/registro", json=["email", "password"])
+        reset = self.client.post("/cuenta/restablecer-password", json=["token", "password"])
+
+        self.assertEqual(login.status_code, 401)
+        self.assertEqual(registro.status_code, 400)
+        self.assertEqual(reset.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

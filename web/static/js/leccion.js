@@ -108,6 +108,9 @@
         try {
           const r = await Tortu.ejecutarConPreguntas("/api/juego/correr", { codigo: paso.codigo });
           await escena.escena.reproducir(r.eventos || [], rapidoSiHaceFalta());
+        } catch (e) {
+          const aviso = el("p", "veredicto error", "No pude ejecutar el juego. Revisá la conexión e intentá otra vez.");
+          caja.appendChild(aviso);
         } finally { probar.disabled = false; }
       });
     } else if (paso.lienzo) {
@@ -120,6 +123,9 @@
           const r = await Tortu.ejecutarConPreguntas("/api/tortuga", { codigo: paso.codigo });
           lienzo.usarVista(Lienzo.vistaPara(r.ordenes));
           await lienzo.reproducir(r.ordenes || [], { velocidad: 7 });
+        } catch (e) {
+          const aviso = el("p", "veredicto error", "No pude ejecutar el dibujo. Revisá la conexión e intentá otra vez.");
+          caja.appendChild(aviso);
         } finally { probar.disabled = false; }
       });
     } else {
@@ -131,6 +137,8 @@
         try {
           const r = await Tortu.ejecutarConPreguntas("/api/ejecutar", { codigo: paso.codigo });
           salida.textContent = r.error ? r.mensaje : (r.salida || "(no mostró nada)");
+        } catch (e) {
+          salida.textContent = "No pude ejecutar el ejemplo. Revisá la conexión e intentá otra vez.";
         } finally { probar.disabled = false; }
       });
     }
@@ -185,7 +193,7 @@
       mostrarPie("mal", ["🤔 Todavía no.", r.pista || ""].filter(Boolean), "Reintentar", reintentar, r.puede_ver_respuesta);
       return r;
     } catch (e) {
-      mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", String(e)], "Reintentar", reintentar, false);
+      mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente."], "Reintentar", reintentar, false);
       return { ok: false };
     }
   }
@@ -392,6 +400,7 @@
     const resultado = el("div", "sql-resultado");
     zona.appendChild(el("div", "rotulo-zona", "Resultado de tu consulta:")); zona.appendChild(resultado); cont.appendChild(zona);
     editor = CodeMirror.fromTextArea(area, {mode:"text/plain", lineNumbers:true, indentUnit:2, tabSize:2, autofocus:true, extraKeys:{"Ctrl-Enter":()=>ejecutar(),"Cmd-Enter":()=>ejecutar(),Esc:()=>run.focus()}});
+    Tortu.nombrarEditor(editor, "Editor de código de este paso. Control más Enter comprueba; Escape sale del editor.");
     editor.setSize(null, 220);
     const acciones = el("div", "acciones");
     const run = el("button", "boton verde", "▶ Ejecutar consulta"); run.type = "button";
@@ -420,14 +429,26 @@
           mostrarPie("bien",["✅ ¡Consulta correcta!","⭐".repeat(p.estrellas)+"☆".repeat(3-p.estrellas)+"  +"+p.xp+" XP"],actual+1<pasos.length?"Continuar":"Terminar",siguientePaso,false); return;
         }
         Tortu.tocar("error"); mostrarPie("mal",["🤔 La consulta todavía no cumple la consigna.",(r.evaluacion&&r.evaluacion.mensaje)||"Revisá el resultado y probá otra vez."],"Reintentar",()=>{ocultarPie();editor.focus();},false);
-      } catch(e) { mostrarPie("mal",["😵 No pude comunicarme con TortuScript.",String(e)],"Reintentar",()=>ocultarPie(),false); }
+      } catch(e) { mostrarPie("mal",["😵 No pude comunicarme con TortuScript.",(e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")],"Reintentar",()=>ocultarPie(),false); }
       finally { if(!editor.getOption("readOnly")) run.disabled=false; }
     }
     run.addEventListener("click", ejecutar);
     pista.addEventListener("click", async () => {
-      const r=await Tortu.api(rutaPaso(paso.indice,"pista"),{}); cajaPista.textContent=""; const caja=el("div","veredicto info");
-      caja.appendChild(el("h3","","💡 Pista "+r.nivel+": "+r.titulo)); if(r.texto) caja.appendChild(el("div","",r.texto)); if(r.codigo) caja.appendChild(el("pre","",r.codigo));
-      pista.textContent=r.nivel>=3?"💡 Pista (vista)":"💡 Pista ("+(r.nivel+1)+"/3)"; if(r.nivel>=3) pista.disabled=true;
+      pista.disabled = true;
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.appendChild(el("h3", "", "💡 Pista " + r.nivel + ": " + r.titulo));
+        if (r.texto) caja.appendChild(el("div", "", r.texto));
+        if (r.codigo) caja.appendChild(el("pre", "", r.codigo));
+        pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : "💡 Pista (" + (r.nivel + 1) + "/3)";
+        if (r.nivel < 3) pista.disabled = false;
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("p", "veredicto mal", "No se pudo cargar la pista. Revisá tu conexión e intentá nuevamente."));
+        pista.disabled = false;
+      }
     });
   }
 
@@ -456,6 +477,7 @@
       extraKeys: { "Ctrl-Enter": () => ejecutar(), "Cmd-Enter": () => ejecutar(),
                    Esc: () => run.focus() },
     });
+    Tortu.nombrarEditor(editor, "Editor de código de este paso. Control más Enter comprueba; Escape sale del editor.");
     editor.setSize(null, 220);
 
     const acciones = el("div", "acciones");
@@ -499,21 +521,28 @@
         mostrarPie("mal", ["🤔 Todavía no cumple la consigna.", (r.evaluacion && r.evaluacion.mensaje) || "Revisá el código y probalo otra vez."],
           "Reintentar", () => { ocultarPie(); editor.focus(); }, false);
       } catch (e) {
-        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", String(e)], "Reintentar", () => ocultarPie(), false);
+        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", (e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")], "Reintentar", () => ocultarPie(), false);
       } finally {
         if (!editor.getOption("readOnly")) run.disabled = false;
       }
     }
     run.addEventListener("click", ejecutar);
     pista.addEventListener("click", async () => {
-      const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
-      cajaPista.textContent = "";
-      const caja = el("div", "veredicto info");
-      caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
-      if (r.texto) caja.appendChild(el("div", "", r.texto));
-      if (r.codigo) caja.appendChild(el("pre", "", r.codigo));
-      pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
-      if (r.nivel >= 3) pista.disabled = true;
+      pista.disabled = true;
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
+        if (r.texto) caja.appendChild(el("div", "", r.texto));
+        if (r.codigo) caja.appendChild(el("pre", "", r.codigo));
+        pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
+        if (r.nivel < 3) pista.disabled = false;
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("p", "veredicto mal", "No se pudo cargar la pista. Revisá tu conexión e intentá nuevamente."));
+        pista.disabled = false;
+      }
     });
     actualizarPreview();
   }
@@ -562,6 +591,7 @@
       extraKeys: { "Ctrl-Enter": () => ejecutar(), "Cmd-Enter": () => ejecutar(), Tab: (cm) => cm.replaceSelection("    "),
                    Esc: () => run.focus() },
     });
+    Tortu.nombrarEditor(editor, "Editor de código de este paso. Control más Enter comprueba; Escape sale del editor.");
     editor.setSize(null, dibuja || esJuego ? 260 : 180);
     if (paso.inicial) {                                    // proyectos guiados: se sigue desde lo que ya estaba armado
       editor.setValue(paso.inicial + "\n");
@@ -637,23 +667,30 @@
         }[ev.estado] || ["Revisalo otra vez."];
         mostrarPie("mal", texto.filter(Boolean), "Reintentar", () => { ocultarPie(); editor.focus(); }, false);
       } catch (e) {
-        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", String(e)], "Reintentar", () => ocultarPie(), false);
+        mostrarPie("mal", ["😵 No pude comunicarme con TortuScript.", (e?.datos?.mensaje || "Revisá tu conexión e intentá nuevamente.")], "Reintentar", () => ocultarPie(), false);
       } finally { if (!editor.getOption("readOnly")) run.disabled = false; }
     }
     run.addEventListener("click", ejecutar);
     pista.addEventListener("click", async () => {
-      const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
-      cajaPista.textContent = "";
-      const caja = el("div", "veredicto info");
-      caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
-      for (const clave of ["texto", "codigo", "python"]) {
-        if (!r[clave]) continue;
-        if (clave === "python") caja.appendChild(el("div", "", "🐍 En Python:"));
-        caja.appendChild(el(clave === "texto" ? "div" : "pre", "", r[clave]));
+      pista.disabled = true;
+      try {
+        const r = await Tortu.api(rutaPaso(paso.indice, "pista"), {});
+        cajaPista.textContent = "";
+        const caja = el("div", "veredicto info");
+        caja.appendChild(el("h3", "", `💡 Pista ${r.nivel}: ${r.titulo}`));
+        for (const clave of ["texto", "codigo", "python"]) {
+          if (!r[clave]) continue;
+          if (clave === "python") caja.appendChild(el("div", "", "🐍 En Python:"));
+          caja.appendChild(el(clave === "texto" ? "div" : "pre", "", r[clave]));
+        }
+        cajaPista.appendChild(caja);
+        pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
+        if (r.nivel < 3) pista.disabled = false;
+      } catch (e) {
+        cajaPista.textContent = "";
+        cajaPista.appendChild(el("p", "veredicto mal", "No se pudo cargar la pista. Revisá tu conexión e intentá nuevamente."));
+        pista.disabled = false;
       }
-      cajaPista.appendChild(caja);
-      pista.textContent = r.nivel >= 3 ? "💡 Pista (vista)" : `💡 Pista (${r.nivel + 1}/3)`;
-      if (r.nivel >= 3) pista.disabled = true;
     });
   }
 

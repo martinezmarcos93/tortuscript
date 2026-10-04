@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contraseña nueva · TortuScript</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/tortuscript.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tortu.css') }}">
+</head>
+<body>
+<main id="contenido" class="columna-ancha pagina-error">
+  <section class="tarjeta">
+    {% if listo %}
+    <div class="centrado">
+      <div class="mascota gran" aria-hidden="true">✅</div>
+      <h1>Contraseña cambiada</h1>
+      <p class="texto-grande" role="status">Por seguridad cerramos las sesiones abiertas. Ingresá con la contraseña nueva.</p>
+      <p><a class="boton verde grande" href="{{ url_for('cuenta.ingresar') }}">Ingresar</a></p>
+    </div>
+    {% elif invalido %}
+    <div class="centrado">
+      <div class="mascota gran" aria-hidden="true">⚠️</div>
+      <h1>Enlace no válido</h1>
+      <p class="texto-grande">El enlace no es válido, ya se usó o expiró. Podés pedir uno nuevo.</p>
+      <p><a class="boton verde grande" href="{{ url_for('cuenta.recuperar') }}">Pedir otro enlace</a></p>
+    </div>
+    {% else %}
+    <div class="centrado">
+      <div class="mascota gran" aria-hidden="true">🔑</div>
+      <h1>Elegí una contraseña nueva</h1>
+    </div>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('cuenta.restablecer_password') }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <label class="etiqueta" for="password">Contraseña nueva</label>
+      <input class="campo" id="password" name="password" type="password" autocomplete="new-password" minlength="12" required>
+      <label class="etiqueta" for="password2">Repetila</label>
+      <input class="campo" id="password2" name="password2" type="password" autocomplete="new-password" minlength="12" required>
+      <p class="tenue">La contraseña debe tener al menos 12 caracteres.</p>
+      <p><button class="boton verde grande" type="submit">Guardar contraseña</button></p>
+    </form>
+    {% endif %}
+  </section>
+</main>
+</body>
+</html>

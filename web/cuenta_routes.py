@@ -11,29 +11,55 @@ from flask import Blueprint, abort, current_app, jsonify, make_response, redirec
 
 from tortuscript.acceso import AccesoProducto
 from tortuscript.auth import AuthError, AuthRepository
-from tortuscript.cuentas import CuentaError, CuentaRepository
+from tortuscript.cuentas import MAX_CHILD_PROFILES, CuentaError, CuentaRepository
 from tortuscript.migracion_progreso import MigracionProgresoError, MigracionProgresoLocal
 from tortuscript.perfil_educativo import ContextoEducativoError, PerfilEducativoService
 from tortuscript.progreso_childprofile import ProgresoChildProfile
 from tortuscript.runtime_educativo import RuntimeEducativo
-from tortuscript.rate_limit import RateLimiter
+from tortuscript.rate_limit import RateLimiter, SQLiteRateLimiter
 
 def _rate_limiter():
-    # Cada instancia Flask mantiene su propio limitador. Evita compartir estado
-    # entre aplicaciones de prueba o instancias WSGI distintas en el mismo proceso.
-    return current_app.extensions.setdefault("tortu_rate_limiter", RateLimiter())
+    # Por defecto se mantiene el limitador local, apropiado para desarrollo/pruebas.
+    # Un despliegue multi-worker puede configurar ACCOUNT_RATE_LIMIT_DB en un
+    # volumen compartido para coordinar límites entre procesos de la misma máquina.
+    limiter = current_app.extensions.get("tortu_rate_limiter")
+    if limiter is None:
+        shared_db = current_app.config.get("ACCOUNT_RATE_LIMIT_DB")
+        limiter = SQLiteRateLimiter(shared_db) if shared_db else RateLimiter()
+        current_app.extensions["tortu_rate_limiter"] = limiter
+    return limiter
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("cuenta", __name__, url_prefix="/cuenta")
 
 
+def _json_dict():
+    """Devuelve un objeto JSON o un diccionario vacío para cuerpos inválidos/no objeto."""
+    datos = request.get_json(silent=True)
+    return datos if isinstance(datos, dict) else {}
+
+
+def _form_or_json_dict():
+    """Normaliza los cuerpos de formularios y JSON sin asumir que JSON sea un objeto."""
+    return request.form if request.form else _json_dict()
+
 def _repos():
     path = Path(current_app.config["ACCOUNT_DB"])
     cuentas = CuentaRepository(path)
-    cuentas.ensure_schema()
     auth = AuthRepository(path)
-    auth.ensure_schema()
+    # El esquema se asegura una vez por archivo y por proceso: hacerlo en cada pedido
+    # costaba una docena de transacciones DDL por página. La marca incluye el inodo
+    # para volver a asegurarlo si el archivo se reemplaza (restauración de backup).
+    listos = current_app.extensions.setdefault("tortu_esquemas_listos", set())
+    try:
+        marca = (str(path), path.stat().st_ino)
+    except OSError:
+        marca = None
+    if marca is None or marca not in listos:
+        cuentas.ensure_schema()
+        auth.ensure_schema()
+        listos.add((str(path), path.stat().st_ino))
     return cuentas, auth
 
 
@@ -83,6 +109,23 @@ def _safe_next_url(value, default="/"):
     return value
 
 
+def _next_pedido(default="/"):
+    """Destino local pedido por formulario o query string, ya validado."""
+    return _safe_next_url(request.form.get("next") or request.args.get("next"), default)
+
+
+def _pagina_perfiles(cuentas, row, estado=200, error=None):
+    return render_template(
+        "cuenta/perfiles.html",
+        perfiles=cuentas.listar_child_profiles(row["account_id"]),
+        csrf=request.cookies.get("tortu_csrf", ""),
+        perfil_activo=row["active_profile_id"],
+        next_url=_next_pedido(),
+        max_perfiles=MAX_CHILD_PROFILES,
+        error=error,
+    ), estado
+
+
 def _cookie_config():
     return {
         "httponly": True,
@@ -116,6 +159,37 @@ def _require_csrf(auth, raw_session):
     return True
 
 
+@bp.before_request
+def _proteger_login_csrf():
+    """Rechaza intentos de login desde otro origen en navegadores modernos."""
+    if request.endpoint != "cuenta.login" or request.method != "POST":
+        return None
+
+    if request.headers.get("Sec-Fetch-Site", "").lower() == "cross-site":
+        return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
+
+    origen = request.headers.get("Origin") or request.headers.get("Referer")
+    if origen:
+        try:
+            parsed = urlsplit(origen)
+        except ValueError:
+            # Un Origin/Referer malformado nunca debe convertir una petición hostil en 500.
+            return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
+        if (
+            parsed.scheme.lower() != request.scheme.lower()
+            or parsed.netloc.lower() != request.host.lower()
+        ):
+            return jsonify(ok=False, mensaje="Solicitud de origen no permitido."), 403
+    return None
+
+
+@bp.after_request
+def _sin_cache(respuesta):
+    """Las páginas de cuenta llevan tokens, correos y perfiles: no deben quedar en caché compartida ni en el historial."""
+    respuesta.headers.setdefault("Cache-Control", "no-store")
+    return respuesta
+
+
 @bp.get("/registrar")
 def registrar():
     return render_template("cuenta/registrar.html")
@@ -123,9 +197,10 @@ def registrar():
 
 @bp.get("/ingresar")
 def ingresar():
+    destino = _next_pedido()
     if _require_session():
-        return redirect(url_for("cuenta.seleccionar_perfil_pagina"))
-    return render_template("cuenta/ingresar.html")
+        return redirect(url_for("cuenta.seleccionar_perfil_pagina", next=destino))
+    return render_template("cuenta/ingresar.html", next_url=destino)
 
 
 @bp.get("/configuracion")
@@ -140,7 +215,7 @@ def configuracion():
         "cuenta/configuracion.html",
         cuenta=cuenta,
         perfiles=perfiles,
-        max_perfiles=3,
+        max_perfiles=MAX_CHILD_PROFILES,
     )
 
 
@@ -150,14 +225,7 @@ def seleccionar_perfil_pagina():
     if not resultado:
         return redirect(url_for("cuenta.ingresar"))
     cuentas, _, row = resultado
-    perfiles = cuentas.listar_child_profiles(row["account_id"])
-    return render_template(
-        "cuenta/perfiles.html",
-        perfiles=perfiles,
-        csrf=request.cookies.get("tortu_csrf", ""),
-        perfil_activo=row["active_profile_id"],
-        next_url=_safe_next_url(request.args.get("next", "/")),
-    )
+    return _pagina_perfiles(cuentas, row)
 
 
 @bp.post("/registrar")
@@ -165,7 +233,7 @@ def registrar_post():
     limit = _limit_or_429(f"register:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
         return limit
-    datos = request.form if request.form else (request.get_json(silent=True) or {})
+    datos = _form_or_json_dict()
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
@@ -199,7 +267,7 @@ def registro():
     limit = _limit_or_429(f"register:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
         return limit
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
@@ -248,9 +316,11 @@ def confirmar_verificacion_email():
     limit = _limit_or_429(f"verify-email:{request.remote_addr or 'unknown'}", 10, 900)
     if limit:
         return limit
-    datos = request.get_json(silent=True) or request.form
+    datos = _form_or_json_dict()
     token = datos.get("token", "")
     try:
+        if not isinstance(token, str):
+            raise AuthError("El enlace no es válido.")
         _, auth = _repos()
         auth.verify_email_token(token)
     except AuthError:
@@ -280,7 +350,7 @@ def reenviar_verificacion():
             codigo="envio_email_no_configurado",
             mensaje="El reenvío no está disponible porque el envío de correo no está configurado.",
         ), 503
-    datos = request.form if request.form else (request.get_json(silent=True) or {})
+    datos = _form_or_json_dict()
     email = datos.get("email")
     if isinstance(email, str) and _email_sender_configurado():
         _, auth = _repos()
@@ -302,65 +372,123 @@ def reenviar_verificacion():
     ), 202
 
 
+@bp.get("/recuperar")
+def recuperar():
+    return render_template("cuenta/recuperar.html")
+
+
 @bp.post("/recuperar")
 def solicitar_recuperacion():
     # La respuesta no depende de que la cuenta exista; solo indica si el canal
     # global de correo está disponible en esta instalación.
+    por_formulario = bool(request.form)
     if not _email_sender_configurado():
-        return jsonify(
-            ok=False,
-            codigo="envio_email_no_configurado",
-            mensaje="La recuperación no está disponible porque el envío de correo no está configurado.",
-        ), 503
+        mensaje = "La recuperación no está disponible porque el envío de correo no está configurado."
+        if por_formulario:
+            return render_template("cuenta/recuperar.html", error=mensaje), 503
+        return jsonify(ok=False, codigo="envio_email_no_configurado", mensaje=mensaje), 503
     limit = _limit_or_429(f"recovery:{request.remote_addr or 'unknown'}", 5, 3600)
     if limit:
+        if por_formulario:
+            respuesta = make_response(render_template(
+                "cuenta/recuperar.html", error="Demasiados intentos. Probá nuevamente más tarde."), 429)
+            respuesta.headers["Retry-After"] = limit[0].headers["Retry-After"]
+            return respuesta
         return limit
-    datos = request.get_json(silent=True) or {}
+    datos = _form_or_json_dict()
     email = datos.get("email")
     if isinstance(email, str):
-        _, auth = _repos()
+        cuentas, auth = _repos()
         token_info = auth.create_recovery_token(email)
         if token_info:
             token, expires = token_info
-            cuenta = _repos()[0].obtener_account_por_email(email)
+            try:
+                cuenta = cuentas.obtener_account_por_email(email)
+            except CuentaError:
+                cuenta = None
             if cuenta:
                 _intentar_emitir_email("recovery", cuenta.email, token, expires)
+    if por_formulario:
+        # Misma página para cuenta existente, inexistente o proveedor fallido.
+        return render_template("cuenta/recuperar.html", enviado=True), 202
     return jsonify(ok=True, estado="solicitud_recibida"), 202
+
+
+@bp.get("/restablecer-password")
+def restablecer_password_pagina():
+    # GET no consume el token: solo muestra el formulario para elegir la clave nueva.
+    token = request.args.get("token", "")
+    if not token:
+        return render_template("cuenta/restablecer.html", invalido=True), 400
+    return render_template("cuenta/restablecer.html", token=token)
 
 
 @bp.post("/restablecer-password")
 def restablecer_password():
-    datos = request.get_json(silent=True) or {}
+    por_formulario = bool(request.form)
+    datos = _form_or_json_dict()
     token = datos.get("token")
     password = datos.get("password")
     if not isinstance(token, str) or not isinstance(password, str):
+        if por_formulario:
+            return render_template("cuenta/restablecer.html", invalido=True), 400
         return jsonify(ok=False, mensaje="Token y contraseña son obligatorios."), 400
     limit = _limit_or_429(f"reset-password:{request.remote_addr or 'unknown'}", 10, 900)
     if limit:
+        if por_formulario:
+            respuesta = make_response(render_template(
+                "cuenta/restablecer.html", token=token,
+                error="Demasiados intentos. Probá nuevamente más tarde."), 429)
+            respuesta.headers["Retry-After"] = limit[0].headers["Retry-After"]
+            return respuesta
         return limit
+    if por_formulario and password != datos.get("password2", password):
+        return render_template("cuenta/restablecer.html", token=token,
+                               error="Las dos contraseñas no coinciden."), 400
+    try:
+        AuthRepository.validar_password(password)
+    except AuthError as exc:
+        # La política se comprueba antes de tocar el token: el enlace sigue sirviendo.
+        if por_formulario:
+            return render_template("cuenta/restablecer.html", token=token, error=str(exc)), 400
+        return jsonify(ok=False, mensaje=str(exc)), 400
     try:
         _, auth = _repos()
         auth.reset_password(token, password)
     except AuthError as exc:
+        if por_formulario:
+            return render_template("cuenta/restablecer.html", invalido=True), 400
         return jsonify(ok=False, mensaje=str(exc)), 400
+    if por_formulario:
+        return render_template("cuenta/restablecer.html", listo=True)
     return jsonify(ok=True, estado="password_restablecida")
 
 
 @bp.post("/login")
 def login():
-    datos = request.get_json(silent=True) or request.form
+    datos = _form_or_json_dict()
     email = datos.get("email")
     password = datos.get("password")
     if not isinstance(email, str) or not isinstance(password, str):
+        if request.form:
+            return render_template(
+                "cuenta/ingresar.html", error="Correo y contraseña son obligatorios.", next_url=_next_pedido()
+            ), 401
         return jsonify(ok=False, mensaje="Correo o contraseña incorrectos."), 401
     email_normalizado = email.strip().lower()
     ip = request.remote_addr or "unknown"
-    limit_ip = _limit_or_429(f"login-ip:{ip}", 30, 900)
-    if limit_ip:
-        return limit_ip
-    limit_cuenta = _limit_or_429(f"login-account:{ip}:{email_normalizado}", 10, 900)
-    if limit_cuenta:
-        return limit_cuenta
+    limite = _limit_or_429(f"login-ip:{ip}", 30, 900) or \
+        _limit_or_429(f"login-account:{ip}:{email_normalizado}", 10, 900)
+    if limite:
+        if request.form:
+            # El adulto que usa el formulario necesita una página, no un JSON crudo.
+            respuesta = make_response(render_template(
+                "cuenta/ingresar.html", next_url=_next_pedido(),
+                error="Demasiados intentos. Esperá unos minutos y probá de nuevo.",
+            ), 429)
+            respuesta.headers["Retry-After"] = limite[0].headers["Retry-After"]
+            return respuesta
+        return limite
     _, auth = _repos()
     try:
         cuenta = auth.verify_password(email, password)
@@ -369,10 +497,10 @@ def login():
         # No distinguir cuenta inexistente, contraseña incorrecta o correo pendiente.
         mensaje = "Correo o contraseña incorrectos, o cuenta sin verificar."
         if request.form:
-            return render_template("cuenta/ingresar.html", error=mensaje), 401
+            return render_template("cuenta/ingresar.html", error=mensaje, next_url=_next_pedido()), 401
         return jsonify(ok=False, mensaje=mensaje), 401
     if request.form:
-        respuesta = make_response(redirect(url_for("cuenta.seleccionar_perfil_pagina")))
+        respuesta = make_response(redirect(url_for("cuenta.seleccionar_perfil_pagina", next=_next_pedido())))
     else:
         respuesta = make_response(jsonify(ok=True, cuenta={"id": cuenta["id"], "email": cuenta["email"], "role": cuenta["role"]},
                                           csrf=csrf, expira=expires.isoformat()))
@@ -441,15 +569,21 @@ def crear_perfil():
     cuentas, auth, row = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    nombre = (request.get_json(silent=True) or {}).get("nombre")
+    nombre = _form_or_json_dict().get("nombre")
     try:
         perfil = cuentas.crear_child_profile(row["account_id"], nombre)
     except CuentaError as exc:
         if request.form:
-            return render_template("cuenta/perfiles.html", perfiles=cuentas.listar_child_profiles(row["account_id"]), csrf=request.cookies.get("tortu_csrf", ""), perfil_activo=row["active_profile_id"], next_url=_safe_next_url(request.args.get("next", "/")), error=str(exc)), 400
+            return _pagina_perfiles(cuentas, row, 400, str(exc))
         return jsonify(ok=False, mensaje=str(exc)), 400
     if request.form:
-        return redirect(url_for("cuenta.seleccionar_perfil_pagina"))
+        # La acción del formulario promete crear y entrar al perfil; no dejar al
+        # usuario en el selector como si la creación no hubiese terminado.
+        try:
+            auth.select_profile(raw, perfil.id)
+        except AuthError:
+            return _pagina_perfiles(cuentas, row, 403, "No se pudo entrar al perfil nuevo. Elegilo de la lista.")
+        return redirect(_next_pedido(url_for("inicio")))
     return jsonify(ok=True, perfil={"id": perfil.id, "nombre": perfil.display_name}), 201
 
 
@@ -459,18 +593,21 @@ def seleccionar_perfil():
     resultado = _require_session()
     if not resultado:
         return jsonify(ok=False, mensaje="Sesión requerida."), 401
-    _, auth, row = resultado
+    cuentas, auth, row = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or request.form
+    datos = _form_or_json_dict()
     profile_id = datos.get("perfil_id")
-    if not profile_id:
+    if not isinstance(profile_id, str) or not profile_id:
+        if request.form:
+            return _pagina_perfiles(cuentas, row, 400, "Elegí un perfil de la lista.")
         return jsonify(ok=False, mensaje="Falta perfil_id."), 400
     try:
         auth.select_profile(raw, profile_id)
     except AuthError as exc:
         if request.form:
-            return redirect(url_for("cuenta.seleccionar_perfil_pagina")), 403
+            # Un 403 con cabecera Location no se sigue: el adulto veía una página en blanco.
+            return _pagina_perfiles(cuentas, row, 403, "Ese perfil no está disponible en esta cuenta.")
         return jsonify(ok=False, mensaje=str(exc)), 403
     if request.form:
         return redirect(_safe_next_url(request.form.get("next"), url_for("inicio")))
@@ -558,7 +695,7 @@ def importar_progreso_local():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     nombre = datos.get("perfil_local")
     reemplazar = datos.get("reemplazar") is True
     try:
@@ -660,7 +797,7 @@ def runtime_guardar_proyecto():
     _, auth, _ = resultado
     if not _require_csrf(auth, raw):
         return jsonify(ok=False, mensaje="Falta una protección CSRF válida."), 403
-    datos = request.get_json(silent=True) or {}
+    datos = _json_dict()
     try:
         proyecto_id = RuntimeEducativo(_educativo()).guardar_proyecto(
             raw, datos.get("nombre"), datos.get("tipo"), datos.get("codigo"), datos.get("proyecto_id"))

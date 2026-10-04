@@ -30,6 +30,8 @@ def inicios_de_seccion():
 def entradas_permitidas(experiencia):
     """Dónde puede empezar cada experiencia: "un poquito", en Variables; "bastante", al comienzo de cualquier sección
     después de Mostrar (es lo que puede recomendar la prueba)."""
+    if not isinstance(experiencia, str):
+        return set()
     if experiencia == "bastante":
         return set(inicios_de_seccion()[1:])
     fija = progreso.PUNTOS_DE_ENTRADA.get(experiencia)

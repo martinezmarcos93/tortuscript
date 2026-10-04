@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Elegí un perfil · TortuScript</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/tortuscript.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tortu.css') }}">
 </head>
 <body>
@@ -27,12 +28,13 @@
       <p class="centrado">Todavía no hay perfiles. Creá el primero abajo.</p>
       {% endfor %}
     </div>
-    {% if perfiles|length < 3 %}
+    {% if perfiles|length < max_perfiles %}
     <hr>
     <form method="post" action="{{ url_for('cuenta.crear_perfil') }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
       <label class="etiqueta" for="nombre">Nuevo perfil</label>
-      <input class="campo" id="nombre" name="nombre" maxlength="40" autocomplete="off" required>
+      <input class="campo" id="nombre" name="nombre" maxlength="30" autocomplete="off" required>
       <button class="boton violeta grande" type="submit">Crear perfil y entrar</button>
     </form>
     {% endif %}
@@ -42,42 +44,5 @@
     </form>
   </section>
 </main>
-<script>
-(function () {
-  const csrf = {{ csrf|tojson }};
-  const error = document.getElementById("error");
-  function mostrarError(texto) {
-    error.textContent = texto;
-    error.hidden = false;
-  }
-  async function seleccionar(id) {
-    const r = await fetch("{{ url_for('cuenta.seleccionar_perfil') }}", {
-      method: "POST",
-      headers: {"Content-Type": "application/json", "X-Tortu-CSRF": csrf},
-      body: JSON.stringify({perfil_id: id})
-    });
-    if (r.ok) location.href = {{ next_url|tojson }};
-    else {
-      const d = await r.json().catch(() => ({}));
-      mostrarError(d.mensaje || "No se pudo seleccionar el perfil.");
-    }
-  }
-  document.querySelectorAll("[data-perfil]").forEach(btn => btn.addEventListener("click", () => seleccionar(btn.dataset.perfil)));
-  const form = document.getElementById("nuevo-perfil");
-  if (form) form.addEventListener("submit", async e => {
-    e.preventDefault();
-    const r = await fetch("{{ url_for('cuenta.crear_perfil') }}", {
-      method: "POST",
-      headers: {"Content-Type": "application/json", "X-Tortu-CSRF": csrf},
-      body: JSON.stringify({nombre: document.getElementById("nombre").value})
-    });
-    if (r.ok) seleccionar((await r.json()).perfil.id);
-    else {
-      const d = await r.json().catch(() => ({}));
-      mostrarError(d.mensaje || "No se pudo crear el perfil.");
-    }
-  });
-})();
-</script>
 </body>
 </html>
