@@ -1145,5 +1145,35 @@ class CuentaRoutesTests(unittest.TestCase):
         tarjeta = progreso_despues.json["progreso"]["data"]["repaso"]["hola-mundo:1"]
         self.assertEqual(tarjeta["aciertos"], 1)
 
+    def test_rate_limit_sqlite_se_comparte_entre_instancias_de_app(self):
+        rate_db = self.tmp / "rate-limit.sqlite3"
+        self.app.config["ACCOUNT_RATE_LIMIT_DB"] = rate_db
+
+        for indice in range(5):
+            respuesta = self.client.post("/cuenta/registro", json={
+                "email": f"compartido-{indice}@example.com",
+                "password": "una-clave-larga-123",
+            })
+            self.assertEqual(respuesta.status_code, 202)
+
+        # Una segunda instancia representa otro worker del mismo host.
+        segunda_app = create_app(token="test-token")
+        segunda_app.config.update(
+            TESTING=True,
+            ACCOUNT_DB=self.tmp / "cuentas.sqlite3",
+            ACCOUNT_COOKIE_SECURE=False,
+            PROGRESS_DIR=self.tmp / "progreso_perfiles",
+            ACCOUNT_RATE_LIMIT_DB=rate_db,
+            ACCOUNT_EMAIL_SENDER=lambda **payload: None,
+        )
+        segunda = segunda_app.test_client()
+        bloqueado = segunda.post("/cuenta/registro", json={
+            "email": "compartido-worker-dos@example.com",
+            "password": "una-clave-larga-123",
+        })
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado.headers)
+
+
 if __name__ == "__main__":
     unittest.main()
