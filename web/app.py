@@ -43,6 +43,12 @@ logger = logging.getLogger("tortuscript.web")
 HOSTS_PERMITIDOS = {"127.0.0.1", "localhost"}
 
 
+def _json_objeto():
+    """Devuelve solo objetos JSON; listas, escalares y JSON inválido se normalizan a {}."""
+    datos = request.get_json(silent=True)
+    return datos if isinstance(datos, dict) else {}
+
+
 # Cabeceras de seguridad (docs/experimental/SEGURIDAD_SITIO_PROFESIONAL.md §5). La app es local, pero se
 # endurece igual: nada se carga de afuera, ningún script inline se ejecuta y ninguna página se puede enmarcar.
 # style-src admite 'unsafe-inline' a propósito: las plantillas usan atributos style= y CodeMirror pone estilos;
@@ -716,14 +722,14 @@ def create_app(token=None):
     @app.post("/api/juego/correr")
     def api_juego_correr():
         """Corre un juego con la implementación de referencia (ejemplos de las lecciones): devuelve el registro."""
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         return jsonify(correr({"op": "juego", "fuente": str(datos.get("codigo", ""))[:mis_proyectos.MAX_CODIGO],
                                "entradas": datos.get("entradas", []), "semilla": datos.get("semilla")}))
 
     @app.post("/api/juego/arbol")
     def api_juego_arbol():
         """El árbol del juego (TortuGame): el servidor analiza y valida, el navegador ejecuta (ADR-006/007)."""
-        codigo = str((request.get_json(silent=True) or {}).get("codigo", ""))
+        codigo = str((_json_objeto()).get("codigo", ""))
         if len(codigo) > mis_proyectos.MAX_CODIGO:
             return jsonify(ok=False, mensaje="Tu juego es demasiado largo."), 400
         try:
@@ -765,20 +771,20 @@ def create_app(token=None):
     # ─────────────── API ───────────────
     @app.post("/api/traducir")
     def api_traducir():
-        fuente = (request.get_json(silent=True) or {}).get("codigo", "")
+        fuente = (_json_objeto()).get("codigo", "")
         tipo = detectar_tipo(fuente)
         python = fuente if tipo == "python" else TraductorTortuScript().traducir_codigo(fuente)
         return jsonify(tipo=tipo, python=python)
 
     @app.post("/api/ejecutar")
     def api_ejecutar():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         return jsonify(correr({"op": "ejecutar", "fuente": datos.get("codigo", ""),
                                "entradas": datos.get("entradas", []), "semilla": datos.get("semilla")}))
 
     @app.post("/api/tortuga")
     def api_tortuga():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         return jsonify(correr({"op": "tortuga", "fuente": datos.get("codigo", ""),
                                "entradas": datos.get("entradas", []), "semilla": datos.get("semilla")}))
 
@@ -797,7 +803,7 @@ def create_app(token=None):
             abort(400)                           # se evalúa ejecutando: .../evaluar
         clave = (_perfil_contexto(), leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
-        r = motor.comprobar(paso, (request.get_json(silent=True) or {}).get("respuesta"), _ejecutar_para_motor(paso))
+        r = motor.comprobar(paso, (_json_objeto()).get("respuesta"), _ejecutar_para_motor(paso))
         if not r["ok"]:
             estado_paso["errores"] += 1
             return jsonify(ok=False, pista=r["pista"], malos=r["malos"],
@@ -974,7 +980,7 @@ def create_app(token=None):
         lec, paso = _paso_o_404(leccion_id, i)
         if paso["tipo"] != "escribir":
             abort(400)
-        return jsonify(_evaluar_escribir(leccion_id, i, paso, request.get_json(silent=True) or {}))
+        return jsonify(_evaluar_escribir(leccion_id, i, paso, _json_objeto()))
 
     @app.post("/api/lecciones/<leccion_id>/pasos/<int:i>/pista")
     def api_pista_paso(leccion_id, i):
@@ -996,7 +1002,7 @@ def create_app(token=None):
         if not _desbloqueado(indice):
             abort(403)
         leccion_id, i, paso = _ejercicio_como_paso(n)
-        return jsonify(_evaluar_escribir(leccion_id, i, paso, request.get_json(silent=True) or {}))
+        return jsonify(_evaluar_escribir(leccion_id, i, paso, _json_objeto()))
 
     @app.post("/api/ejercicios/<int:n>/pista")
     def api_pista(n):
@@ -1017,7 +1023,7 @@ def create_app(token=None):
 
     @app.post("/api/practica/comprobar")
     def api_practica_comprobar():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         leccion_id, i, paso = _tarjeta_de_la_sesion(datos)
         clave = (_perfil_contexto(), "practica", leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
@@ -1038,7 +1044,7 @@ def create_app(token=None):
 
     @app.post("/api/practica/respuesta")
     def api_practica_respuesta():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         leccion_id, i, paso = _tarjeta_de_la_sesion(datos)
         clave = (_perfil_contexto(), "practica", leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
@@ -1064,7 +1070,7 @@ def create_app(token=None):
 
     @app.post("/api/proyectos")
     def api_proyecto_guardar():
-        d = request.get_json(silent=True) or {}
+        d = _json_objeto()
         return _con_proyectos(lambda p: mis_proyectos.guardar(p, d.get("nombre"), d.get("tipo"), d.get("codigo"),
                                                               proyecto_id=d.get("id")))
 
@@ -1088,7 +1094,7 @@ def create_app(token=None):
 
     @app.post("/api/proyectos-integradores/<proyecto_id>/archivo")
     def api_proyecto_integrador_archivo(proyecto_id):
-        d = request.get_json(silent=True) or {}
+        d = _json_objeto()
         p = _cargar_progreso()
         try:
             proyectos_integradores.guardar_archivo(p, proyecto_id, d.get("nombre"), d.get("codigo"))
@@ -1131,7 +1137,7 @@ def create_app(token=None):
 
     @app.post("/api/onboarding")
     def api_onboarding():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         crudo = str(datos.get("nombre") or "").strip()
         if crudo and not progreso.sanitizar_perfil(crudo):
             return jsonify(ok=False, mensaje="Usá letras o números para el nombre."), 400
@@ -1155,7 +1161,7 @@ def create_app(token=None):
 
     @app.post("/api/config")
     def api_config():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         p = _cargar_progreso()
         if not progreso.guardar_config(p, meta_min=datos.get("meta_min")):
             return jsonify(ok=False, mensaje="Esa meta no existe."), 400
@@ -1164,7 +1170,7 @@ def create_app(token=None):
 
     @app.post("/api/ajustes")
     def api_ajustes():
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         p = _cargar_progreso()
         cambios = {k: datos.get(k) for k in progreso.AJUSTES if k in datos}
         if not progreso.guardar_ajustes(p, **cambios):
@@ -1194,7 +1200,7 @@ def create_app(token=None):
     def api_diagnostico():
         """Corrige la prueba de nivel (ADR-004) y recomienda dónde empezar. No guarda nada: lo elige el chico."""
         try:
-            entrada = diagnostico.recomendar((request.get_json(silent=True) or {}).get("respuestas"))
+            entrada = diagnostico.recomendar((_json_objeto()).get("respuestas"))
         except ValueError as e:
             return jsonify(ok=False, mensaje=str(e)), 400
         seccion, lec = next((s, l) for s, l in contenido.lecciones(contenido.cargar_curso()) if l["id"] == entrada)
@@ -1203,7 +1209,7 @@ def create_app(token=None):
     @app.post("/api/intereses/<encuesta_id>")
     def api_intereses(encuesta_id):
         """Guarda lo que el chico eligió (o "Ahora no"), solo en su progreso local."""
-        datos = request.get_json(silent=True) or {}
+        datos = _json_objeto()
         p = _cargar_progreso()
         try:
             if datos.get("omitir") is True:
