@@ -688,7 +688,7 @@
     {
       "id": "exploradores",
       "nombre": "Exploradores",
-      "edad_aproximada": "8-10",
+      "edad_aproximada": "9-10",
       "estado": "hipotesis"
     },
     {
@@ -706,7 +706,7 @@
     {
       "id": "desarrolladores",
       "nombre": "Desarrolladores",
-      "edad_aproximada": "14-17",
+      "edad_aproximada": "14-15",
       "estado": "hipotesis"
     }
   ],

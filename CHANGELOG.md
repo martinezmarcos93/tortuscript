@@ -19,6 +19,8 @@ consultan antes de fijarlos.
   orden) no figuraba en ningún lado; ahora se lista con su plan.
 
 ### Cambiado
+- **Franjas de edad de 9 a 15 años** (decisión de Marcos, 04/10/2026): «exploradores» pasa a 9–10 y
+  «desarrolladores» a 14–15, para no superponerse con Croco-Script, que va de 16 a 20. Antes iban de 8 a 17.
 - **ADR-048 y ADR-049 aceptadas** por Marcos el 04/10/2026 (modelo de sincronización y no importar el progreso
   exportado). No cambian código.
 

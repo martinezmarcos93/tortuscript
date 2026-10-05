@@ -12,7 +12,11 @@ Estas fuentes sirven como marco curricular, no como validación de que una edad 
 
 ## Franjas operativas iniciales
 
-### Exploradores — aproximadamente 8–10
+> **Alcance de edades (decisión de Marcos, 04/10/2026).** TortuScript va de los **9 a los 15 años**. A partir de
+> los 16 corresponde Croco-Script, el producto avanzado (de 16 a 20). Las franjas se ajustaron para que no se
+> superpongan: antes iban de 8 a 17 y la última llegaba hasta los 17.
+
+### Exploradores — aproximadamente 9–10
 
 Objetivo: construir modelo mental de computación y comenzar a programar.
 
@@ -73,7 +77,7 @@ Características:
 
 La estética puede conservar la identidad TortuScript sin infantilizar el lenguaje.
 
-### Desarrolladores — aproximadamente 14–17
+### Desarrolladores — aproximadamente 14–15
 
 Objetivo: consolidar fundamentos y conectar tecnologías.
 

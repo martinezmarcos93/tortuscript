@@ -1,10 +1,10 @@
 {
   "version": 1,
   "franjas": {
-    "exploradores": {"edad_aprox": "8-10", "densidad_codigo": "muy_baja", "autonomia": "acompanada", "ayudas": "alta", "tono": "concreto"},
+    "exploradores": {"edad_aprox": "9-10", "densidad_codigo": "muy_baja", "autonomia": "acompanada", "ayudas": "alta", "tono": "concreto"},
     "constructores": {"edad_aprox": "10-12", "densidad_codigo": "baja", "autonomia": "guiada", "ayudas": "media_alta", "tono": "concreto_tecnico"},
     "creadores": {"edad_aprox": "12-14", "densidad_codigo": "media", "autonomia": "semi_autonoma", "ayudas": "media", "tono": "tecnico_amigable"},
-    "desarrolladores": {"edad_aprox": "14-17", "densidad_codigo": "media_alta", "autonomia": "autonoma", "ayudas": "baja", "tono": "tecnico_directo"}
+    "desarrolladores": {"edad_aprox": "14-15", "densidad_codigo": "media_alta", "autonomia": "autonoma", "ayudas": "baja", "tono": "tecnico_directo"}
   },
   "regla": "La franja modifica presentacion, dificultad declarada y andamiaje; no altera silenciosamente la competencia ni el criterio de aprobacion."
 }

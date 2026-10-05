@@ -2,10 +2,10 @@
 
 ## Franjas
 
-- Exploradores: aproximadamente 8–10.
+- Exploradores: aproximadamente 9–10.
 - Constructores: aproximadamente 10–12.
 - Creadores: aproximadamente 12–14.
-- Desarrolladores: aproximadamente 14–17.
+- Desarrolladores: aproximadamente 14–15.
 
 Son franjas pedagógicas configurables, no reglas de elegibilidad legal.
 
