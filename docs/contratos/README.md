@@ -72,6 +72,17 @@ receptor descarta la vieja. La clave nunca va al navegador ni al repositorio.
 
 Los prerrequisitos de las tres fuentes del nivel avanzado (`docs/catalogo_avanzado_v1.json`) ya se validan así.
 
+## Cómo se conectan los dos productos
+
+| En TortuScript (`.env`) | En Croco-Script (`.env`) |
+|---|---|
+| `TORTU_CROCO_URL=<dirección de Croco-Script>/entrar` | — |
+| `TORTU_CROCO_CLAVE=<secreto>` y `TORTU_CROCO_KID=k1` | `CROCO_CLAVES=k1:<el mismo secreto>` |
+| — | `CROCO_URL_TORTUSCRIPT=<dirección de TortuScript>` |
+| `TORTU_PAGO_IMPORTE_CROCO=<pesos>` (para vender el plan) | — |
+
+Sin esas variables no hay puente: TortuScript no muestra el botón y Croco-Script funciona en modo local.
+
 ## Decisiones abiertas (de Marcos)
 
 - Dominios definitivos (`croco.tortuscript.com` u otro) y la URL de entrada de Croco-Script.

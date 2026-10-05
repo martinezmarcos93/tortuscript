@@ -90,17 +90,31 @@ def importe_legible(centavos: int) -> str:
 
 @dataclass(frozen=True)
 class ConfiguracionPagos:
-    """Lo que hace falta para ofrecer la suscripción. Sin alias o sin importe, no se ofrece nada."""
+    """Lo que hace falta para ofrecer la suscripción. Sin alias o sin ningún importe, no se ofrece nada.
+
+    Hay un plan por producto con importe: `importe_centavos` es el de TortuScript Premium y
+    `importe_croco_centavos`, el del nivel avanzado (Croco-Script). Se pueden ofrecer los dos o uno solo."""
     alias: str = ""
     titular: str = ""
     importe_centavos: int = 0
     moneda: str = "ARS"
     dias: int = 30
     producto: str = "tortuscript-premium"
+    importe_croco_centavos: int = 0
 
     @property
     def habilitado(self) -> bool:
-        return bool(self.alias) and self.importe_centavos > 0
+        return bool(self.alias) and bool(self.planes())
+
+    def planes(self) -> list:
+        """[{producto, importe_centavos, importe_legible}] de lo que esta instalación ofrece, en orden fijo."""
+        ofrecidos = [(self.producto, self.importe_centavos), ("croco-script", self.importe_croco_centavos)]
+        return [{"producto": producto, "importe_centavos": importe, "importe_legible": importe_legible(importe)}
+                for producto, importe in ofrecidos if importe > 0]
+
+    def plan(self, producto):
+        """El plan de ese producto, o None si no se ofrece."""
+        return next((p for p in self.planes() if p["producto"] == producto), None)
 
     @property
     def importe_legible(self) -> str:
@@ -114,21 +128,30 @@ def configuracion_desde_entorno(entorno=None) -> ConfiguracionPagos:
     entorno = os.environ if entorno is None else entorno
     alias = (entorno.get("TORTU_PAGO_ALIAS") or "").strip()
     importe = (entorno.get("TORTU_PAGO_IMPORTE") or "").strip()
+    importe_croco = (entorno.get("TORTU_PAGO_IMPORTE_CROCO") or "").strip()
     dias = (entorno.get("TORTU_PAGO_DIAS") or "30").strip()
-    if not alias and not importe:
+    if not alias and not importe and not importe_croco:
         return ConfiguracionPagos()
+
+    def centavos_de(texto):
+        if not texto:
+            return 0
+        pesos, _, centavos = texto.replace(",", ".").partition(".")
+        return int(pesos) * 100 + int((centavos + "00")[:2] if centavos else 0)
     try:
-        pesos, _, centavos = importe.replace(",", ".").partition(".")
-        importe_centavos = int(pesos) * 100 + int((centavos + "00")[:2] if centavos else 0)
+        importe_centavos, importe_croco_centavos = centavos_de(importe), centavos_de(importe_croco)
         dias = int(dias)
     except ValueError as exc:
-        raise PagoError("TORTU_PAGO_IMPORTE y TORTU_PAGO_DIAS deben ser números (por ejemplo 9500 y 30).") from exc
-    if not alias or importe_centavos <= 0 or not 1 <= dias <= 366:
-        raise PagoError("Para ofrecer la suscripción hacen falta TORTU_PAGO_ALIAS, un TORTU_PAGO_IMPORTE mayor a cero "
-                        "y TORTU_PAGO_DIAS entre 1 y 366.")
+        raise PagoError("TORTU_PAGO_IMPORTE, TORTU_PAGO_IMPORTE_CROCO y TORTU_PAGO_DIAS deben ser números "
+                        "(por ejemplo 9500 y 30).") from exc
+    if not alias or importe_centavos < 0 or importe_croco_centavos < 0 \
+            or importe_centavos + importe_croco_centavos <= 0 or not 1 <= dias <= 366:
+        raise PagoError("Para ofrecer la suscripción hacen falta TORTU_PAGO_ALIAS, un importe mayor a cero "
+                        "(TORTU_PAGO_IMPORTE o TORTU_PAGO_IMPORTE_CROCO) y TORTU_PAGO_DIAS entre 1 y 366.")
     return ConfiguracionPagos(
         alias=alias, titular=(entorno.get("TORTU_PAGO_TITULAR") or "").strip(), importe_centavos=importe_centavos,
-        moneda=(entorno.get("TORTU_PAGO_MONEDA") or "ARS").strip().upper(), dias=dias)
+        moneda=(entorno.get("TORTU_PAGO_MONEDA") or "ARS").strip().upper(), dias=dias,
+        importe_croco_centavos=importe_croco_centavos)
 
 
 def medio_de_pago(medio_id):

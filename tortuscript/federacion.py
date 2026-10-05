@@ -117,6 +117,34 @@ def validar_autorizacion(token: str, claves: dict, destino: str, ahora: datetime
     return cuerpo
 
 
+def configuracion_desde_entorno(entorno=None) -> dict:
+    """La configuración `FEDERACION` a partir de TORTU_CROCO_* (ver `.env.example`). Vacía si no hay nada definido.
+
+    Una configuración a medias o insegura lanza FederacionError: es preferible no levantar el puente a levantarlo
+    con una clave débil o hacia una dirección mal escrita."""
+    import os
+    from urllib.parse import urlsplit
+    entorno = os.environ if entorno is None else entorno
+    url = (entorno.get("TORTU_CROCO_URL") or "").strip()
+    clave = (entorno.get("TORTU_CROCO_CLAVE") or "").strip()
+    kid = (entorno.get("TORTU_CROCO_KID") or "k1").strip()
+    if not url and not clave:
+        return {}
+    if not url or not clave:
+        raise FederacionError("Para conectar con Croco-Script hacen falta TORTU_CROCO_URL y TORTU_CROCO_CLAVE.")
+    partes = urlsplit(url)
+    if partes.scheme not in ("http", "https") or not partes.hostname:
+        raise FederacionError("TORTU_CROCO_URL debe ser la dirección de entrada de Croco-Script, por ejemplo "
+                              "http://127.0.0.1:5067/entrar")
+    local = partes.hostname in ("127.0.0.1", "localhost")
+    if partes.scheme != "https" and not local:
+        raise FederacionError("TORTU_CROCO_URL debe ser https:// salvo que Croco-Script corra en esta misma máquina.")
+    _validar_clave(clave)
+    if not kid or len(kid) > 40:
+        raise FederacionError("TORTU_CROCO_KID no es válido.")
+    return {"croco-script": {"url": url, "clave": clave, "kid": kid}}
+
+
 # ── documentos de contrato (lo que TortuScript expone a otro producto del ecosistema) ──
 def identidad_v1(cuenta_id: str, perfil_id: str) -> dict:
     """Identity.v1: solo identificadores opacos. Sin correo, sin nombre visible, sin credenciales."""

@@ -92,7 +92,7 @@ def purgar_cuentas_vencidas(app):
 
 def crear_aplicacion(datos, url):
     """La app real: cuentas y progreso en la carpeta de datos, y correo según el entorno (o deshabilitado)."""
-    from tortuscript import correo, pagos, rutas, tutor
+    from tortuscript import correo, federacion, pagos, rutas, tutor
     from web.app import create_app
     app = create_app()
     cuentas = rutas.carpeta_de_cuentas(datos)
@@ -104,6 +104,10 @@ def crear_aplicacion(datos, url):
         app.config["PAGOS"] = pagos.configuracion_desde_entorno()        # vacía salvo TORTU_PAGO_ALIAS e IMPORTE
     except pagos.PagoError as e:
         print(f"⚠️  Suscripción deshabilitada: {e}")
+    try:
+        app.config["FEDERACION"] = federacion.configuracion_desde_entorno()   # vacía salvo TORTU_CROCO_URL y CLAVE
+    except federacion.FederacionError as e:
+        print(f"⚠️  Paso a Croco-Script deshabilitado: {e}")
     purgar_cuentas_vencidas(app)
     return app
 

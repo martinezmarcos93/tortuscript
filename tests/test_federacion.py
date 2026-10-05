@@ -157,6 +157,43 @@ class TestCurriculumV1(unittest.TestCase):
             federacion.curriculo_v1("tortuscript", "1", [{"id": "a", "unidades": ["a"]}])
 
 
+class TestConfiguracionDelPuente(unittest.TestCase):
+    """TORTU_CROCO_*: la conexión con Croco-Script se configura por entorno y falla cerrada."""
+
+    def test_sin_variables_no_hay_puente(self):
+        self.assertEqual(federacion.configuracion_desde_entorno({}), {})
+        from web.app import create_app
+        self.assertEqual(create_app(token="t").config["FEDERACION"], {})
+
+    def test_configuracion_completa(self):
+        config = federacion.configuracion_desde_entorno(
+            {"TORTU_CROCO_URL": " http://127.0.0.1:5067/entrar ", "TORTU_CROCO_CLAVE": CLAVE, "TORTU_CROCO_KID": "k9"})
+        self.assertEqual(config, {"croco-script": {"url": "http://127.0.0.1:5067/entrar", "clave": CLAVE, "kid": "k9"}})
+        por_defecto = federacion.configuracion_desde_entorno({"TORTU_CROCO_URL": "https://croco.example/entrar", "TORTU_CROCO_CLAVE": CLAVE})
+        self.assertEqual(por_defecto["croco-script"]["kid"], "k1")
+
+    def test_configuraciones_a_medias_o_inseguras_se_rechazan(self):
+        casos = {
+            "sin clave": {"TORTU_CROCO_URL": "https://croco.example/entrar"},
+            "sin dirección": {"TORTU_CROCO_CLAVE": CLAVE},
+            "clave corta": {"TORTU_CROCO_URL": "https://croco.example/entrar", "TORTU_CROCO_CLAVE": "corta"},
+            "sin esquema": {"TORTU_CROCO_URL": "croco.example/entrar", "TORTU_CROCO_CLAVE": CLAVE},
+            "otro esquema": {"TORTU_CROCO_URL": "javascript:alert(1)", "TORTU_CROCO_CLAVE": CLAVE},
+            "http hacia otra máquina": {"TORTU_CROCO_URL": "http://croco.example/entrar", "TORTU_CROCO_CLAVE": CLAVE},
+            "kid enorme": {"TORTU_CROCO_URL": "https://croco.example/entrar", "TORTU_CROCO_CLAVE": CLAVE, "TORTU_CROCO_KID": "k" * 80},
+        }
+        for motivo, entorno in casos.items():
+            with self.subTest(motivo=motivo), self.assertRaises(FederacionError):
+                federacion.configuracion_desde_entorno(entorno)
+
+    def test_un_token_emitido_con_esa_configuracion_es_valido(self):
+        destino = federacion.configuracion_desde_entorno(
+            {"TORTU_CROCO_URL": "https://croco.example/entrar", "TORTU_CROCO_CLAVE": CLAVE})["croco-script"]
+        token = federacion.emitir_autorizacion(destino["clave"], destino["kid"], "croco-script", "acc_x", "child_y", ahora=T)
+        datos = federacion.validar_autorizacion(token, {destino["kid"]: destino["clave"]}, "croco-script", ahora=T)
+        self.assertEqual((datos["acc"], datos["sub"]), ("acc_x", "child_y"))
+
+
 class TestTransicionHTTP(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -177,6 +214,31 @@ class TestTransicionHTTP(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
+
+    def test_la_cuenta_muestra_el_paso_a_croco_segun_el_acceso(self):
+        pagina = self.c.get("/cuenta/configuracion").get_data(as_text=True)
+        self.assertIn("Croco-Script</h2>", pagina)
+        self.assertIn("todavía no tiene acceso al nivel avanzado", pagina)
+        self.assertIn('href="/cuenta/suscripcion#plan-croco-script"', pagina)
+        self.assertNotIn('href="/cuenta/ir/croco-script"', pagina)
+        CuentaRepository(self.tmp / "cuentas.sqlite3").establecer_entitlement(self.cuenta_id, "croco-script", True, "prueba")
+        pagina = self.c.get("/cuenta/configuracion").get_data(as_text=True)
+        self.assertIn('href="/cuenta/ir/croco-script"', pagina)
+        self.assertNotIn("todavía no tiene acceso al nivel avanzado", pagina)
+        self.assertIn('href="/cuenta/ir/croco-script"', self.c.get("/cuenta/suscripcion").get_data(as_text=True))
+
+    def test_sin_puente_configurado_no_se_ofrece_el_paso(self):
+        self.app.config["FEDERACION"] = {}
+        CuentaRepository(self.tmp / "cuentas.sqlite3").establecer_entitlement(self.cuenta_id, "croco-script", True, "prueba")
+        for ruta in ("/cuenta/configuracion", "/cuenta/suscripcion"):
+            self.assertNotIn("/cuenta/ir/croco-script", self.c.get(ruta).get_data(as_text=True))
+
+    def test_la_cuenta_administradora_puede_pasar_sin_suscripcion(self):
+        CuentaRepository(self.tmp / "cuentas.sqlite3").establecer_role(self.cuenta_id, "admin")
+        self.assertIn('href="/cuenta/ir/croco-script"', self.c.get("/cuenta/configuracion").get_data(as_text=True))
+        r = self.c.get("/cuenta/ir/croco-script")
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers["Location"].startswith("https://croco.example/entrar?autorizacion="))
 
     def test_sin_acceso_no_hay_token(self):
         r = self.c.get("/cuenta/ir/croco-script")

@@ -218,6 +218,8 @@ def _pagina_configuracion(cuentas, auth, row, estado=200, error=None):
         csrf=request.cookies.get("tortu_csrf", ""),
         consentimientos=cuentas.listar_consentimientos(row["account_id"]),
         suscripciones=_suscripciones(row["account_id"]),
+        croco_configurado=_croco_configurado(),
+        croco_con_acceso=cuentas.es_admin(row["account_id"]) or cuentas.tiene_entitlement(row["account_id"], "croco-script"),
         tutor_configurado=current_app.config.get("TUTOR_PROVEEDOR") is not None,
         tutor_aceptado=cuentas.tiene_consentimiento(row["account_id"], "tutor_ia"),
         aviso=AVISOS_CONFIGURACION.get(request.args.get("ok", "")),
@@ -230,18 +232,46 @@ def _servicio_pagos():
     return servicio_de_pagos()
 
 
+DESCRIPCIONES_PRODUCTO = {
+    "tortuscript-premium": "El plan de TortuScript para toda la familia.",
+    "croco-script": "El nivel avanzado: Python de verdad, trabajando en tu editor y entregando los archivos.",
+}
+
+
+def _croco_configurado():
+    return bool((current_app.config.get("FEDERACION") or {}).get("croco-script"))
+
+
 def _pagina_suscripcion(cuentas, row, estado=200, error=None):
     oferta = current_app.config.get("PAGOS") or pagos.ConfiguracionPagos()
     servicio = _servicio_pagos()
-    ordenes = servicio.listar_ordenes(row["account_id"])
+    cuenta_id = row["account_id"]
+    ordenes = servicio.listar_ordenes(cuenta_id)
+    suscripciones = servicio.listar_suscripciones(cuenta_id)
+    # Un plan por producto que se ofrece, más los productos en los que la cuenta ya tiene algo (una suscripción,
+    # una orden abierta o un acceso concedido a mano), aunque no se ofrezcan.
+    productos = [p["producto"] for p in oferta.planes()] if oferta.habilitado else []
+    con_algo = [s["producto"] for s in suscripciones] \
+        + [o["producto"] for o in ordenes if o["estado"] in pagos.ORDENES_ABIERTAS] \
+        + [producto for producto, vigente in cuentas.listar_entitlements(cuenta_id) if vigente]     # acceso dado a mano
+    for producto in con_algo:
+        if producto not in productos:
+            productos.append(producto)
+    planes = [{
+        "producto": producto,
+        "nombre": NOMBRES_PRODUCTO.get(producto, producto),
+        "descripcion": DESCRIPCIONES_PRODUCTO.get(producto, ""),
+        "oferta": oferta.plan(producto) if oferta.habilitado else None,
+        "con_acceso": cuentas.tiene_entitlement(cuenta_id, producto),
+        "suscripciones": [s for s in suscripciones if s["producto"] == producto],
+        "orden_abierta": next((o for o in ordenes if o["producto"] == producto and o["estado"] in pagos.ORDENES_ABIERTAS), None),
+        "entrada": url_for("cuenta.ir_a_producto", producto=producto) if producto == "croco-script" and _croco_configurado() else None,
+    } for producto in productos]
     return render_template(
         "cuenta/suscripcion.html",
         oferta=oferta,
-        producto=NOMBRES_PRODUCTO.get(oferta.producto, oferta.producto),
-        con_acceso=cuentas.tiene_entitlement(row["account_id"], oferta.producto),
-        es_admin=cuentas.es_admin(row["account_id"]),
-        suscripciones=servicio.listar_suscripciones(row["account_id"]),
-        orden_abierta=next((o for o in ordenes if o["estado"] in pagos.ORDENES_ABIERTAS), None),
+        planes=planes,
+        es_admin=cuentas.es_admin(cuenta_id),
         ordenes_cerradas=[o for o in ordenes if o["estado"] not in pagos.ORDENES_ABIERTAS][:5],
         medios=pagos.MEDIOS_DE_PAGO,
         nombres_producto=NOMBRES_PRODUCTO,
@@ -290,7 +320,12 @@ def crear_orden_de_pago():
         oferta = current_app.config.get("PAGOS") or pagos.ConfiguracionPagos()
         if not oferta.habilitado:
             raise pagos.PagoError("La suscripción todavía no está disponible en esta instalación.")
-        return servicio.crear_orden(cuenta_id, oferta.producto, datos.get("medio"), oferta.importe_centavos,
+        # El pedido solo elige QUÉ plan; el importe y la duración son los del servidor.
+        pedido = datos.get("producto")
+        plan = oferta.planes()[0] if pedido is None else (oferta.plan(pedido) if isinstance(pedido, str) else None)
+        if plan is None:
+            raise pagos.PagoError("Ese plan no está disponible en esta instalación.")
+        return servicio.crear_orden(cuenta_id, plan["producto"], datos.get("medio"), plan["importe_centavos"],
                                     oferta.moneda, oferta.dias)
     return _operar_orden(crear)
 

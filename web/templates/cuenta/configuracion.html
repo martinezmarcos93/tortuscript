@@ -40,6 +40,20 @@
       <p><a class="boton chico" href="{{ url_for('cuenta.suscripcion') }}">Suscripción y medios de pago</a></p>
     </div>
 
+    {% if croco_configurado %}
+    <div class="tarjeta">
+      <h2>🐊 Croco-Script</h2>
+      <p>El nivel avanzado del ecosistema: Python de verdad, trabajando en el editor propio. Se entra con esta misma
+        cuenta, desde el perfil que esté elegido; no hace falta otro usuario ni otra contraseña.</p>
+      {% if croco_con_acceso %}
+      <p><a class="boton verde" href="{{ url_for('cuenta.ir_a_producto', producto='croco-script') }}">🐊 Ir a Croco-Script</a></p>
+      {% else %}
+      <p class="tenue">Esta cuenta todavía no tiene acceso al nivel avanzado.</p>
+      <p><a class="boton chico" href="{{ url_for('cuenta.suscripcion') }}#plan-croco-script">Ver el plan de Croco-Script</a></p>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="tarjeta">
       <h2>Perfiles educativos</h2>
       <p>{{ perfiles|length }}/{{ max_perfiles }} perfiles en uso.</p>

@@ -472,6 +472,7 @@ def create_app(token=None):
             "estado": _estado(),
             "perfil": contexto.perfil.display_name,
             "cuenta_email": contexto.cuenta.email,
+            "croco_configurado": bool((app.config.get("FEDERACION") or {}).get("croco-script")),
             "cuenta_role": contexto.cuenta.role,
             "cuenta_csrf": request.cookies.get("tortu_csrf", ""),
             "avisos_pendientes": avisos,
