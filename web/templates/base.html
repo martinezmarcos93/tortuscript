@@ -64,6 +64,7 @@
       {% if cuenta_role == "admin" %}<p class="tenue">Administrador</p>{% else %}<p class="tenue">Cuenta adulta</p>{% endif %}
       <div class="lista-perfiles">
         <a class="boton chico" href="{{ url_for('cuenta.configuracion') }}">⚙️ Configuración de cuenta</a>
+        {% if croco_configurado %}<a class="boton chico verde" href="{{ url_for('cuenta.ir_a_producto', producto='croco-script') }}">🐊 Ir a Croco-Script</a>{% endif %}
       </div>
       <div class="pie">
         <span class="espacio"></span>

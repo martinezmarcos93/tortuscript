@@ -40,7 +40,7 @@ def _hosts(valor):
 
 def crear_aplicacion_servidor(entorno=None):
     """La aplicación lista para un servidor WSGI. Lanza ConfiguracionInvalida si algo obligatorio falta."""
-    from tortuscript import correo, pagos, rutas, sandbox_docker, tutor
+    from tortuscript import correo, federacion, pagos, rutas, sandbox_docker, tutor
     from web.app import create_app
 
     entorno = os.environ if entorno is None else entorno
@@ -64,6 +64,12 @@ def crear_aplicacion_servidor(entorno=None):
         oferta = pagos.configuracion_desde_entorno(entorno)
     except pagos.PagoError as e:
         raise ConfiguracionInvalida(f"Pagos mal configurados: {e}") from e
+    try:
+        puente = federacion.configuracion_desde_entorno(entorno)
+    except federacion.FederacionError as e:
+        raise ConfiguracionInvalida(f"Conexión con Croco-Script mal configurada: {e}") from e
+    if any(not destino["url"].startswith("https://") for destino in puente.values()):
+        raise ConfiguracionInvalida("En modo servidor TORTU_CROCO_URL debe ser https://.")
     token = entorno.get("TORTU_TOKEN") or None
     if token is not None and len(token) < 32:
         raise ConfiguracionInvalida("TORTU_TOKEN debe tener al menos 32 caracteres.")
@@ -89,6 +95,7 @@ def crear_aplicacion_servidor(entorno=None):
         ACCOUNT_EMAIL_SENDER=enviador,
         TUTOR_PROVEEDOR=tutor.proveedor_desde_entorno(entorno),
         PAGOS=oferta,
+        FEDERACION=puente,
         HSTS=HSTS,
         PREFERRED_URL_SCHEME="https",
     )

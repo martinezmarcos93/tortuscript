@@ -201,6 +201,29 @@ class TestHerramienta(Base):
         self.assertEqual(gestionar_pagos.main(["--db", str(self.tmp / "no-existe.sqlite3")]), 1)
 
 
+class TestPlanes(unittest.TestCase):
+    """Un plan por producto: TortuScript Premium y el nivel avanzado (Croco-Script)."""
+
+    def test_planes_segun_los_importes_configurados(self):
+        dos = pagos.configuracion_desde_entorno({"TORTU_PAGO_ALIAS": "a.b", "TORTU_PAGO_IMPORTE": "9500", "TORTU_PAGO_IMPORTE_CROCO": "15000,50"})
+        self.assertEqual([(p["producto"], p["importe_centavos"]) for p in dos.planes()],
+                         [(PREMIUM, 950000), ("croco-script", 1500050)])
+        self.assertEqual(dos.plan("croco-script")["importe_legible"], "$ 15.000,50")
+        solo_croco = pagos.configuracion_desde_entorno({"TORTU_PAGO_ALIAS": "a.b", "TORTU_PAGO_IMPORTE_CROCO": "15000"})
+        self.assertTrue(solo_croco.habilitado)
+        self.assertEqual([p["producto"] for p in solo_croco.planes()], ["croco-script"])
+        self.assertIsNone(solo_croco.plan(PREMIUM))
+        self.assertIsNone(solo_croco.plan("inventado"))
+
+    def test_importes_invalidos_del_plan_avanzado(self):
+        for entorno in ({"TORTU_PAGO_IMPORTE_CROCO": "15000"},
+                        {"TORTU_PAGO_ALIAS": "a", "TORTU_PAGO_IMPORTE_CROCO": "mucho"},
+                        {"TORTU_PAGO_ALIAS": "a", "TORTU_PAGO_IMPORTE_CROCO": "-5"},
+                        {"TORTU_PAGO_ALIAS": "a", "TORTU_PAGO_IMPORTE": "0", "TORTU_PAGO_IMPORTE_CROCO": "0"}):
+            with self.subTest(entorno=entorno), self.assertRaises(pagos.PagoError):
+                pagos.configuracion_desde_entorno(entorno)
+
+
 class TestHTTP(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -246,10 +269,18 @@ class TestHTTP(unittest.TestCase):
 
     def test_el_importe_lo_fija_el_servidor(self):
         r = self.c.post("/cuenta/suscripcion/orden", headers={"X-Tortu-CSRF": self.csrf()},
-                        json={"medio": "transferencia", "importe_centavos": 1, "dias": 9999, "producto": "croco-script"})
+                        json={"medio": "transferencia", "importe_centavos": 1, "dias": 9999})
         self.assertEqual(r.status_code, 200)
         self.assertEqual((r.json["orden"]["importe_centavos"], r.json["orden"]["dias"], r.json["orden"]["producto"]),
                          (950000, 30, PREMIUM))
+
+    def test_no_se_puede_pedir_un_plan_que_no_se_ofrece(self):
+        cabeceras = {"X-Tortu-CSRF": self.csrf()}
+        for producto in ("croco-script", "inventado", "", ["croco-script"], 7):
+            with self.subTest(producto=producto):
+                r = self.c.post("/cuenta/suscripcion/orden", headers=cabeceras, json={"medio": "transferencia", "producto": producto})
+                self.assertEqual(r.status_code, 400)
+        self.assertEqual(self.servicio.listar_ordenes(self.cuenta), [])
 
     def test_circuito_completo_hasta_el_acceso(self):
         cabeceras = {"X-Tortu-CSRF": self.csrf()}
@@ -295,6 +326,27 @@ class TestHTTP(unittest.TestCase):
         self.assertIn("cuenta administradora", pagina)
         self.assertNotIn("todavía no tiene acceso", pagina)
         self.assertIn("Continuar", pagina)                           # igual puede probar el circuito
+
+    def test_dos_planes_se_contratan_por_separado(self):
+        self.app.config["PAGOS"] = pagos.ConfiguracionPagos(alias="tortu.alias.prueba", importe_centavos=950000,
+                                                             importe_croco_centavos=1500000, dias=30)
+        pagina = self.c.get("/cuenta/suscripcion").get_data(as_text=True)
+        for texto in ("TortuScript Premium", "Croco-Script", "$ 9.500", "$ 15.000", 'id="plan-croco-script"'):
+            self.assertIn(texto, pagina)
+        cabeceras = {"X-Tortu-CSRF": self.csrf()}
+        croco = self.c.post("/cuenta/suscripcion/orden", json={"medio": "transferencia", "producto": "croco-script"}, headers=cabeceras).json["orden"]
+        premium = self.c.post("/cuenta/suscripcion/orden", json={"medio": "transferencia", "producto": PREMIUM}, headers=cabeceras).json["orden"]
+        self.assertEqual((croco["producto"], croco["importe_centavos"]), ("croco-script", 1500000))
+        self.assertEqual((premium["producto"], premium["importe_centavos"]), (PREMIUM, 950000))
+        self.assertNotEqual(croco["referencia"], premium["referencia"])
+        self.servicio.confirmar_orden(croco["id"])
+        cuentas = CuentaRepository(self.db)
+        self.assertTrue(cuentas.tiene_entitlement(self.cuenta, "croco-script"))
+        self.assertFalse(cuentas.tiene_entitlement(self.cuenta, PREMIUM))       # pagar uno no da el otro
+        pagina = self.c.get("/cuenta/suscripcion").get_data(as_text=True)
+        self.assertIn("tiene acceso a Croco-Script", pagina)
+        self.assertIn("todavía no tiene acceso a TortuScript Premium", pagina)
+        self.assertIn(premium["referencia"], pagina)                              # la otra orden sigue abierta
 
     def test_sin_oferta_configurada_no_se_puede_contratar(self):
         self.app.config["PAGOS"] = pagos.ConfiguracionPagos()

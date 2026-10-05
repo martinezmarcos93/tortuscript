@@ -5,6 +5,19 @@ consultan antes de fijarlos.
 
 ## Sin publicar
 
+### Agregado
+- **Paso a Croco-Script desde la cuenta (ADR-037).** La conexión se configura por entorno (`TORTU_CROCO_URL`,
+  `TORTU_CROCO_CLAVE`, `TORTU_CROCO_KID`) y falla cerrada: una clave corta, una dirección mal escrita o `http://`
+  hacia otra máquina impiden levantar el puente. Con el puente configurado aparece «Ir a Croco-Script» en el menú
+  de cuenta, en la configuración y en la página de suscripción; sin acceso, lleva al plan en lugar de al token.
+- **Un plan por producto en la suscripción.** Además de TortuScript Premium se puede ofrecer el nivel avanzado
+  (`TORTU_PAGO_IMPORTE_CROCO`): cada plan muestra su estado, su orden abierta y su formulario, y pagar uno no
+  concede el otro. El pedido solo elige qué plan; el importe y la duración siguen saliendo del servidor.
+
+### Corregido
+- **Accesos concedidos a mano en la página de suscripción:** un acceso dado por soporte (sin suscripción ni
+  orden) no figuraba en ningún lado; ahora se lista con su plan.
+
 ### Cambiado
 - **ADR-048 y ADR-049 aceptadas** por Marcos el 04/10/2026 (modelo de sincronización y no importar el progreso
   exportado). No cambian código.

@@ -13,76 +13,79 @@
     <div class="centrado">
       <div class="mascota gran" aria-hidden="true">🐢</div>
       <h1>Suscripción</h1>
-      <p class="texto-grande">{{ producto }} para todos los perfiles de la cuenta.</p>
+      <p class="texto-grande">Los planes cubren a todos los perfiles de la cuenta.</p>
     </div>
 
     {% if aviso %}<p class="aviso-ok" role="status">{{ aviso }}</p>{% endif %}
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    {% if es_admin %}
+    <p role="status"><b>Esta es una cuenta administradora: tiene acceso a todo sin suscripción.</b></p>
+    <p class="tenue">Podés armar una orden igual, para probar el circuito de pago.</p>
+    {% endif %}
 
-    <div class="tarjeta">
-      <h2>Estado</h2>
-      {% set estados = {"incomplete": "pago pendiente", "active": "activa", "past_due": "con un pago rechazado", "canceled": "cancelada", "refunded": "reembolsada"} %}
-      {% if con_acceso %}
-      <p role="status"><b>Esta cuenta tiene acceso a {{ producto }}.</b></p>
-      {% elif es_admin %}
-      <p role="status"><b>Esta es una cuenta administradora: tiene acceso a todo sin suscripción.</b></p>
-      <p class="tenue">Podés armar una orden igual, para probar el circuito de pago.</p>
-      {% else %}
-      <p role="status">Esta cuenta todavía no tiene acceso a {{ producto }}.</p>
+    {% set estados = {"incomplete": "pago pendiente", "active": "activa", "past_due": "con un pago rechazado", "canceled": "cancelada", "refunded": "reembolsada"} %}
+    {% for plan in planes %}
+    <div class="tarjeta" id="plan-{{ plan.producto }}">
+      <h2>{{ plan.nombre }}</h2>
+      {% if plan.descripcion %}<p class="tenue">{{ plan.descripcion }}</p>{% endif %}
+      {% if plan.con_acceso %}
+      <p role="status"><b>Esta cuenta tiene acceso a {{ plan.nombre }}.</b></p>
+      {% elif not es_admin %}
+      <p role="status">Esta cuenta todavía no tiene acceso a {{ plan.nombre }}.</p>
       {% endif %}
-      {% if suscripciones %}
+      {% if plan.suscripciones %}
       <ul>
-        {% for sub in suscripciones %}
-        <li><b>{{ nombres_producto.get(sub.producto, sub.producto) }}:</b>
-          {% if sub.vencida %}período vencido el {{ sub.periodo_hasta[:10] }}{% else %}{{ estados.get(sub.estado, sub.estado) }}{% if sub.periodo_hasta %} · período hasta el {{ sub.periodo_hasta[:10] }}{% endif %}{% endif %}</li>
+        {% for sub in plan.suscripciones %}
+        <li>{% if sub.vencida %}Período vencido el {{ sub.periodo_hasta[:10] }}{% else %}Suscripción {{ estados.get(sub.estado, sub.estado) }}{% if sub.periodo_hasta %} · período hasta el {{ sub.periodo_hasta[:10] }}{% endif %}{% endif %}</li>
         {% endfor %}
       </ul>
       {% endif %}
-      <p class="tenue">Una suscripción cubre todos los perfiles de la cuenta. Si se vence, el progreso de los chicos no se borra.</p>
-    </div>
+      {% if plan.entrada and (plan.con_acceso or es_admin) %}
+      <p><a class="boton verde" href="{{ plan.entrada }}">🐊 Ir a Croco-Script</a></p>
+      {% endif %}
 
-    {% if orden_abierta %}
-    <div class="tarjeta">
-      <h2>Tu orden de pago</h2>
-      <p><b>Importe:</b> {{ orden_abierta.importe_legible }} ({{ orden_abierta.moneda }}) · <b>Cubre:</b> {{ orden_abierta.dias }} días</p>
-      {% if oferta.habilitado %}
+      {% if plan.orden_abierta %}
+      {% set orden = plan.orden_abierta %}
+      <h3>Tu orden de pago</h3>
+      <p><b>Importe:</b> {{ orden.importe_legible }} ({{ orden.moneda }}) · <b>Cubre:</b> {{ orden.dias }} días</p>
+      {% if oferta.alias %}
       <p><b>Alias para transferir:</b> <code>{{ oferta.alias }}</code>{% if oferta.titular %} · a nombre de {{ oferta.titular }}{% endif %}</p>
       {% endif %}
-      <p><b>Referencia:</b> <code>{{ orden_abierta.referencia }}</code></p>
+      <p><b>Referencia:</b> <code>{{ orden.referencia }}</code></p>
       <p class="tenue">Escribí la referencia en el concepto o motivo de la transferencia: así encontramos tu pago.</p>
-      {% if orden_abierta.estado == "pendiente" %}
-      <form method="post" action="{{ url_for('cuenta.informar_orden_de_pago', orden_id=orden_abierta.id) }}">
+      {% if orden.estado == "pendiente" %}
+      <form method="post" action="{{ url_for('cuenta.informar_orden_de_pago', orden_id=orden.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
-        <label class="etiqueta" for="nota">Nombre de quien transfirió (opcional)</label>
-        <input class="campo" id="nota" name="nota" maxlength="{{ max_nota }}" autocomplete="off">
+        <label class="etiqueta" for="nota-{{ plan.producto }}">Nombre de quien transfirió (opcional)</label>
+        <input class="campo" id="nota-{{ plan.producto }}" name="nota" maxlength="{{ max_nota }}" autocomplete="off">
         <p><button class="boton verde" type="submit">Ya hice la transferencia</button></p>
       </form>
       {% else %}
-      <p role="status"><b>Estado:</b> avisaste que ya transferiste el {{ orden_abierta.informada[:10] }}. Estamos confirmando el pago; el acceso se activa solo.</p>
+      <p role="status"><b>Estado:</b> avisaste que ya transferiste el {{ orden.informada[:10] }}. Estamos confirmando el pago; el acceso se activa solo.</p>
       {% endif %}
-      <form method="post" action="{{ url_for('cuenta.cancelar_orden_de_pago', orden_id=orden_abierta.id) }}">
+      <form method="post" action="{{ url_for('cuenta.cancelar_orden_de_pago', orden_id=orden.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
-        <button class="boton chico" type="submit">Cancelar esta orden</button>
+        <button class="boton chico" type="submit" aria-label="Cancelar la orden de {{ plan.nombre }}">Cancelar esta orden</button>
       </form>
-    </div>
-    {% elif oferta.habilitado %}
-    <div class="tarjeta">
-      <h2>{{ "Renovar" if suscripciones else "Suscribirse" }}</h2>
-      <p><b>{{ oferta.importe_legible }}</b> ({{ oferta.moneda }}) por {{ oferta.dias }} días. No se renueva sola: cuando se acerque el vencimiento podés pagar otro período.</p>
+      {% elif plan.oferta %}
+      <h3>{{ "Renovar" if plan.suscripciones else "Suscribirse" }}</h3>
+      <p><b>{{ plan.oferta.importe_legible }}</b> ({{ oferta.moneda }}) por {{ oferta.dias }} días. No se renueva sola: cuando se acerque el vencimiento podés pagar otro período.</p>
       <form method="post" action="{{ url_for('cuenta.crear_orden_de_pago') }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="producto" value="{{ plan.producto }}">
         <fieldset>
-          <legend>Medio de pago</legend>
+          <legend>Medio de pago para {{ plan.nombre }}</legend>
           {% for medio in medios %}
           <p>
-            <input type="radio" id="medio-{{ medio.id }}" name="medio" value="{{ medio.id }}"
+            <input type="radio" id="medio-{{ plan.producto }}-{{ medio.id }}" name="medio" value="{{ medio.id }}"
                    {% if not medio.disponible %}disabled{% elif loop.first %}checked{% endif %} required>
-            <label for="medio-{{ medio.id }}"><b>{{ medio.nombre }}</b>{% if not medio.disponible %} <span class="tenue">(próximamente)</span>{% endif %} — {{ medio.descripcion }}</label>
+            <label for="medio-{{ plan.producto }}-{{ medio.id }}"><b>{{ medio.nombre }}</b>{% if not medio.disponible %} <span class="tenue">(próximamente)</span>{% endif %} — {{ medio.descripcion }}</label>
           </p>
           {% endfor %}
         </fieldset>
-        <p><button class="boton verde" type="submit">Continuar</button></p>
+        <p><button class="boton verde" type="submit" aria-label="Continuar con {{ plan.nombre }}">Continuar</button></p>
       </form>
+      {% endif %}
     </div>
     {% else %}
     <div class="tarjeta">
@@ -91,14 +94,15 @@
       <p class="tenue">Medios de pago previstos:
         {% for medio in medios %}{{ medio.nombre | lower }}{% if not medio.disponible %} (próximamente){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
     </div>
-    {% endif %}
+    {% endfor %}
+    <p class="tenue">Si una suscripción se vence, el progreso de los chicos no se borra.</p>
 
     {% if ordenes_cerradas %}
     <div class="tarjeta">
       <h2>Órdenes anteriores</h2>
       <ul>
         {% for orden in ordenes_cerradas %}
-        <li>{{ orden.creada[:10] }} · {{ orden.referencia }} · {{ orden.estado }}{% if orden.nota_operador %} ({{ orden.nota_operador }}){% endif %}</li>
+        <li>{{ orden.creada[:10] }} · {{ nombres_producto.get(orden.producto, orden.producto) }} · {{ orden.referencia }} · {{ orden.estado }}{% if orden.nota_operador %} ({{ orden.nota_operador }}){% endif %}</li>
         {% endfor %}
       </ul>
     </div>
