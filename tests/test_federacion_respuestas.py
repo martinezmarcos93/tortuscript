@@ -178,6 +178,29 @@ class TestOperaciones(unittest.TestCase):
         ops.solicitar("suprimir_perfil", "acc_1", "p1")
         self.assertEqual(len(ops.pendientes()), 1)
 
+    def test_una_cola_danada_se_conserva_antes_de_encolar_nuevos_pedidos(self):
+        for nombre, contenido in (
+            ("json-malformado", "{"),
+            ("estructura-invalida", "{}"),
+            ("entrada-invalida", json.dumps([{"accion": "suprimir_cuenta", "cuenta": "acc_x",
+                                              "perfil": None, "intentos": "no-numero", "creada": "ahora"}])),
+        ):
+            with self.subTest(nombre=nombre):
+                carpeta = self.tmp / nombre
+                carpeta.mkdir()
+                archivo = carpeta / "operaciones_pendientes.json"
+                archivo.write_text(contenido, encoding="utf-8")
+                self.salidas = [OSError("sin red")]
+                ops = OperacionesCroco(CONFIG, carpeta, abrir=self.abrir)
+
+                self.assertFalse(ops.solicitar("suprimir_cuenta", "acc_sintetica"))
+                cuarentena = list(carpeta.glob("operaciones_pendientes.json.corrupto-*"))
+                self.assertEqual(len(cuarentena), 1)
+                self.assertEqual(cuarentena[0].read_text(encoding="utf-8"), contenido)
+                pendientes = json.loads(archivo.read_text(encoding="utf-8"))
+                self.assertEqual([(e["accion"], e["cuenta"]) for e in pendientes],
+                                 [("suprimir_cuenta", "acc_sintetica")])
+
     def test_un_perfil_de_otra_cuenta_no_se_reintenta(self):
         self.salidas = [_http_error(409)]
         self.assertTrue(self.ops().solicitar("suprimir_perfil", "acc_1", "p1"))

@@ -68,15 +68,46 @@ class OperacionesCroco:
             return estado, None
 
     # ── cola ──
+    def _poner_en_cuarentena(self) -> None:
+        """Conserva una cola ilegible antes de permitir que una escritura la reemplace."""
+        marca = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        destino = self.archivo.with_name(f"{self.archivo.name}.corrupto-{marca}")
+        self.archivo.replace(destino)
+        logger.error("La cola de operaciones pendientes está dañada; se conservó en %s", destino.name)
+
     def _leer(self) -> list:
         try:
-            datos = json.loads(self.archivo.read_text(encoding="utf-8"))
+            contenido = self.archivo.read_text(encoding="utf-8")
         except FileNotFoundError:
             return []
-        except (OSError, ValueError):
-            logger.error("La cola de operaciones pendientes está dañada: %s", self.archivo.name, exc_info=True)
+        # Otros errores de E/S deben propagarse: asumir una cola vacía podría sobrescribir
+        # pedidos de supresión que no pudimos leer.
+        try:
+            datos = json.loads(contenido)
+        except ValueError:
+            self._poner_en_cuarentena()
             return []
-        return datos if isinstance(datos, list) else []
+        if not isinstance(datos, list) or any(not self._entrada_valida(e) for e in datos):
+            self._poner_en_cuarentena()
+            return []
+        return datos
+
+    @staticmethod
+    def _entrada_valida(entrada) -> bool:
+        """Evita que una cola sintácticamente válida pero mal formada rompa los reintentos."""
+        if not isinstance(entrada, dict):
+            return False
+        accion, cuenta, perfil = entrada.get("accion"), entrada.get("cuenta"), entrada.get("perfil")
+        intentos, creada = entrada.get("intentos"), entrada.get("creada")
+        if accion not in ("suprimir_perfil", "suprimir_cuenta") or not isinstance(cuenta, str) or not cuenta:
+            return False
+        if accion == "suprimir_perfil" and (not isinstance(perfil, str) or not perfil):
+            return False
+        if accion == "suprimir_cuenta" and perfil is not None:
+            return False
+        if not isinstance(intentos, int) or isinstance(intentos, bool) or intentos < 1:
+            return False
+        return isinstance(creada, str) and bool(creada)
 
     def _escribir(self, pendientes: list) -> None:
         self.archivo.parent.mkdir(parents=True, exist_ok=True)
