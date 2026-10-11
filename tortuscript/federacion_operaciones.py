@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 PRODUCTO = "croco-script"
 RUTA_OPERACION = "/federacion/v1/operacion"
 ESPERA_MAXIMA = 3                       # segundos por pedido
-RESPUESTA_MAXIMA = 256 * 1024
+RESPUESTA_MAXIMA = 256 * 1024           # respuestas de supresión y errores
+RESPUESTA_EXPORTACION_MAXIMA = 16 * 1024 * 1024  # historial educativo completo, con límite defensivo
 MAXIMO_POR_PASADA = 20                  # pendientes que se reintentan de una vez, para no demorar un arranque
 _CANDADO = threading.Lock()
 
@@ -56,11 +57,12 @@ class OperacionesCroco:
             "Authorization": f"Bearer {token}", "Accept": "application/json"})
         try:
             with self._abrir(pedido, timeout=ESPERA_MAXIMA) as respuesta:
-                crudo = respuesta.read(RESPUESTA_MAXIMA + 1)
+                limite = RESPUESTA_EXPORTACION_MAXIMA if accion == "exportar_perfil" else RESPUESTA_MAXIMA
+                crudo = respuesta.read(limite + 1)
                 estado = respuesta.status
         except urllib.error.HTTPError as exc:
             return exc.code, None
-        if len(crudo) > RESPUESTA_MAXIMA:
+        if len(crudo) > limite:
             raise OSError("La respuesta de Croco-Script es demasiado grande.")
         try:
             return estado, json.loads(crudo.decode("utf-8"))
