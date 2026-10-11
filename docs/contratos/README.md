@@ -1,14 +1,16 @@
 # Contratos entre TortuScript y Croco-Script (v1)
 
-Estado: definidos y probados del lado de TortuScript (ADR-037). Croco-Script es otro repositorio y **no importa
+Estado: definidos, implementados y probados en los dos productos (ADR-037); verificados entre sí por HTTP el 11/10/2026. Croco-Script es otro repositorio y **no importa
 código de TortuScript**: implementa estos contratos y debe pasar los mismos vectores de prueba.
 
 | Contrato | Qué es | Dónde está |
 |---|---|---|
 | `Identity.v1` | Identificadores opacos de cuenta y perfil | `tortuscript/federacion.py::identidad_v1` |
-| `Entitlement.v1` | Estado de acceso a un producto | `acceso_v1` + `GET /cuenta/acceso?producto=` |
+| `Entitlement.v1` | Estado de acceso a un producto; Croco-Script lo consulta para cortar una sesión abierta | `acceso_v1` + `GET /federacion/v1/acceso?cuenta=&producto=` |
 | `Authorization.v1` | Token firmado para pasar de un producto al otro | `emitir_autorizacion` / `validar_autorizacion` |
 | `Progress.v1` | Resumen de progreso por curso que publica cada producto | `progreso_v1` |
+| `ProgressQuery.v1` | Croco-Script pregunta el `Progress.v1` de un perfil (prerrequisitos entre productos) | `GET /federacion/v1/progreso` |
+| `Supresion.v1` | TortuScript pide a Croco-Script borrar o exportar los datos de un perfil o cuenta | `federacion.emitir_operacion` + `federacion_operaciones.py` |
 | `Curriculum.v1` | Identificadores de itinerarios y unidades que se pueden nombrar como prerrequisito | `curriculum-v1.json` (lo genera `herramientas/publicar_contratos.py`) |
 
 ## Authorization.v1 — transición autenticada
@@ -79,12 +81,36 @@ Los prerrequisitos de las tres fuentes del nivel avanzado (`docs/catalogo_avanza
 | `TORTU_CROCO_URL=<dirección de Croco-Script>/entrar` | — |
 | `TORTU_CROCO_CLAVE=<secreto>` y `TORTU_CROCO_KID=k1` | `CROCO_CLAVES=k1:<el mismo secreto>` |
 | — | `CROCO_URL_TORTUSCRIPT=<dirección de TortuScript>` |
+| — | `CROCO_ACCESO_URL=<dirección de TortuScript>/federacion/v1/acceso` (corte de sesión, `Entitlement.v1`) |
+| — | `CROCO_PROGRESO_URL=<dirección de TortuScript>/federacion/v1/progreso` (prerrequisitos que bloquean, `ProgressQuery.v1`) |
 | `TORTU_PAGO_IMPORTE_CROCO=<pesos>` (para vender el plan) | — |
 
 Sin esas variables no hay puente: TortuScript no muestra el botón y Croco-Script funciona en modo local.
 
+## Consultas y pedidos entre servidores (v1)
+
+**Croco-Script pregunta, TortuScript responde** — `Entitlement.v1` y `ProgressQuery.v1`, ambos `GET` con
+`Authorization: Croco-HMAC kid=<kid>, ts=<unix>, firma=<firma>`; `firma` = HMAC-SHA256 de `<ts>.<producto>.<cuenta|perfil>`
+(base64 para direcciones, sin `=`). Se rechaza lo que difiera más de 60 s del reloj. Cualquier fallo de autenticación
+responde `401 {"error": "autorizacion_invalida"}` sin decir cuál; el motivo va al log, sin identificadores.
+Respuestas con `Cache-Control: no-store`.
+
+- `Entitlement.v1`: `200` siempre que la firma valga; `activo` es `false` para una cuenta desconocida, borrada o sin acceso
+  (un administrador tiene acceso, igual que al entrar).
+- `ProgressQuery.v1`: `200` con `Progress.v1` solo si el perfil existe, está activo y su cuenta tiene acceso al producto que
+  pregunta; si no, `404 {"error": "perfil_inexistente"}` (decisión: a un perfil sin acceso se le contesta como a uno
+  inexistente, para no revelar su estado). El resumen es **por itinerario** (`curso` = id de itinerario), con las unidades
+  completas en `lecciones_completadas` y sin nombre, correo ni XP. Un itinerario sin actividad no figura.
+
+**TortuScript pide, Croco-Script ejecuta** — `Supresion.v1`: `POST <origen de Croco-Script>/federacion/v1/operacion` con
+`Authorization: Bearer <token>`. Se emite al eliminar un perfil archivado (`suprimir_perfil`), al purgar una cuenta vencida
+(`suprimir_cuenta`) y, por perfil, al descargar los datos del adulto (`exportar_perfil`). Un borrado que no llegó se guarda
+en `instance/operaciones_pendientes.json` y se reintenta (al arrancar y en cada purga) con un token nuevo.
+
+**Retención de respaldos:** pendiente de decisión de Marcos; un borrado no reescribe los respaldos ya hechos.
+
 ## Decisiones abiertas (de Marcos)
 
 - Dominios definitivos (`croco.tortuscript.com` u otro) y la URL de entrada de Croco-Script.
-- Si Croco-Script consultará el acceso en línea (`Entitlement.v1`) además de confiar en el token al entrar: hace
-  falta si una suscripción cancelada debe cortar una sesión ya abierta de Croco-Script.
+- Política si Croco-Script no puede preguntar el acceso: hoy «no se sabe» deja la sesión abierta (se prefiere no dejar a
+  nadie afuera por un fallo de red); cambiarla a «se corta» es una decisión de hospedaje.

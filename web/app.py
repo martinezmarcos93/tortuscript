@@ -49,12 +49,13 @@ from tortuscript.runtime_educativo import RuntimeEducativo, ContextoEducativoErr
 from tortuscript.repaso import MODOS, cola_repaso, contar  # noqa: E402
 from tortuscript.translator import TraductorTortuScript, detectar_tipo  # noqa: E402
 from web.cuenta_routes import bp as cuenta_bp, _educativo  # noqa: E402
+from web.federacion_routes import bp as federacion_bp  # noqa: E402
 from web.pagos_routes import bp as pagos_bp  # noqa: E402
 
 logger = logging.getLogger("tortuscript.web")
 HOSTS_PERMITIDOS = {"127.0.0.1", "localhost"}
-# Rutas que no operan sobre un perfil educativo: cuenta del adulto y eventos del proveedor de pagos.
-SIN_PERFIL = ("/cuenta", "/pagos")
+# Rutas que no operan sobre un perfil educativo: cuenta del adulto, eventos de pagos y consultas de otros productos.
+SIN_PERFIL = ("/cuenta", "/pagos", "/federacion")
 
 
 def _json_objeto():
@@ -158,6 +159,7 @@ def create_app(token=None):
     app.config["FEDERACION"] = {}
     app.register_blueprint(cuenta_bp)
     app.register_blueprint(pagos_bp)
+    app.register_blueprint(federacion_bp)
     INDICES_POR_LECCION = {}
     for i, e in enumerate(EJERCICIOS):
         INDICES_POR_LECCION.setdefault(e["leccion_id"], []).append(i)
