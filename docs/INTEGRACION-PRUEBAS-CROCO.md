@@ -31,6 +31,8 @@ Reproducir los contratos desde los checkouts actuales de `main` sin importar có
 | SUP-04 | Croco apagado durante una supresión | TortuScript termina la operación local, persiste la cola y reporta el pendiente sin exponer IDs |
 | SUP-05 | Reiniciar TortuScript y recuperar Croco | El reintento emite un token nuevo, la operación se confirma y sale de la cola |
 | SUP-06 | Token de otra cuenta o acción inválida | Rechazo; no se leen, exportan ni borran datos de otro perfil |
+| SUP-07 | Exportar un historial mayor a 256 KiB pero menor a 16 MiB | La exportación completa se recibe y se incluye en el archivo de datos |
+| SUP-08 | Exportación mayor a 16 MiB o respuesta de supresión mayor a 256 KiB | Se rechaza el cuerpo completo; nunca se procesa JSON truncado; la supresión fallida permanece en la cola |
 | PRIV-01 | Inspeccionar respuestas y logs | Sin email, nombres de menores, tokens completos ni claves |
 | PRIV-02 | Inspeccionar cola persistida | Solo IDs opacos, acción, contador y fecha; permisos del archivo adecuados |
 
