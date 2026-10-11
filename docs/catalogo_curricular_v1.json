@@ -43,7 +43,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-lenguaje",
@@ -58,7 +59,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-codigo",
@@ -73,7 +75,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-navegador",
@@ -88,7 +91,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-internet",
@@ -103,7 +107,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-servidor",
@@ -118,7 +123,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-frontend",
@@ -133,7 +139,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-backend",
@@ -148,7 +155,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-datos",
@@ -163,7 +171,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "baja"
+          "dificultad": "baja",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-base-datos",
@@ -178,7 +187,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-api",
@@ -192,7 +202,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-seguridad",
@@ -207,7 +218,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-integracion",
@@ -221,7 +233,8 @@
             "desarrolladores"
           ],
           "nivel": "introduccion",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-json",
@@ -235,7 +248,8 @@
             "desarrolladores"
           ],
           "nivel": "herramientas",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-git",
@@ -249,7 +263,8 @@
             "desarrolladores"
           ],
           "nivel": "herramientas",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         },
         {
           "id": "nivel0-github",
@@ -263,7 +278,8 @@
             "desarrolladores"
           ],
           "nivel": "herramientas",
-          "dificultad": "media"
+          "dificultad": "media",
+          "estado_acceso": "gratuito"
         }
       ]
     },
@@ -291,7 +307,8 @@
             {
               "itinerario": "alfabetizacion-tecnologica"
             }
-          ]
+          ],
+          "estado_acceso": "gratuito"
         },
         {
           "id": "python-control",
@@ -307,7 +324,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "fuente_curricular": "python-real:py-if,py-for"
+          "fuente_curricular": "python-real:py-if,py-for",
+          "estado_acceso": "premium"
         },
         {
           "id": "python-funciones",
@@ -322,7 +340,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "fuente_curricular": "python-real:py-def"
+          "fuente_curricular": "python-real:py-def",
+          "estado_acceso": "premium"
         },
         {
           "id": "python-programa",
@@ -337,7 +356,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "alta",
-          "fuente_curricular": "python-real:py-final"
+          "fuente_curricular": "python-real:py-final",
+          "estado_acceso": "premium"
         },
         {
           "id": "python-datos",
@@ -352,7 +372,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "fuente_curricular": "python-real:py-datos"
+          "fuente_curricular": "python-real:py-datos",
+          "estado_acceso": "premium"
         },
         {
           "id": "python-listas",
@@ -367,7 +388,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "fuente_curricular": "python-real:py-listas"
+          "fuente_curricular": "python-real:py-listas",
+          "estado_acceso": "premium"
         },
         {
           "id": "python-problemas",
@@ -382,7 +404,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "alta",
-          "fuente_curricular": "python-real:py-problemas"
+          "fuente_curricular": "python-real:py-problemas",
+          "estado_acceso": "premium"
         }
       ]
     },
@@ -416,7 +439,8 @@
             {
               "itinerario": "alfabetizacion-tecnologica"
             }
-          ]
+          ],
+          "estado_acceso": "gratuito"
         },
         {
           "id": "web-css-apariencia",
@@ -438,7 +462,8 @@
             "predecir",
             "construir",
             "depurar"
-          ]
+          ],
+          "estado_acceso": "premium"
         },
         {
           "id": "web-js-comportamiento",
@@ -459,7 +484,8 @@
             "predecir",
             "construir",
             "depurar"
-          ]
+          ],
+          "estado_acceso": "premium"
         },
         {
           "id": "web-mini-productos",
@@ -479,7 +505,8 @@
             "integrar",
             "depurar",
             "construir"
-          ]
+          ],
+          "estado_acceso": "premium"
         }
       ]
     },
@@ -509,7 +536,8 @@
                 "web-esencial"
               ]
             }
-          ]
+          ],
+          "estado_acceso": "gratuito"
         },
         {
           "id": "sql-select",
@@ -524,7 +552,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         },
         {
           "id": "sql-where",
@@ -539,7 +568,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         },
         {
           "id": "sql-order",
@@ -554,7 +584,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         },
         {
           "id": "sql-agregaciones",
@@ -568,7 +599,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "media",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         },
         {
           "id": "sql-group",
@@ -582,7 +614,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "alta",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         },
         {
           "id": "sql-join",
@@ -596,7 +629,8 @@
           ],
           "nivel": "fundamentos",
           "dificultad": "alta",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         },
         {
           "id": "sql-seguridad",
@@ -610,7 +644,8 @@
           ],
           "nivel": "aplicacion",
           "dificultad": "alta",
-          "lenguaje": "sql"
+          "lenguaje": "sql",
+          "estado_acceso": "premium"
         }
       ]
     },
@@ -640,7 +675,8 @@
                 "web-esencial"
               ]
             }
-          ]
+          ],
+          "estado_acceso": "premium"
         },
         {
           "id": "integrador-inventario-fantasia",
@@ -662,7 +698,8 @@
                 "sql-fundamentos"
               ]
             }
-          ]
+          ],
+          "estado_acceso": "premium"
         }
       ]
     },
@@ -679,7 +716,7 @@
   ],
   "reglas_acceso": [
     "Los estados gratuito/premium/prueba/bloqueado_por_prerrequisito/no_publicado representan disponibilidad conceptual.",
-    "La disponibilidad comercial concreta no se fija por itinerario completo en V1.",
+    "ADR-050: son gratuitas la alfabetización completa y la primera unidad de Python, Web y SQL; el resto, y los proyectos integradores, son premium.",
     "Una unidad puede cambiar de estado sin modificar su contenido ni su evaluación.",
     "bloqueado_por_prerrequisito expresa una dependencia curricular, no una decisión comercial.",
     "por_definir es un estado documental interno del catálogo V1 y no es un estado de acceso del motor."

@@ -23,6 +23,13 @@ class AccesoProducto:
             return True
         return self.repository.tiene_entitlement_por_perfil(profile_id, product.strip())
 
+    def puede_ver(self, profile_id: str, estado_comercial: str, product: str = "tortuscript-premium") -> bool:
+        """¿Puede este perfil abrir contenido con este estado comercial (ADR-050)? Lo que no es `premium` está abierto;
+        lo premium pide acceso vigente al producto (o ser administrador). La decisión es siempre del servidor."""
+        if estado_comercial != "premium":
+            return True
+        return self.puede_acceder(profile_id, product)
+
     def exigir_acceso(self, profile_id: str, product: str) -> None:
         if not self.puede_acceder(profile_id, product):
             raise AccesoError("El perfil no tiene acceso al producto solicitado.")

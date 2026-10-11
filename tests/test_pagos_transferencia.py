@@ -18,6 +18,7 @@ CLAVE = "una-clave-larga-123"
 PREMIUM = "tortuscript-premium"
 OFERTA = pagos.ConfiguracionPagos(alias="tortu.alias.prueba", titular="Titular de Prueba", importe_centavos=950000, dias=30)
 T0 = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
+CORTE_DICIEMBRE = datetime(2026, 12, 11, 3, 0, tzinfo=timezone.utc)      # 11/12 a las 00:00 en Argentina (UTC-3)
 
 
 class TestConfiguracion(unittest.TestCase):
@@ -59,11 +60,11 @@ class Base(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-    def orden(self, cuenta, **cambios):
-        datos = dict(producto=PREMIUM, medio="transferencia", importe_centavos=950000, moneda="ARS", dias=30)
+    def orden(self, cuenta, ahora=T0, **cambios):
+        datos = dict(producto=PREMIUM, medio="transferencia", importe_centavos=950000, moneda="ARS", dias=30, meses=1)
         datos.update(cambios)
         return self.servicio.crear_orden(cuenta, datos["producto"], datos["medio"], datos["importe_centavos"],
-                                         datos["moneda"], datos["dias"], ahora=T0)
+                                         datos["moneda"], datos["dias"], ahora=ahora, meses=datos["meses"])
 
 
 class TestOrdenes(Base):
@@ -115,28 +116,35 @@ class TestOrdenes(Base):
         self.assertTrue(self.cuentas.tiene_entitlement(self.cuenta, PREMIUM))
         (sub,) = self.servicio.listar_suscripciones(self.cuenta)
         self.assertEqual((sub["estado"], sub["proveedor"]), ("active", "transferencia"))
-        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), T0 + timedelta(days=30))
+        # Cuota de noviembre pagada el 1/11: cubre hasta el 10/12 inclusive; el 11/12 a las 00:00 (Argentina) se corta.
+        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), CORTE_DICIEMBRE)
 
     def test_confirmar_dos_veces_no_suma_dias(self):
         orden = self.orden(self.cuenta)
         self.servicio.confirmar_orden(orden["id"], ahora=T0)
         self.servicio.confirmar_orden(orden["id"], ahora=T0 + timedelta(days=3))
         (sub,) = self.servicio.listar_suscripciones(self.cuenta)
-        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), T0 + timedelta(days=30))
+        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), CORTE_DICIEMBRE)
 
-    def test_renovar_antes_de_vencer_extiende_desde_el_fin_del_periodo(self):
-        self.servicio.confirmar_orden(self.orden(self.cuenta)["id"], ahora=T0)
-        segunda = self.orden(self.cuenta)
-        self.servicio.confirmar_orden(segunda["id"], ahora=T0 + timedelta(days=10))
+    def test_renovar_en_la_ventana_del_1_al_10_cubre_el_mes_siguiente(self):
+        self.servicio.confirmar_orden(self.orden(self.cuenta)["id"], ahora=T0)               # cuota de noviembre
+        dic = datetime(2026, 12, 3, 15, 0, tzinfo=timezone.utc)
+        self.servicio.confirmar_orden(self.orden(self.cuenta, ahora=dic)["id"], ahora=dic)   # cuota de diciembre
         (sub,) = self.servicio.listar_suscripciones(self.cuenta)
-        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), T0 + timedelta(days=60))
+        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), datetime(2027, 1, 11, 3, 0, tzinfo=timezone.utc))
 
-    def test_renovar_despues_de_vencer_arranca_desde_el_pago(self):
+    def test_la_cuota_del_mes_ya_paga_no_se_vuelve_a_pedir(self):
         self.servicio.confirmar_orden(self.orden(self.cuenta)["id"], ahora=T0)
-        tarde = T0 + timedelta(days=90)
-        self.servicio.confirmar_orden(self.orden(self.cuenta)["id"], ahora=tarde)
+        with self.assertRaisesRegex(pagos.PagoError, "ya está paga"):
+            self.orden(self.cuenta, ahora=T0 + timedelta(days=10))
+
+    def test_pagar_tarde_cubre_el_mes_en_curso(self):
+        self.servicio.confirmar_orden(self.orden(self.cuenta)["id"], ahora=T0)
+        tarde = datetime(2026, 12, 20, 15, 0, tzinfo=timezone.utc)            # pasó el 10: el acceso ya se cortó
+        self.assertFalse(self.servicio.estado_cuota(self.cuenta, PREMIUM, tarde)["al_dia"])
+        self.servicio.confirmar_orden(self.orden(self.cuenta, ahora=tarde)["id"], ahora=tarde)
         (sub,) = self.servicio.listar_suscripciones(self.cuenta)
-        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), tarde + timedelta(days=30))
+        self.assertEqual(datetime.fromisoformat(sub["periodo_hasta"]), datetime(2027, 1, 11, 3, 0, tzinfo=timezone.utc))
 
     def test_un_periodo_vencido_se_informa_como_vencido_y_no_da_acceso(self):
         self.servicio.confirmar_orden(self.orden(self.cuenta)["id"], ahora=datetime(2020, 1, 1, tzinfo=timezone.utc))
@@ -296,7 +304,7 @@ class TestHTTP(unittest.TestCase):
         self.assertTrue(acceso())
         pagina = self.c.get("/cuenta/suscripcion").get_data(as_text=True)
         self.assertIn("tiene acceso a TortuScript Premium", pagina)
-        self.assertIn("Renovar", pagina)
+        self.assertIn("Cuota mensual", pagina)
         exportado = self.c.get("/cuenta/datos/exportar").json
         self.assertEqual(exportado["ordenes_de_pago"][0]["estado"], "confirmada")
         self.assertNotIn(OFERTA.alias, str(exportado))

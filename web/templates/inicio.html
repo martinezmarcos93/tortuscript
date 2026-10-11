@@ -60,6 +60,19 @@
   </div>
 </section>
 
+{% if aviso_cuota %}
+<section class="tarjeta aviso-cuota" id="aviso-cuota" role="status">
+  {% if aviso_cuota.vencida %}
+  <h2>⏸️ El acceso Premium está pausado</h2>
+  <p>La cuota venció el 10. Lo gratis y todo tu progreso siguen acá. Un adulto puede volver a activar Premium pagando la cuota.</p>
+  {% else %}
+  <h2>🗓️ La cuota de este mes</h2>
+  <p>Quedan <b>{{ aviso_cuota.dias_para_pagar }} día{{ 's' if aviso_cuota.dias_para_pagar != 1 }}</b> para pagarla (hasta el 10). Si el 11 no está paga, se pausa el acceso Premium.</p>
+  {% endif %}
+  <div class="acciones"><a class="boton verde" href="{{ url_for('cuenta.suscripcion') }}#plan-tortuscript-premium">Pagar la cuota</a></div>
+</section>
+{% endif %}
+
 {% if siguiente_paso %}
 <section class="tarjeta siguiente-paso{{ ' destacada' if siguiente_paso.terminaste }}" id="siguiente-paso-croco" aria-labelledby="siguiente-paso-titulo">
   <div class="fila">
@@ -111,7 +124,9 @@
     <ol class="senda">
       {% for lec in seccion.lecciones %}
       <li class="parada z{{ loop.index0 % 4 }} {{ lec.estado }}">
-        {% if lec.estado == 'bloqueada' %}
+        {% if lec.de_pago %}
+          <a class="nodo-camino" href="{{ url_for('leccion', leccion_id=lec.id) }}" title="{{ lec.nombre }} (Premium)" aria-label="{{ lec.nombre }} (Premium)">💎</a>
+        {% elif lec.estado == 'bloqueada' %}
           <span class="nodo-camino" title="{{ ('Primero terminá «' ~ lec.pide ~ '»') if lec.pide else 'Completá la lección anterior para desbloquearla' }}" aria-label="{{ lec.nombre }} (bloqueada)">🔒</span>
         {% else %}
           <a class="nodo-camino" href="{{ url_for('leccion', leccion_id=lec.id) }}" title="{{ lec.nombre }}">
@@ -120,6 +135,7 @@
         {% endif %}
         <span class="nombre-camino"><span class="tenue">{{ lec.numero }}.</span> {{ lec.nombre }}
           {% if lec.pasos > 1 %}<small class="tenue">· {{ lec.pasos }} pasos</small>{% endif %}
+          {% if lec.de_pago %}<small class="tenue">· Premium</small>{% endif %}
           {% if lec.estado == 'actual' %}<span class="burbuja">¡Te toca!</span>{% endif %}
           {% if lec.estado == 'salteada' %}<small class="tenue">· la salteaste: hacela cuando quieras</small>{% endif %}
           {% if lec.pide %}<small class="candado-curso">🔒 Primero terminá «{{ lec.pide }}»</small>{% endif %}</span>

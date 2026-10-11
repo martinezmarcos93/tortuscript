@@ -27,9 +27,10 @@ import json
 import secrets
 import sqlite3
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 PRODUCTOS = ("tortuscript-premium", "croco-script")
 TIPOS = ("checkout_completed", "payment_succeeded", "payment_failed",
@@ -37,6 +38,67 @@ TIPOS = ("checkout_completed", "payment_succeeded", "payment_failed",
 ESTADOS = ("incomplete", "active", "past_due", "canceled", "refunded")
 # Tras un cobro fallido el acceso sigue unos días mientras el proveedor reintenta.
 DIAS_DE_GRACIA = 7
+
+# ── Ciclo mensual por calendario (ADR-050) ──
+# La cuota de un mes se paga del 1 al 10 de ese mes y cubre hasta el día 10 del mes siguiente. El día 11 a las 00:00
+# (hora de Argentina) se corta el acceso premium si la cuota del mes no está paga. La inscripción cubre dos meses
+# (el actual y el siguiente): vale el doble de la cuota. Se puede pagar tarde (el mes que se paga queda cubierto), pero
+# no por adelantado más allá del mes en curso.
+ZONA_HORARIA = ZoneInfo("America/Argentina/Buenos_Aires")
+ULTIMO_DIA_DE_PAGO = 10
+MESES_DE_LA_INSCRIPCION = 2
+MESES_DE_LA_CUOTA = 1
+
+
+def _siguiente_mes(mes):
+    """(año, mes) → el (año, mes) que sigue."""
+    return (mes[0] + 1, 1) if mes[1] == 12 else (mes[0], mes[1] + 1)
+
+
+def _sumar_meses(mes, n):
+    for _ in range(n):
+        mes = _siguiente_mes(mes)
+    return mes
+
+
+def mes_de(momento):
+    """El (año, mes) de un instante, en hora de Argentina."""
+    local = momento.astimezone(ZONA_HORARIA)
+    return (local.year, local.month)
+
+
+def corte_del_mes(mes_cubierto):
+    """El instante (UTC) en que se corta el acceso si no se pagó el mes siguiente a `mes_cubierto`: el día 11 a las
+    00:00 de Argentina del mes que sigue."""
+    año, mes = _siguiente_mes(mes_cubierto)
+    return datetime(año, mes, ULTIMO_DIA_DE_PAGO + 1, tzinfo=ZONA_HORARIA).astimezone(timezone.utc)
+
+
+def ultimo_mes_cubierto(corte):
+    """Inverso de `corte_del_mes`: el (año, mes) hasta el que paga quien tiene ese corte."""
+    local = corte.astimezone(ZONA_HORARIA)
+    return (local.year - 1, 12) if local.month == 1 else (local.year, local.month - 1)
+
+
+def periodo_que_cubre_un_pago(ahora, corte_actual, meses):
+    """(primer_mes, ultimo_mes, corte_nuevo) de un pago de `meses` meses hecho en `ahora`.
+
+    Con acceso vigente, el pago cubre desde el mes siguiente al último cubierto; si el acceso venció o nunca existió,
+    desde el mes en curso."""
+    if corte_actual is not None and corte_actual > ahora:
+        primero = _siguiente_mes(ultimo_mes_cubierto(corte_actual))
+    else:
+        primero = mes_de(ahora)
+    ultimo = _sumar_meses(primero, meses - 1)
+    return primero, ultimo, corte_del_mes(ultimo)
+
+
+NOMBRES_MES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
+               "noviembre", "diciembre")
+
+
+def nombre_de_mes(mes):
+    return f"{NOMBRES_MES[mes[1] - 1]} de {mes[0]}"
 # Ventana para aceptar un webhook firmado: evita reenviar uno capturado tiempo atrás.
 TOLERANCIA_FIRMA_SEGUNDOS = 300
 MAX_CUERPO_WEBHOOK = 64 * 1024
@@ -74,6 +136,7 @@ class EventoPago:
     suscripcion: str
     ocurrido: datetime
     periodo_hasta: datetime | None = None
+    gracia_dias: int = DIAS_DE_GRACIA          # los pagos con ciclo por calendario no tienen gracia: el 11 se corta
 
 
 @dataclass(frozen=True)
@@ -93,7 +156,11 @@ class ConfiguracionPagos:
     """Lo que hace falta para ofrecer la suscripción. Sin alias o sin ningún importe, no se ofrece nada.
 
     Hay un plan por producto con importe: `importe_centavos` es el de TortuScript Premium y
-    `importe_croco_centavos`, el del nivel avanzado (Croco-Script). Se pueden ofrecer los dos o uno solo."""
+    `importe_croco_centavos`, el del nivel avanzado (Croco-Script). Se pueden ofrecer los dos o uno solo.
+
+    Ese importe es el **mantenimiento mensual** (ADR-050). Si además hay una **inscripción** (`inscripcion_centavos`,
+    `inscripcion_croco_centavos`), es lo que paga la cuenta la primera vez que contrata ese producto; cubre el primer
+    período igual que cualquier otro pago. Sin inscripción configurada (0) todos los pagos son el mensual."""
     alias: str = ""
     titular: str = ""
     importe_centavos: int = 0
@@ -101,6 +168,15 @@ class ConfiguracionPagos:
     dias: int = 30
     producto: str = "tortuscript-premium"
     importe_croco_centavos: int = 0
+    inscripcion_centavos: int = 0
+    inscripcion_croco_centavos: int = 0
+    # Enlaces de pago de Mercado Pago (los que también se imprimen como QR): {(producto, concepto): url https}.
+    # `concepto` es «inscripcion» o «cuota». Un enlace estático no dice quién pagó: confirma una persona (ADR-047).
+    enlaces: dict = field(default_factory=dict)
+    carpeta_qr: str = ""
+
+    def enlace(self, producto, concepto):
+        return self.enlaces.get((producto, concepto), "")
 
     @property
     def habilitado(self) -> bool:
@@ -108,9 +184,12 @@ class ConfiguracionPagos:
 
     def planes(self) -> list:
         """[{producto, importe_centavos, importe_legible}] de lo que esta instalación ofrece, en orden fijo."""
-        ofrecidos = [(self.producto, self.importe_centavos), ("croco-script", self.importe_croco_centavos)]
-        return [{"producto": producto, "importe_centavos": importe, "importe_legible": importe_legible(importe)}
-                for producto, importe in ofrecidos if importe > 0]
+        ofrecidos = [(self.producto, self.importe_centavos, self.inscripcion_centavos),
+                     ("croco-script", self.importe_croco_centavos, self.inscripcion_croco_centavos)]
+        return [{"producto": producto, "importe_centavos": importe, "importe_legible": importe_legible(importe),
+                 "inscripcion_centavos": inscripcion,
+                 "inscripcion_legible": importe_legible(inscripcion) if inscripcion else ""}
+                for producto, importe, inscripcion in ofrecidos if importe > 0]
 
     def plan(self, producto):
         """El plan de ese producto, o None si no se ofrece."""
@@ -129,7 +208,19 @@ def configuracion_desde_entorno(entorno=None) -> ConfiguracionPagos:
     alias = (entorno.get("TORTU_PAGO_ALIAS") or "").strip()
     importe = (entorno.get("TORTU_PAGO_IMPORTE") or "").strip()
     importe_croco = (entorno.get("TORTU_PAGO_IMPORTE_CROCO") or "").strip()
+    inscripcion = (entorno.get("TORTU_PAGO_INSCRIPCION") or "").strip()
+    inscripcion_croco = (entorno.get("TORTU_PAGO_INSCRIPCION_CROCO") or "").strip()
     dias = (entorno.get("TORTU_PAGO_DIAS") or "30").strip()
+    enlaces = {}
+    for variable, clave in (("TORTU_PAGO_LINK_INSCRIPCION", ("tortuscript-premium", "inscripcion")),
+                            ("TORTU_PAGO_LINK_CUOTA", ("tortuscript-premium", "cuota")),
+                            ("TORTU_PAGO_LINK_INSCRIPCION_CROCO", ("croco-script", "inscripcion")),
+                            ("TORTU_PAGO_LINK_CUOTA_CROCO", ("croco-script", "cuota"))):
+        enlace = (entorno.get(variable) or "").strip()
+        if enlace:
+            if not enlace.startswith("https://") or any(c.isspace() or c in "\"'<>" for c in enlace) or len(enlace) > 500:
+                raise PagoError(f"{variable} debe ser una dirección https:// sin espacios (el enlace de pago de Mercado Pago).")
+            enlaces[clave] = enlace
     if not alias and not importe and not importe_croco:
         return ConfiguracionPagos()
 
@@ -140,18 +231,25 @@ def configuracion_desde_entorno(entorno=None) -> ConfiguracionPagos:
         return int(pesos) * 100 + int((centavos + "00")[:2] if centavos else 0)
     try:
         importe_centavos, importe_croco_centavos = centavos_de(importe), centavos_de(importe_croco)
+        inscripcion_centavos, inscripcion_croco_centavos = centavos_de(inscripcion), centavos_de(inscripcion_croco)
         dias = int(dias)
     except ValueError as exc:
-        raise PagoError("TORTU_PAGO_IMPORTE, TORTU_PAGO_IMPORTE_CROCO y TORTU_PAGO_DIAS deben ser números "
+        raise PagoError("Los importes (TORTU_PAGO_IMPORTE*, TORTU_PAGO_INSCRIPCION*) y TORTU_PAGO_DIAS deben ser números "
                         "(por ejemplo 9500 y 30).") from exc
     if not alias or importe_centavos < 0 or importe_croco_centavos < 0 \
             or importe_centavos + importe_croco_centavos <= 0 or not 1 <= dias <= 366:
         raise PagoError("Para ofrecer la suscripción hacen falta TORTU_PAGO_ALIAS, un importe mayor a cero "
                         "(TORTU_PAGO_IMPORTE o TORTU_PAGO_IMPORTE_CROCO) y TORTU_PAGO_DIAS entre 1 y 366.")
+    # Una inscripción sin su mantenimiento no tiene sentido: el producto no se ofrecería.
+    if (inscripcion_centavos and not importe_centavos) or (inscripcion_croco_centavos and not importe_croco_centavos):
+        raise PagoError("Una inscripción (TORTU_PAGO_INSCRIPCION*) necesita el mantenimiento mensual del mismo producto "
+                        "(TORTU_PAGO_IMPORTE*).")
     return ConfiguracionPagos(
         alias=alias, titular=(entorno.get("TORTU_PAGO_TITULAR") or "").strip(), importe_centavos=importe_centavos,
         moneda=(entorno.get("TORTU_PAGO_MONEDA") or "ARS").strip().upper(), dias=dias,
-        importe_croco_centavos=importe_croco_centavos)
+        importe_croco_centavos=importe_croco_centavos, inscripcion_centavos=inscripcion_centavos,
+        inscripcion_croco_centavos=inscripcion_croco_centavos, enlaces=enlaces,
+        carpeta_qr=(entorno.get("TORTU_PAGO_QR_CARPETA") or "").strip())
 
 
 def medio_de_pago(medio_id):
@@ -282,6 +380,7 @@ class ServicioPagos:
                         amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
                         currency TEXT NOT NULL,
                         days INTEGER NOT NULL CHECK (days > 0),
+                        months INTEGER NOT NULL DEFAULT 1,
                         reference TEXT NOT NULL UNIQUE,
                         status TEXT NOT NULL CHECK (status IN ('pendiente','informada','confirmada','rechazada','cancelada')),
                         created_at TEXT NOT NULL,
@@ -290,6 +389,8 @@ class ServicioPagos:
                         payer_note TEXT NOT NULL DEFAULT '',
                         operator_note TEXT NOT NULL DEFAULT ''
                     )""")
+                if "months" not in {r["name"] for r in con.execute("PRAGMA table_info(payment_orders)")}:
+                    con.execute("ALTER TABLE payment_orders ADD COLUMN months INTEGER NOT NULL DEFAULT 1")
                 con.execute("CREATE INDEX IF NOT EXISTS idx_payment_orders_account ON payment_orders(account_id, created_at)")
                 # Como mucho una orden abierta por cuenta y producto: pedirla dos veces devuelve la misma.
                 con.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_orders_abierta
@@ -352,7 +453,7 @@ class ServicioPagos:
         elif e.tipo == "payment_succeeded":
             if e.periodo_hasta is None:
                 return REVISION, "pago sin fin de período"
-            estado, acceso = "active", (True, e.periodo_hasta + timedelta(days=DIAS_DE_GRACIA))
+            estado, acceso = "active", (True, e.periodo_hasta + timedelta(days=e.gracia_dias))
         elif e.tipo == "payment_failed":
             estado, acceso = "past_due", None                         # sigue lo ya concedido (período + gracia)
         elif e.tipo == "subscription_updated":
@@ -394,13 +495,70 @@ class ServicioPagos:
     def _orden(fila) -> dict:
         return {"id": fila["id"], "cuenta": fila["account_id"], "producto": fila["product"], "medio": fila["method"],
                 "importe_centavos": fila["amount_cents"], "importe_legible": importe_legible(fila["amount_cents"]),
-                "moneda": fila["currency"], "dias": fila["days"],
+                "moneda": fila["currency"], "dias": fila["days"], "meses": fila["months"],
                 "referencia": fila["reference"], "estado": fila["status"], "creada": fila["created_at"],
                 "informada": fila["informed_at"], "resuelta": fila["resolved_at"], "nota": fila["payer_note"],
                 "nota_operador": fila["operator_note"]}
 
+    @staticmethod
+    def _referencia_transferencia(account_id: str, producto: str) -> str:
+        # Una suscripción por cuenta y producto. Es un hash: la referencia queda en el registro de eventos,
+        # que sobrevive a la eliminación de la cuenta (ADR-046) y no debe permitir identificarla.
+        return "tr_" + hashlib.sha256(f"transferencia:{account_id}:{producto}".encode("utf-8")).hexdigest()[:24]
+
+    def corte_vigente(self, account_id: str, producto: str) -> datetime | None:
+        """El instante en que se corta el acceso pago de esta cuenta a este producto, o None si nunca pagó."""
+        with closing(self._conexion()) as con:
+            fila = con.execute(
+                "SELECT period_end FROM subscriptions WHERE provider=? AND provider_reference=? AND status='active'",
+                (PROVEEDOR_TRANSFERENCIA, self._referencia_transferencia(account_id, producto))).fetchone()
+        return datetime.fromisoformat(fila["period_end"]) if fila is not None and fila["period_end"] else None
+
+    def estado_cuota(self, account_id: str, producto: str, ahora: datetime | None = None) -> dict:
+        """Dónde está la cuenta en el ciclo mensual de `producto` (ADR-050).
+
+        - `inscripto`: ya pagó alguna vez.
+        - `al_dia`: tiene acceso pago ahora mismo.
+        - `cuota_pagada`: la cuota del mes en curso está paga (no hace falta pagar hasta el 1 del mes que viene).
+        - `debe_pagar`: inscripto y falta la cuota de este mes (o ya se cortó).
+        - `vencida`: se cortó el acceso porque pasó el día 10 sin pagar.
+        - `dias_para_pagar`: si está en plazo y debe, cuántos días quedan hasta el 10 inclusive."""
+        ahora = ahora or datetime.now(timezone.utc)
+        corte = self.corte_vigente(account_id, producto)
+        inscripto = self.ya_se_inscribio(account_id, producto)
+        al_dia = corte is not None and corte > ahora
+        actual = mes_de(ahora)
+        cuota_pagada = al_dia and ultimo_mes_cubierto(corte) >= actual
+        debe = inscripto and not cuota_pagada
+        dias = None
+        if debe and al_dia:
+            dia = ahora.astimezone(ZONA_HORARIA).day
+            dias = max(ULTIMO_DIA_DE_PAGO - dia + 1, 0)
+        return {"inscripto": inscripto, "al_dia": al_dia, "cuota_pagada": cuota_pagada, "debe_pagar": debe,
+                "vencida": inscripto and not al_dia, "dias_para_pagar": dias,
+                "cubierto_hasta": nombre_de_mes(ultimo_mes_cubierto(corte)) if corte else None,
+                "corte": corte}
+
+    def ya_se_inscribio(self, account_id: str, producto: str) -> bool:
+        """¿La cuenta ya pagó alguna vez este producto? (orden confirmada o suscripción registrada). Decide si el próximo
+        pago es la inscripción o el mantenimiento mensual (ADR-050)."""
+        with closing(self._conexion()) as con:
+            if con.execute("SELECT 1 FROM payment_orders WHERE account_id=? AND product=? AND status=?",
+                           (account_id, producto, ORDEN_CONFIRMADA)).fetchone():
+                return True
+        return any(s["producto"] == producto for s in self.listar_suscripciones(account_id))
+
+    def cobro_para(self, plan: dict, account_id: str) -> dict:
+        """Qué se le cobra a esta cuenta por `plan` (un elemento de `ConfiguracionPagos.planes()`): la inscripción la
+        primera vez, el mantenimiento después. Lo decide el servidor; el pedido del navegador no influye."""
+        if plan.get("inscripcion_centavos") and not self.ya_se_inscribio(account_id, plan["producto"]):
+            return {"concepto": "inscripcion", "meses": MESES_DE_LA_INSCRIPCION,
+                    "importe_centavos": plan["inscripcion_centavos"], "importe_legible": plan["inscripcion_legible"]}
+        return {"concepto": "mensual", "meses": MESES_DE_LA_CUOTA,
+                "importe_centavos": plan["importe_centavos"], "importe_legible": plan["importe_legible"]}
+
     def crear_orden(self, account_id: str, producto: str, medio: str, importe_centavos: int, moneda: str,
-                    dias: int, ahora: datetime | None = None) -> dict:
+                    dias: int, ahora: datetime | None = None, meses: int = MESES_DE_LA_CUOTA) -> dict:
         """Orden pendiente para pagar `producto`. Si la cuenta ya tiene una abierta para ese producto, devuelve esa."""
         definicion = medio_de_pago(medio)
         if definicion is None:
@@ -409,9 +567,12 @@ class ServicioPagos:
             raise PagoError("Ese medio de pago todavía no está disponible.")
         if producto not in PRODUCTOS:
             raise PagoError("Ese producto no existe.")
-        if type(importe_centavos) is not int or importe_centavos <= 0 or type(dias) is not int or dias <= 0:
+        if type(importe_centavos) is not int or importe_centavos <= 0 or type(dias) is not int or dias <= 0 \
+                or type(meses) is not int or not 1 <= meses <= 12:
             raise PagoError("El importe y la duración de la orden no son válidos.")
         ahora = ahora or datetime.now(timezone.utc)
+        if self.estado_cuota(account_id, producto, ahora)["cuota_pagada"]:
+            raise PagoError("La cuota de este mes ya está paga. La del mes que viene se paga del 1 al 10.")
         with closing(self._conexion()) as con:
             con.execute("BEGIN IMMEDIATE")
             try:
@@ -425,9 +586,9 @@ class ServicioPagos:
                     orden_id = "ord_" + secrets.token_hex(12)
                     referencia = "TS-" + "".join(secrets.choice(_ALFABETO_REFERENCIA) for _ in range(6))
                     con.execute(
-                        """INSERT INTO payment_orders(id,account_id,product,method,amount_cents,currency,days,reference,
-                                                      status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                        (orden_id, account_id, producto, medio, importe_centavos, moneda, dias, referencia,
+                        """INSERT INTO payment_orders(id,account_id,product,method,amount_cents,currency,days,months,
+                                                      reference,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (orden_id, account_id, producto, medio, importe_centavos, moneda, dias, meses, referencia,
                          ORDEN_PENDIENTE, _iso(ahora)))
                     abierta = con.execute("SELECT * FROM payment_orders WHERE id=?", (orden_id,)).fetchone()
                 con.execute("COMMIT")
@@ -479,8 +640,9 @@ class ServicioPagos:
     def confirmar_orden(self, orden_id: str, ahora: datetime | None = None) -> dict:
         """Quien opera vio el dinero en su cuenta: el pago entra como evento del proveedor «transferencia».
 
-        El período nuevo arranca donde termina el que la cuenta ya tiene pago (o ahora, si no tiene). Repetir la
-        confirmación no suma días: el identificador del evento es el de la orden.
+        Cubre los meses de la orden según el ciclo por calendario (`periodo_que_cubre_un_pago`): desde el mes siguiente al
+        último pago si el acceso sigue vigente, o desde el mes en curso si venció. Repetir la confirmación no suma
+        meses: el identificador del evento es el de la orden.
         """
         ahora = ahora or datetime.now(timezone.utc)
         with closing(self._conexion()) as con:
@@ -492,20 +654,13 @@ class ServicioPagos:
                 return self._orden(fila)
             if fila["status"] not in ORDENES_ABIERTAS:
                 raise PagoError(f"La orden está {fila['status']}: no se puede confirmar.")
-            # Una suscripción por cuenta y producto. Es un hash: la referencia queda en el registro de eventos,
-            # que sobrevive a la eliminación de la cuenta (ADR-046) y no debe permitir identificarla.
-            suscripcion = "tr_" + hashlib.sha256(
-                f"transferencia:{fila['account_id']}:{fila['product']}".encode("utf-8")).hexdigest()[:24]
-            vigente = con.execute(
-                "SELECT period_end FROM subscriptions WHERE provider=? AND provider_reference=? AND status='active'",
-                (PROVEEDOR_TRANSFERENCIA, suscripcion)).fetchone()
-        desde = ahora
-        if vigente is not None and vigente["period_end"]:
-            desde = max(ahora, datetime.fromisoformat(vigente["period_end"]))
+            suscripcion = self._referencia_transferencia(fila["account_id"], fila["product"])
+        corte_actual = self.corte_vigente(fila["account_id"], fila["product"])
+        _primero, _ultimo, corte_nuevo = periodo_que_cubre_un_pago(ahora, corte_actual, fila["months"])
         resultado = self.aplicar(EventoPago(
             proveedor=PROVEEDOR_TRANSFERENCIA, id=fila["id"], tipo="payment_succeeded", cuenta_id=fila["account_id"],
             producto=fila["product"], suscripcion=suscripcion, ocurrido=ahora,
-            periodo_hasta=desde + timedelta(days=fila["days"])), ahora=ahora)
+            periodo_hasta=corte_nuevo, gracia_dias=0), ahora=ahora)
         if resultado.estado not in (APLICADO, DUPLICADO):
             raise PagoError(f"El pago no se pudo aplicar: {resultado.detalle}")
         return self._cambiar_orden(orden_id, ORDENES_ABIERTAS, ORDEN_CONFIRMADA, {"resolved_at": _iso(ahora)})

@@ -6,6 +6,15 @@ consultan antes de fijarlos.
 ## Sin publicar
 
 ### Agregado
+- **Puerta de pago, ciclo mensual y cobro con inscripción (ADR-050).** El catálogo marca 19 unidades gratuitas (Alfabetización
+  completa + la primera de Python, Web y SQL) y 18 premium; el servidor no abre lo premium sin acceso vigente, ni por la
+  interfaz, ni por la URL, ni por la API (402), y una pantalla de puerta explica qué logró el chico y que lo decide un adulto.
+  Solo rige donde hay pagos configurados; el camino muestra 💎 en lo premium. El cobro distingue **inscripción** (primer pago,
+  cubre dos meses) y **cuota mensual**, que se paga del 1 al 10 y cubre hasta el 10 del mes siguiente: el 11 a las 00:00
+  (hora de Argentina) se pausa el acceso. Aviso de cuota en el inicio. Enlaces y QR de Mercado Pago opcionales por producto y
+  concepto (`TORTU_PAGO_LINK_*`, `TORTU_PAGO_QR_CARPETA`); la orden guarda cuántos meses cubre. `TORTU_PAGO_DIAS` ya no decide
+  el vencimiento. Lo que queda fuera del catálogo (las 30 prácticas de «primeros pasos», Tortuga, Juegos, RPG, Proyectos y 3
+  lecciones de Web) sigue abierto.
 - **Tarjeta «Siguiente paso: Croco-Script» en el inicio** (ADR-037). Con acceso lleva directo a Croco-Script; sin acceso invita
   a conocerlo y lleva al plan (aclara que es para 16 años o más y que lo activa un adulto); al terminar todo TortuScript pasa
   a ser la tarjeta destacada. El botón del menú de cuenta ahora dice «Conocer Croco-Script» cuando no hay acceso, en vez de

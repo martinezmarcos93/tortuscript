@@ -47,7 +47,16 @@
       {% if plan.orden_abierta %}
       {% set orden = plan.orden_abierta %}
       <h3>Tu orden de pago</h3>
-      <p><b>Importe:</b> {{ orden.importe_legible }} ({{ orden.moneda }}) · <b>Cubre:</b> {{ orden.dias }} días</p>
+      {% set concepto = concepto_de_orden(orden) %}
+      <p><b>{{ "Inscripción" if concepto == "inscripcion" else "Cuota mensual" }}:</b> {{ orden.importe_legible }} ({{ orden.moneda }}) · <b>Cubre:</b> {{ orden.meses }} mes{{ "es" if orden.meses != 1 }}</p>
+      {% set enlace = oferta.enlace(plan.producto, concepto) %}
+      {% if enlace %}
+      <div class="qr-de-pago">
+        <p><b>Pagá con Mercado Pago:</b> escaneá el QR con la app o tocá el botón.</p>
+        {% if oferta.carpeta_qr %}<img src="{{ url_for('cuenta.qr_de_pago', producto=plan.producto, concepto=concepto) }}" alt="QR de pago de Mercado Pago por {{ orden.importe_legible }}" width="220" height="220">{% endif %}
+        <p><a class="boton verde" href="{{ enlace }}" rel="noopener noreferrer" target="_blank">Pagar {{ orden.importe_legible }} con Mercado Pago</a></p>
+      </div>
+      {% endif %}
       {% if oferta.alias %}
       <p><b>Alias para transferir:</b> <code>{{ oferta.alias }}</code>{% if oferta.titular %} · a nombre de {{ oferta.titular }}{% endif %}</p>
       {% endif %}
@@ -68,8 +77,18 @@
         <button class="boton chico" type="submit" aria-label="Cancelar la orden de {{ plan.nombre }}">Cancelar esta orden</button>
       </form>
       {% elif plan.oferta %}
-      <h3>{{ "Renovar" if plan.suscripciones else "Suscribirse" }}</h3>
-      <p><b>{{ plan.oferta.importe_legible }}</b> ({{ oferta.moneda }}) por {{ oferta.dias }} días. No se renueva sola: cuando se acerque el vencimiento podés pagar otro período.</p>
+      <h3>{{ "Pagar la cuota" if plan.cuota.inscripto else "Inscribirse" }}</h3>
+      {% if plan.cuota.vencida %}
+      <p class="error" role="status"><b>La cuota venció el 10 y el acceso a {{ plan.nombre }} está pausado.</b> Pagá la cuota para volver: tu progreso está guardado.</p>
+      {% elif plan.cuota.debe_pagar and plan.cuota.dias_para_pagar is not none %}
+      <p role="status"><b>Te quedan {{ plan.cuota.dias_para_pagar }} día{{ "s" if plan.cuota.dias_para_pagar != 1 }} para pagar la cuota de este mes</b> (hasta el 10 inclusive). Si no está paga el 11, se pausa el acceso.</p>
+      {% endif %}
+      {% if plan.cobro.concepto == 'inscripcion' %}
+      <p><b>Inscripción: {{ plan.cobro.importe_legible }}</b> ({{ oferta.moneda }}). Cubre este mes y el que viene. Después, la cuota es de <b>{{ plan.oferta.importe_legible }}</b> por mes, del 1 al 10.</p>
+      {% else %}
+      <p><b>Cuota mensual: {{ plan.cobro.importe_legible }}</b> ({{ oferta.moneda }}). Se paga del 1 al 10 de cada mes.</p>
+      {% endif %}
+      <p class="tenue">No se renueva sola. Si el día 11 la cuota del mes no está paga, se pausa el acceso a lo premium; lo gratis y todo tu progreso se conservan.</p>
       <form method="post" action="{{ url_for('cuenta.crear_orden_de_pago') }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="producto" value="{{ plan.producto }}">

@@ -249,6 +249,22 @@ def _croco_configurado():
     return bool((current_app.config.get("FEDERACION") or {}).get("croco-script"))
 
 
+def _concepto_de_orden(orden):
+    return "inscripcion" if orden["meses"] == pagos.MESES_DE_LA_INSCRIPCION else "cuota"
+
+
+@bp.get("/suscripcion/qr/<producto>/<concepto>.png")
+def qr_de_pago(producto, concepto):
+    """La imagen del QR del enlace de pago, que quien opera deja en `TORTU_PAGO_QR_CARPETA` (no se versiona).
+    Solo se sirven los cuatro nombres posibles, nunca una ruta que ponga el pedido."""
+    oferta = current_app.config.get("PAGOS") or pagos.ConfiguracionPagos()
+    if not _require_session() or producto not in pagos.PRODUCTOS or concepto not in ("inscripcion", "cuota") \
+            or not oferta.carpeta_qr or not oferta.enlace(producto, concepto):
+        abort(404)
+    from flask import send_from_directory
+    return send_from_directory(oferta.carpeta_qr, f"{producto}-{concepto}.png", mimetype="image/png", max_age=0)
+
+
 def _pagina_suscripcion(cuentas, row, estado=200, error=None):
     oferta = current_app.config.get("PAGOS") or pagos.ConfiguracionPagos()
     servicio = _servicio_pagos()
@@ -269,6 +285,8 @@ def _pagina_suscripcion(cuentas, row, estado=200, error=None):
         "nombre": NOMBRES_PRODUCTO.get(producto, producto),
         "descripcion": DESCRIPCIONES_PRODUCTO.get(producto, ""),
         "oferta": oferta.plan(producto) if oferta.habilitado else None,
+        "cobro": servicio.cobro_para(oferta.plan(producto), cuenta_id) if oferta.habilitado and oferta.plan(producto) else None,
+        "cuota": servicio.estado_cuota(cuenta_id, producto),
         "con_acceso": cuentas.tiene_entitlement(cuenta_id, producto),
         "suscripciones": [s for s in suscripciones if s["producto"] == producto],
         "orden_abierta": next((o for o in ordenes if o["producto"] == producto and o["estado"] in pagos.ORDENES_ABIERTAS), None),
@@ -281,6 +299,8 @@ def _pagina_suscripcion(cuentas, row, estado=200, error=None):
         es_admin=cuentas.es_admin(cuenta_id),
         ordenes_cerradas=[o for o in ordenes if o["estado"] not in pagos.ORDENES_ABIERTAS][:5],
         medios=pagos.MEDIOS_DE_PAGO,
+        concepto_de_orden=_concepto_de_orden,
+        nombre_de_mes=pagos.nombre_de_mes,
         nombres_producto=NOMBRES_PRODUCTO,
         max_nota=pagos.MAX_NOTA,
         csrf=request.cookies.get("tortu_csrf", ""),
@@ -316,7 +336,7 @@ def _operar_orden(operacion, aviso=None):
         return jsonify(ok=False, mensaje=str(exc)), 400
     if request.form:
         return redirect(url_for("cuenta.suscripcion", ok=aviso) if aviso else url_for("cuenta.suscripcion"))
-    publica = {k: orden[k] for k in ("id", "producto", "medio", "importe_centavos", "moneda", "dias", "referencia", "estado")}
+    publica = {k: orden[k] for k in ("id", "producto", "medio", "importe_centavos", "moneda", "dias", "meses", "referencia", "estado")}
     return jsonify(ok=True, orden=publica)
 
 
@@ -332,8 +352,9 @@ def crear_orden_de_pago():
         plan = oferta.planes()[0] if pedido is None else (oferta.plan(pedido) if isinstance(pedido, str) else None)
         if plan is None:
             raise pagos.PagoError("Ese plan no está disponible en esta instalación.")
-        return servicio.crear_orden(cuenta_id, plan["producto"], datos.get("medio"), plan["importe_centavos"],
-                                    oferta.moneda, oferta.dias)
+        cobro = servicio.cobro_para(plan, cuenta_id)           # inscripción la primera vez, mantenimiento después
+        return servicio.crear_orden(cuenta_id, plan["producto"], datos.get("medio"), cobro["importe_centavos"],
+                                    oferta.moneda, 30 * cobro["meses"], meses=cobro["meses"])
     return _operar_orden(crear)
 
 

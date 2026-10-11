@@ -23,10 +23,10 @@ class Fase10ProductoTests(unittest.TestCase):
         self.assertEqual(segmentos["premium"]["itinerarios"], [])
         self.assertEqual(catalogo_producto.ESTADO_COMERCIAL_POR_DEFINIR, "por_definir")
 
-    def test_comercial_no_fija_premium(self):
+    def test_lo_premium_es_una_decision_del_catalogo_y_los_prerrequisitos_siguen_bloqueando(self):
         self.assertEqual(
             catalogo_producto.estado_acceso("python-datos", self.p),
-            "por_definir",
+            "premium",
         )
         self.assertEqual(
             catalogo_producto.estado_acceso("python-puente", self.p),
@@ -37,9 +37,10 @@ class Fase10ProductoTests(unittest.TestCase):
             "bloqueado_por_prerrequisito",
         )
 
-    def test_nivel0_es_gratuito_y_python_sigue_por_definir(self):
-        self.assertEqual(catalogo_producto.estado_acceso("nivel0-programa", self.p), "gratuito")
-        self.assertEqual(catalogo_producto.estado_acceso("python-datos", self.p), "por_definir")
+    def test_nivel0_y_la_primera_unidad_de_cada_camino_son_gratuitos(self):
+        for unidad in ("nivel0-programa", "python-puente", "web-html-estructura", "sql-tablas"):
+            self.assertEqual(catalogo_producto.estado_comercial(unidad), "gratuito", unidad)
+        self.assertEqual(catalogo_producto.estado_acceso("python-datos", self.p), "premium")
 
     def test_unidad_puede_pasar_de_pendiente_a_completada(self):
         self.assertEqual(catalogo_producto.estado_unidad("nivel0-programa", self.p)["estado"], "pendiente")

@@ -49,13 +49,14 @@ from tortuscript.runtime_educativo import RuntimeEducativo, ContextoEducativoErr
 from tortuscript.repaso import MODOS, cola_repaso, contar  # noqa: E402
 from tortuscript.translator import TraductorTortuScript, detectar_tipo  # noqa: E402
 from tortuscript.acceso import AccesoProducto  # noqa: E402
-from web.cuenta_routes import bp as cuenta_bp, _educativo  # noqa: E402
+from web.cuenta_routes import bp as cuenta_bp, _educativo, _servicio_pagos  # noqa: E402
 from web.federacion_routes import bp as federacion_bp  # noqa: E402
 from web.pagos_routes import bp as pagos_bp  # noqa: E402
 
 logger = logging.getLogger("tortuscript.web")
 HOSTS_PERMITIDOS = {"127.0.0.1", "localhost"}
 # Rutas que no operan sobre un perfil educativo: cuenta del adulto, eventos de pagos y consultas de otros productos.
+PRODUCTO_PREMIUM = "tortuscript-premium"
 SIN_PERFIL = ("/cuenta", "/pagos", "/federacion")
 
 
@@ -387,6 +388,63 @@ def create_app(token=None):
             return redirect(url_for("cuenta.ingresar", next=request.full_path))
         return None
 
+    # ─────────────── puerta de pago (ADR-050) ───────────────
+    def _puerta_activa():
+        """La puerta solo rige en una instalación que vende Premium (con el plan configurado). En una instalación
+        local sin pagos, todo está abierto: nadie puede pagar ahí, y bloquear no tendría salida."""
+        oferta = app.config.get("PAGOS") or pagos.ConfiguracionPagos()
+        return oferta.habilitado and oferta.plan(PRODUCTO_PREMIUM) is not None
+
+    def _tiene_premium():
+        """¿El perfil activo tiene acceso vigente a Premium (o es administrador)? Una consulta por pedido."""
+        if "tiene_premium" not in g:
+            g.tiene_premium = AccesoProducto(_educativo().cuentas).puede_acceder(_contexto().perfil.id, PRODUCTO_PREMIUM)
+        return g.tiene_premium
+
+    def _bloqueada_por_pago(unidad_id, indice=None):
+        """¿Esa unidad es premium y el perfil activo no tiene acceso vigente? (False si no hay puerta o la unidad es libre)"""
+        if unidad_id is None or not _puerta_activa():
+            return False
+        if catalogo_producto.estado_comercial(unidad_id, indice) != "premium":
+            return False
+        return not _tiene_premium()
+
+    def _unidad_del_pedido():
+        """La unidad del catálogo que este pedido quiere abrir, o None si no toca contenido de una unidad."""
+        args = request.view_args or {}
+        if "leccion_id" in args:
+            return catalogo_producto.unidad_de_leccion(args["leccion_id"])
+        if "proyecto_id" in args and request.path.startswith(("/proyectos-integradores/", "/api/proyectos-integradores/")):
+            return catalogo_producto.unidad_de_proyecto(args["proyecto_id"])
+        return None
+
+    @app.before_request
+    def _puerta_de_pago():
+        """Lo premium no se abre sin acceso, ni por la interfaz ni por la URL directa ni por la API."""
+        if request.endpoint in (None, "static") or request.path.startswith(SIN_PERFIL) or "tortu_contexto" not in g:
+            return None
+        unidad = _unidad_del_pedido()
+        if not _bloqueada_por_pago(unidad):
+            return None
+        if request.path.startswith("/api/"):
+            return jsonify(ok=False, puerta=True, mensaje="Este contenido es premium: un adulto puede activarlo desde la cuenta."), 402
+        return _pagina_de_la_puerta(unidad), 402
+
+    def _pagina_de_la_puerta(unidad_id):
+        """Qué ve el chico (y el adulto que lo acompaña) al llegar a lo premium: lo que ya logró y cómo seguir."""
+        cuenta_id = _contexto().cuenta.id
+        oferta = app.config["PAGOS"]
+        plan = oferta.plan(PRODUCTO_PREMIUM)
+        servicio = _servicio_pagos()
+        p = _cargar_progreso()
+        indice = catalogo_producto._indice_unidades()
+        hechas = sum(1 for u in indice if catalogo_producto.estado_comercial(u, indice) == "gratuito"
+                     and catalogo_producto.estado_unidad(u, p, _indice=indice)["completada"])
+        libres = sum(1 for u in indice if catalogo_producto.estado_comercial(u, indice) == "gratuito")
+        return render_template("puerta.html", unidad=indice[unidad_id], hechas=hechas, libres=libres, plan=plan,
+                               cobro=servicio.cobro_para(plan, cuenta_id),
+                               cuota=servicio.estado_cuota(cuenta_id, PRODUCTO_PREMIUM), moneda=oferta.moneda)
+
     def _perfil_del_pedido():
         """El perfil sobre el que opera este pedido, o None si no toca progreso de nadie."""
         if "tortu_contexto" in g:
@@ -583,6 +641,12 @@ def create_app(token=None):
                     for leccion in seccion.get("lecciones", []):
                         if leccion.get("estado") == "bloqueada":
                             leccion["estado"] = "actual"
+        if _puerta_activa() and "tortu_contexto" in g and not _tiene_premium():
+            indice = catalogo_producto._indice_unidades()
+            for curso in camino:
+                for seccion in curso.get("secciones", []):
+                    for leccion in seccion.get("lecciones", []):
+                        leccion["de_pago"] = _bloqueada_por_pago(catalogo_producto.unidad_de_leccion(leccion["id"]), indice)
         return camino
 
     def _leccion_o_404(leccion_id):
@@ -681,7 +745,16 @@ def create_app(token=None):
         encuesta = intereses.pendiente(p, "curso-terminado", cupo=terminados) if terminados else None
         actual = motor.leccion_actual(camino)
         return render_template("inicio.html", camino=camino, actual=actual, regreso=progreso.regreso(p),
-                               encuesta=encuesta, siguiente_paso=_siguiente_paso_croco(terminaste=actual is None))
+                               encuesta=encuesta, siguiente_paso=_siguiente_paso_croco(terminaste=actual is None),
+                               aviso_cuota=_aviso_de_cuota())
+
+    def _aviso_de_cuota():
+        """El recordatorio de la cuota mensual para quien ya se inscribió: se muestra del 1 al 10 mientras falta pagarla y
+        después del 10 si se pausó el acceso. None si no corresponde (sin puerta, sin inscripción o cuota paga)."""
+        if not _puerta_activa() or _es_admin():
+            return None
+        cuota = _servicio_pagos().estado_cuota(_contexto().cuenta.id, PRODUCTO_PREMIUM)
+        return cuota if cuota["inscripto"] and cuota["debe_pagar"] else None
 
     def _siguiente_paso_croco(terminaste):
         """La tarjeta «Siguiente paso: Croco-Script» del inicio (ADR-037), o None si el puente no está configurado.
