@@ -6,6 +6,16 @@ consultan antes de fijarlos.
 ## Sin publicar
 
 ### Agregado
+- **TortuScript responde y pide lo que Croco-Script esperaba (ADR-037).** Tres contratos que faltaban de este lado:
+  `GET /federacion/v1/acceso` (`Entitlement.v1`: si la cuenta conserva el acceso, para cortar sesiones abiertas),
+  `GET /federacion/v1/progreso` (`ProgressQuery.v1`: el `Progress.v1` de un perfil con acceso, con los identificadores de
+  `Curriculum.v1`) y la emisión de `Supresion.v1`: al eliminar un perfil o purgar una cuenta se le avisa a Croco-Script
+  (`suprimir_perfil` / `suprimir_cuenta`), y la descarga de datos del adulto suma lo que Croco-Script guarda de cada perfil
+  (`exportar_perfil`). Las consultas van firmadas con HMAC (60 s), sin cookies; un perfil sin acceso se trata como inexistente.
+  Si Croco-Script no responde, el aviso de borrado queda en una cola en disco (`operaciones_pendientes.json`, solo
+  identificadores opacos) y se reintenta con un token nuevo: eliminar en TortuScript nunca depende de que el otro esté arriba.
+  Verificado contra los clientes y el servidor reales de Croco-Script, y contra sus vectores de `Supresion.v1`
+  (`docs/contratos/supresion-v1.vectores.json`).
 - **Paso a Croco-Script desde la cuenta (ADR-037).** La conexión se configura por entorno (`TORTU_CROCO_URL`,
   `TORTU_CROCO_CLAVE`, `TORTU_CROCO_KID`) y falla cerrada: una clave corta, una dirección mal escrita o `http://`
   hacia otra máquina impiden levantar el puente. Con el puente configurado aparece «Ir a Croco-Script» en el menú

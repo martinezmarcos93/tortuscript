@@ -12,6 +12,7 @@ from flask import Blueprint, abort, current_app, jsonify, make_response, redirec
 
 from tortuscript import federacion, pagos
 from tortuscript.acceso import AccesoProducto
+from tortuscript.federacion_operaciones import OperacionesCroco
 from tortuscript.auth import AuthError, AuthRepository
 from tortuscript.cuentas import DIAS_DE_GRACIA_ELIMINACION, MAX_CHILD_PROFILES, CuentaError, CuentaRepository
 from tortuscript.progreso_childprofile import ProgresoPerfilError
@@ -72,6 +73,12 @@ def _educativo():
     store = ProgresoChildProfile(progreso_dir)
     acceso = AccesoProducto(cuentas)
     return PerfilEducativoService(cuentas, auth, store, acceso)
+
+
+def _operaciones():
+    """Avisos a Croco-Script por borrado y exportación (Supresion.v1). Inactiva si no está conectado."""
+    config = (current_app.config.get("FEDERACION") or {}).get("croco-script")
+    return OperacionesCroco(config, Path(current_app.instance_path))
 
 
 def _limit_or_429(key, limit, window):
@@ -404,6 +411,7 @@ def eliminar_perfil(profile_id):
 
     def eliminar(cuentas, cuenta_id):
         cuentas.eliminar_child_profile(cuenta_id, profile_id, confirmacion)   # rechaza un perfil ajeno o inexistente
+        _operaciones().solicitar("suprimir_perfil", cuenta_id, profile_id)   # Croco-Script guarda entregas de este perfil
         try:
             _educativo().progreso.eliminar(profile_id)
         except ProgresoPerfilError:
@@ -418,6 +426,8 @@ def purgar_cuentas_vencidas(ahora=None):
     aplicación y al intentar ingresar a una de ellas; necesita contexto de aplicación. Devuelve cuántas borró."""
     cuentas, _ = _repos()
     store = _educativo().progreso
+    operaciones = _operaciones()
+    operaciones.reintentar_pendientes()                                # avisos a Croco-Script que no llegaron antes
     borradas = 0
     for cuenta_id in cuentas.cuentas_con_plazo_vencido(ahora):
         try:
@@ -429,6 +439,7 @@ def purgar_cuentas_vencidas(ahora=None):
                 store.eliminar(perfil_id)
             except ProgresoPerfilError:
                 logger.error("Cuenta eliminada: quedaron archivos del perfil %s sin borrar", perfil_id)
+        operaciones.solicitar("suprimir_cuenta", cuenta_id)
         borradas += 1
         logger.info("Cuenta eliminada de forma definitiva tras el plazo de gracia (%d perfiles)", len(perfiles))
     return borradas
@@ -549,6 +560,7 @@ def exportar_datos():
     cuentas, auth, row = resultado
     cuenta = cuentas.obtener_account(row["account_id"])
     store = _educativo().progreso
+    operaciones = _operaciones()
     perfiles = []
     for perfil in cuentas.listar_child_profiles(cuenta.id):
         try:
@@ -556,8 +568,11 @@ def exportar_datos():
             progreso = None if snapshot is None else {"actualizado": snapshot.updated_at, "datos": snapshot.data}
         except ProgresoPerfilError:
             progreso = {"error": "El archivo de progreso de este perfil está dañado."}
-        perfiles.append({"id": perfil.id, "nombre": perfil.display_name, "creado": perfil.created_at,
-                         "en_uso": perfil.active, "progreso": progreso})
+        entrada = {"id": perfil.id, "nombre": perfil.display_name, "creado": perfil.created_at,
+                   "en_uso": perfil.active, "progreso": progreso}
+        if operaciones.activa:
+            entrada["croco_script"] = operaciones.exportar_perfil(cuenta.id, perfil.id)    # Supresion.v1 exportar_perfil
+        perfiles.append(entrada)
     documento = {
         "formato": "tortuscript-datos-de-cuenta", "version": 1,
         "cuenta": {"id": cuenta.id, "correo": cuenta.email, "creada": cuenta.created_at, "rol": cuenta.role},

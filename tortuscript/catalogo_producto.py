@@ -269,3 +269,37 @@ def curriculo_publicado():
     itinerarios = [{"id": it["id"], "unidades": [u["id"] for u in it["unidades"]]}
                    for it in catalogo["itinerarios"] if it.get("unidades")]
     return federacion.curriculo_v1("tortuscript", catalogo["version"], itinerarios)
+
+
+def progreso_publicable(perfil_id, progreso, actualizado):
+    """El Progress.v1 de TortuScript para un perfil (ADR-037, ProgressQuery.v1): un resumen educativo por itinerario.
+
+    No es la base interna ni lleva nada personal: solo qué unidades están completas, cuántos pasos se hicieron en ellas
+    y cuántos proyectos se terminaron. Un itinerario sin actividad no figura. Croco-Script lo usa para decidir qué
+    cursos muestra abiertos (los prerrequisitos que nombran unidades o itinerarios de `Curriculum.v1`)."""
+    from tortuscript import federacion
+    catalogo = cargar_catalogo()
+    mapa = cargar_mapa()["unidades"]
+    indice = _indice_unidades()
+    lecciones = progreso.get("lecciones") or {}
+    cursos = []
+    for itinerario in catalogo["itinerarios"]:
+        if not itinerario.get("unidades"):
+            continue
+        completas, pasos, proyectos, con_actividad = [], 0, 0, False
+        for unidad in itinerario["unidades"]:
+            try:
+                estado = estado_unidad(unidad["id"], progreso, _indice=indice)
+            except KeyError:
+                continue                                  # una unidad sin evidencia en el mapa no cuenta
+            con_actividad = con_actividad or estado["estudiada"] or estado["completada"]
+            if estado["completada"]:
+                completas.append(unidad["id"])
+                if mapa[unidad["id"]].get("tipo") == "proyecto":
+                    proyectos += 1
+            for leccion in mapa[unidad["id"]].get("lecciones", []) if mapa[unidad["id"]].get("tipo") == "lecciones" else []:
+                pasos += len((lecciones.get(leccion) or {}).get("pasos") or {})
+        if con_actividad:
+            cursos.append({"curso": itinerario["id"], "lecciones_completadas": completas,
+                           "ejercicios_completados": pasos, "proyectos": proyectos, "evaluaciones": []})
+    return federacion.progreso_v1(perfil_id, "tortuscript", str(catalogo["version"]), cursos, actualizado)

@@ -117,6 +117,63 @@ def validar_autorizacion(token: str, claves: dict, destino: str, ahora: datetime
     return cuerpo
 
 
+# ── consultas firmadas de servidor a servidor (Entitlement.v1 y ProgressQuery.v1: Croco-Script pregunta) ──
+VENTANA_CONSULTA = 60            # segundos de diferencia de reloj que se toleran en un pedido
+ACCIONES_SOBRE_DATOS = ("suprimir_perfil", "suprimir_cuenta", "exportar_perfil")
+
+
+def firma_de_consulta(clave: str, momento: int, producto: str, identificador: str) -> str:
+    """HMAC-SHA256 de «momento.producto.identificador» (base64 para direcciones, sin «=»). `identificador` es la
+    cuenta (Entitlement.v1) o el perfil (ProgressQuery.v1)."""
+    mensaje = f"{int(momento)}.{producto}.{identificador}".encode("utf-8")
+    return _b64(hmac.new(_validar_clave(clave).encode("utf-8"), mensaje, hashlib.sha256).digest())
+
+
+def validar_consulta(encabezado, claves: dict, producto: str, identificador: str, ahora: datetime | None = None) -> None:
+    """Valida `Authorization: Croco-HMAC kid=…, ts=…, firma=…`. Lanza FederacionError si no corresponde.
+    El motivo es para el log; al que pregunta se le responde siempre lo mismo."""
+    if not isinstance(encabezado, str) or not encabezado.startswith("Croco-HMAC "):
+        raise FederacionError("Falta la firma de la consulta.")
+    partes = {}
+    for trozo in encabezado[len("Croco-HMAC "):].split(","):
+        nombre, separador, valor = trozo.strip().partition("=")
+        if not separador or nombre in partes:
+            raise FederacionError("Firma de consulta mal formada.")
+        partes[nombre] = valor
+    if set(partes) != {"kid", "ts", "firma"} or not partes["ts"].isdigit() or len(partes["ts"]) > 12:
+        raise FederacionError("Firma de consulta mal formada.")
+    clave = claves.get(partes["kid"]) if isinstance(claves, dict) else None
+    if not clave:
+        raise FederacionError("Clave de firma desconocida.")
+    esperada = firma_de_consulta(clave, int(partes["ts"]), producto, identificador)
+    if not hmac.compare_digest(esperada, partes["firma"]):
+        raise FederacionError("La firma no coincide.")
+    momento = int((ahora or datetime.now(timezone.utc)).timestamp())
+    if abs(momento - int(partes["ts"])) > VENTANA_CONSULTA:
+        raise FederacionError("La consulta está fuera de la ventana de tiempo aceptada.")
+
+
+def emitir_operacion(clave: str, kid: str, destino: str, accion: str, cuenta_id: str, perfil_id: str | None = None,
+                     ahora: datetime | None = None, jti: str | None = None) -> str:
+    """Token Supresion.v1: pide a otro producto borrar o exportar datos. Mismo formato y claves que Authorization.v1,
+    pero con `act` y sin `ent`: ninguno de los dos tokens sirve en el lugar del otro."""
+    _validar_clave(clave)
+    if destino not in PRODUCTOS:
+        raise FederacionError("Producto de destino desconocido.")
+    if accion not in ACCIONES_SOBRE_DATOS:
+        raise FederacionError("Acción no admitida.")
+    if not cuenta_id or (accion != "suprimir_cuenta" and not perfil_id):
+        raise FederacionError("Falta un identificador.")
+    momento = int((ahora or datetime.now(timezone.utc)).timestamp())
+    cuerpo = {"v": VERSION, "iss": EMISOR, "aud": destino, "act": accion, "acc": cuenta_id,
+              "iat": momento, "exp": momento + VIDA_SEGUNDOS, "jti": jti or secrets.token_urlsafe(16)}
+    if perfil_id:
+        cuerpo["sub"] = perfil_id
+    cabecera = {"alg": "HS256", "typ": "JWT", "kid": str(kid)}
+    partes = ".".join(_b64(json.dumps(p, separators=(",", ":"), sort_keys=True).encode("utf-8")) for p in (cabecera, cuerpo))
+    return f"{partes}.{_firma(clave, partes)}"
+
+
 def configuracion_desde_entorno(entorno=None) -> dict:
     """La configuración `FEDERACION` a partir de TORTU_CROCO_* (ver `.env.example`). Vacía si no hay nada definido.
 

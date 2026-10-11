@@ -1,0 +1,133 @@
+{
+  "_": "Vectores de prueba de Supresion.v1. Generados por herramientas/generar_vectores_supresion.py; un receptor debe aceptar cada token de `validos` y rechazar todos los de `invalidos`. La clave es publica y solo sirve para estos vectores.",
+  "clave": "clave-de-ejemplo-solo-para-vectores-000000",
+  "kid": "ejemplo-1",
+  "destino": "croco-script",
+  "momento_de_validacion": "2026-11-01T12:00:30+00:00",
+  "validos": {
+    "suprimir_perfil": {
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLXN1cHJpbWlyX3BlcmZpbCIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.GpSjxrIMzGXwl4syAcMvwOAqY6sirfhCkRvFYdl495Q",
+      "datos": {
+        "acc": "acc_0123456789abcdef01234567",
+        "act": "suprimir_perfil",
+        "aud": "croco-script",
+        "exp": 1793534460,
+        "iat": 1793534400,
+        "iss": "tortuscript",
+        "jti": "jti-suprimir_perfil",
+        "sub": "child_0123456789abcdef01234567",
+        "v": 1
+      }
+    },
+    "suprimir_cuenta": {
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfY3VlbnRhIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLXN1cHJpbWlyX2N1ZW50YSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.FbANltb_0uCEZN9rDdbUPA4yJG4pIIPawTVYFRtQHcc",
+      "datos": {
+        "acc": "acc_0123456789abcdef01234567",
+        "act": "suprimir_cuenta",
+        "aud": "croco-script",
+        "exp": 1793534460,
+        "iat": 1793534400,
+        "iss": "tortuscript",
+        "jti": "jti-suprimir_cuenta",
+        "sub": "child_0123456789abcdef01234567",
+        "v": 1
+      }
+    },
+    "exportar_perfil": {
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0IjoiZXhwb3J0YXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWV4cG9ydGFyX3BlcmZpbCIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.soxMM3xzje25eAkNmrfv7qenb-KHOlrnxJ7vHkDOUeM",
+      "datos": {
+        "acc": "acc_0123456789abcdef01234567",
+        "act": "exportar_perfil",
+        "aud": "croco-script",
+        "exp": 1793534460,
+        "iat": 1793534400,
+        "iss": "tortuscript",
+        "jti": "jti-exportar_perfil",
+        "sub": "child_0123456789abcdef01234567",
+        "v": 1
+      }
+    }
+  },
+  "invalidos": [
+    {
+      "motivo": "firma alterada",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.XRvkPGTVZ7Dxh9jEMYrUR6DxSRi2wRg9JAhaiqwAAAA"
+    },
+    {
+      "motivo": "firmado con otra clave",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.SaL_k396wBnXhM_oZW2yccTkAOc487QfqQKEVVO65u4"
+    },
+    {
+      "motivo": "kid desconocido",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6Im5vLWV4aXN0ZSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.NkxUxA3qJtu_POf1yeFU8woQuIkfQ0MvsVbA7F4wTy0"
+    },
+    {
+      "motivo": "algoritmo none",
+      "token": "eyJhbGciOiJub25lIiwia2lkIjoiZWplbXBsby0xIiwidHlwIjoiSldUIn0.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.aZiyVwqkLfpiWbR1_CtUKftnlMi4wDH33bUvE7Ac1nI"
+    },
+    {
+      "motivo": "algoritmo distinto de HS256",
+      "token": "eyJhbGciOiJIUzUxMiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.xMlSd32RVp-3Ek_jJ0wwFDvgT37fuxzfXQEWg_MB_4w"
+    },
+    {
+      "motivo": "version distinta de 1",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjJ9.dYI6nqat_xmz82tMPruz2QhI9AAIkd_KZd9BDzMhC0o"
+    },
+    {
+      "motivo": "emisor ajeno",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6Im90cm8iLCJqdGkiOiJqdGktZGUtZWplbXBsby0wMDAxIiwic3ViIjoiY2hpbGRfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwidiI6MX0.6UjLW8nNE0AnsBYWoUh-FWIrg-Gx1QQ05ZiB7EE0GPc"
+    },
+    {
+      "motivo": "destino ajeno",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoib3Ryby1wcm9kdWN0byIsImV4cCI6MTc5MzUzNDQ2MCwiaWF0IjoxNzkzNTM0NDAwLCJpc3MiOiJ0b3J0dXNjcmlwdCIsImp0aSI6Imp0aS1kZS1lamVtcGxvLTAwMDEiLCJzdWIiOiJjaGlsZF8wMTIzNDU2Nzg5YWJjZGVmMDEyMzQ1NjciLCJ2IjoxfQ.IOtBGVLHf_v8HRXzFez5z-jYtcf9meisSONFQv2pXXI"
+    },
+    {
+      "motivo": "vive mas de 60 segundos",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM1MDAwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.wAvJ3v58aH3sdqTrVp_1sz7Ntsn7k0TAT-EEkTT5ppE"
+    },
+    {
+      "motivo": "vencido",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTMzODYwLCJpYXQiOjE3OTM1MzM4MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.LicDEP3Z15zEnjUWGL9M7TRRW8huIvkQaYjl3UEiuf8"
+    },
+    {
+      "motivo": "todavia no vale",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM1MDYwLCJpYXQiOjE3OTM1MzUwMDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.eIX3LbDhAYl5NDmKUNr7NtnqN2rse9psSgHFfnCAN3A"
+    },
+    {
+      "motivo": "sin accion",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.2ddeEsXqJexqvLp-kuKrRPSHbk_avspFbT5vlDhXP1U"
+    },
+    {
+      "motivo": "accion desconocida",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0IjoiYm9ycmFyX3RvZG8iLCJhdWQiOiJjcm9jby1zY3JpcHQiLCJleHAiOjE3OTM1MzQ0NjAsImlhdCI6MTc5MzUzNDQwMCwiaXNzIjoidG9ydHVzY3JpcHQiLCJqdGkiOiJqdGktZGUtZWplbXBsby0wMDAxIiwic3ViIjoiY2hpbGRfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwidiI6MX0.r3LliSuHn_ykV5pdtW3k4vKXQs1leIcJzua8VGssI3g"
+    },
+    {
+      "motivo": "accion que no es texto",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0IjpbInN1cHJpbWlyX3BlcmZpbCJdLCJhdWQiOiJjcm9jby1zY3JpcHQiLCJleHAiOjE3OTM1MzQ0NjAsImlhdCI6MTc5MzUzNDQwMCwiaXNzIjoidG9ydHVzY3JpcHQiLCJqdGkiOiJqdGktZGUtZWplbXBsby0wMDAxIiwic3ViIjoiY2hpbGRfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwidiI6MX0.6KEaSVl77pXnFmHv-kh_NV2FeN3w2U0T10WhTYYU9ko"
+    },
+    {
+      "motivo": "falta el perfil en suprimir_perfil",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6IiIsInYiOjF9.iVP1jSbcz1yvRamIp4qBbyXJ0PN4JGgGGgQWz6csA_M"
+    },
+    {
+      "motivo": "falta la cuenta",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiIiLCJhY3QiOiJzdXByaW1pcl9wZXJmaWwiLCJhdWQiOiJjcm9jby1zY3JpcHQiLCJleHAiOjE3OTM1MzQ0NjAsImlhdCI6MTc5MzUzNDQwMCwiaXNzIjoidG9ydHVzY3JpcHQiLCJqdGkiOiJqdGktZGUtZWplbXBsby0wMDAxIiwic3ViIjoiY2hpbGRfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwidiI6MX0.IlZf5g9VXpVSV7y9RRiPyvdwbF8fdU12mj17LnTGaOs"
+    },
+    {
+      "motivo": "falta el jti",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoiIiwic3ViIjoiY2hpbGRfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwidiI6MX0.LiDd0yfuyEqXILeiJ247SUkVafmtvRDhjApwXP8eUbA"
+    },
+    {
+      "motivo": "token de entrada (Authorization.v1): lleva ent y no act",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZW50Ijp7ImFjdGl2byI6dHJ1ZSwicHJvZHVjdG8iOiJjcm9jby1zY3JpcHQifSwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.8aX8dfnWZCFzhMgQm3nPK3s72wiGLqTFrkMXYlvcX68"
+    },
+    {
+      "motivo": "token de entrada al que se le agrego act",
+      "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImVqZW1wbG8tMSIsInR5cCI6IkpXVCJ9.eyJhY2MiOiJhY2NfMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3IiwiYWN0Ijoic3VwcmltaXJfcGVyZmlsIiwiYXVkIjoiY3JvY28tc2NyaXB0IiwiZW50Ijp7ImFjdGl2byI6dHJ1ZSwicHJvZHVjdG8iOiJjcm9jby1zY3JpcHQifSwiZXhwIjoxNzkzNTM0NDYwLCJpYXQiOjE3OTM1MzQ0MDAsImlzcyI6InRvcnR1c2NyaXB0IiwianRpIjoianRpLWRlLWVqZW1wbG8tMDAwMSIsInN1YiI6ImNoaWxkXzAxMjM0NTY3ODlhYmNkZWYwMTIzNDU2NyIsInYiOjF9.804g_bsUb0Qj_0Kb5z-xnGn3aYk4JHJ1xGDgMpcOR-w"
+    },
+    {
+      "motivo": "malformado",
+      "token": "esto.no.es-un-token"
+    }
+  ]
+}
