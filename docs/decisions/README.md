@@ -73,3 +73,4 @@ ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evoluci�
 | [ADR-047](ADR-047-transferencia-como-primer-medio-de-pago.md) | Transferencia como primer medio de pago | **Aceptada** |
 | [ADR-048](ADR-048-sincronizacion-desktop-cloud.md) | Modelo de sincronización Desktop ↔ Cloud | **Aceptada** |
 | [ADR-049](ADR-049-no-se-importa-progreso-exportado.md) | El progreso exportado no se vuelve a importar | **Aceptada** |
+| [ADR-050](ADR-050-gratuidad-y-puertas-de-pago.md) | Qué es gratis y cuándo se pide pagar | **Aceptada** |

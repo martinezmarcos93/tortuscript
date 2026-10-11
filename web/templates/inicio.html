@@ -60,6 +60,26 @@
   </div>
 </section>
 
+{% if siguiente_paso %}
+<section class="tarjeta siguiente-paso{{ ' destacada' if siguiente_paso.terminaste }}" id="siguiente-paso-croco" aria-labelledby="siguiente-paso-titulo">
+  <div class="fila">
+    <div class="mascota" aria-hidden="true">🐊</div>
+    <div>
+      <h2 id="siguiente-paso-titulo">{% if siguiente_paso.terminaste %}🎉 ¡Terminaste TortuScript! Siguiente paso: Croco-Script{% else %}Más adelante: Croco-Script{% endif %}</h2>
+      <p>Python de verdad, en tu propio editor: escribís el programa, lo entregás y recibís la corrección. Es para quienes tienen <b>16 años o más</b> y ya se animan a programar.</p>
+      {% if not siguiente_paso.con_acceso %}<p class="tenue">Un adulto de la familia puede activarlo desde la cuenta. Tu progreso de TortuScript no se toca.</p>{% endif %}
+    </div>
+  </div>
+  <div class="acciones">
+    {% if siguiente_paso.con_acceso %}
+      <a class="boton verde grande" href="{{ url_for('cuenta.ir_a_producto', producto='croco-script') }}">🐊 Entrar a Croco-Script</a>
+    {% else %}
+      <a class="boton {{ 'violeta grande' if siguiente_paso.terminaste else '' }}" href="{{ url_for('cuenta.suscripcion') }}#plan-croco-script">Conocer Croco-Script</a>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
 {% if encuesta %}
 <section class="tarjeta encuesta" id="encuesta" data-id="{{ encuesta.id }}" data-multiple="{{ 'si' if encuesta.multiple else 'no' }}" aria-labelledby="encuesta-titulo">
   <h2 id="encuesta-titulo">💡 {{ encuesta.pregunta }}</h2>
