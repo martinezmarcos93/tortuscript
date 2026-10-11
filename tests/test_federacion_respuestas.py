@@ -179,7 +179,12 @@ class TestOperaciones(unittest.TestCase):
         self.assertEqual(len(ops.pendientes()), 1)
 
     def test_una_cola_danada_se_conserva_antes_de_encolar_nuevos_pedidos(self):
-        for nombre, contenido in (("json-malformado", "{"), ("estructura-invalida", "{}")):
+        for nombre, contenido in (
+            ("json-malformado", "{"),
+            ("estructura-invalida", "{}"),
+            ("entrada-invalida", json.dumps([{"accion": "suprimir_cuenta", "cuenta": "acc_x",
+                                              "perfil": None, "intentos": "no-numero", "creada": "ahora"}])),
+        ):
             with self.subTest(nombre=nombre):
                 carpeta = self.tmp / nombre
                 carpeta.mkdir()
