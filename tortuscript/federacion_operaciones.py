@@ -87,10 +87,27 @@ class OperacionesCroco:
         except ValueError:
             self._poner_en_cuarentena()
             return []
-        if not isinstance(datos, list) or any(not isinstance(e, dict) for e in datos):
+        if not isinstance(datos, list) or any(not self._entrada_valida(e) for e in datos):
             self._poner_en_cuarentena()
             return []
         return datos
+
+    @staticmethod
+    def _entrada_valida(entrada) -> bool:
+        """Evita que una cola sintácticamente válida pero mal formada rompa los reintentos."""
+        if not isinstance(entrada, dict):
+            return False
+        accion, cuenta, perfil = entrada.get("accion"), entrada.get("cuenta"), entrada.get("perfil")
+        intentos, creada = entrada.get("intentos"), entrada.get("creada")
+        if accion not in ("suprimir_perfil", "suprimir_cuenta") or not isinstance(cuenta, str) or not cuenta:
+            return False
+        if accion == "suprimir_perfil" and (not isinstance(perfil, str) or not perfil):
+            return False
+        if accion == "suprimir_cuenta" and perfil is not None:
+            return False
+        if not isinstance(intentos, int) or isinstance(intentos, bool) or intentos < 1:
+            return False
+        return isinstance(creada, str) and bool(creada)
 
     def _escribir(self, pendientes: list) -> None:
         self.archivo.parent.mkdir(parents=True, exist_ok=True)
