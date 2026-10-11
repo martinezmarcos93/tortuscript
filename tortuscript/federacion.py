@@ -96,13 +96,13 @@ def validar_autorizacion(token: str, claves: dict, destino: str, ahora: datetime
         raise FederacionError("Clave de firma desconocida.")
     if not hmac.compare_digest(_firma(_validar_clave(clave), f"{cabecera_b64}.{cuerpo_b64}"), firma):
         raise FederacionError("La firma no coincide.")
-    if cuerpo.get("v") != VERSION:
+    if type(cuerpo.get("v")) is not int or cuerpo.get("v") != VERSION:
         raise FederacionError("Versión de contrato no admitida.")
     if cuerpo.get("iss") != EMISOR or cuerpo.get("aud") != destino:
         raise FederacionError("El token no fue emitido para este producto.")
     momento = int((ahora or datetime.now(timezone.utc)).timestamp())
     iat, exp = cuerpo.get("iat"), cuerpo.get("exp")
-    if type(iat) is not int or type(exp) is not int or exp - iat > VIDA_SEGUNDOS:
+    if type(iat) is not int or type(exp) is not int or exp <= iat or exp - iat > VIDA_SEGUNDOS:
         raise FederacionError("Vigencia del token no válida.")
     if momento > exp or momento < iat - TOLERANCIA_RELOJ:
         raise FederacionError("El token venció o todavía no vale.")
