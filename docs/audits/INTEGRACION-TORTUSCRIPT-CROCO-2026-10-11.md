@@ -49,3 +49,10 @@ El conector permite inspeccionar y modificar texto en GitHub, pero no ejecutar e
 - Croco-Script: se rehízo `docs/ROADMAP.md` con estados actuales de las fases, dependencias y criterios de cierre; se removieron estados incompatibles con el handoff reciente.
 - Croco-Script: se actualizó `docs/contratos/README.md` para distinguir cliente/receptor implementado de la necesidad de reproducir integración desde ambos `main`.
 - Cada cambio documental quedó como un commit independiente; los commits y pruebas de ejecución se informan al cierre.
+
+## Hallazgos estáticos adicionales — 11/10/2026
+
+- **Privacidad de logs en Croco-Script:** los clientes de Entitlement.v1 y ProgressQuery.v1 registraban el texto de excepciones HTTP; un `HTTPError` puede incluir la URL y sus parámetros `cuenta`/`perfil`. Corrección propuesta en Croco-Script PR #13, con regresiones que verifican la ausencia de identificadores en logs.
+- **Vigencia de tokens:** la validación del emisor aceptaba una vigencia cero en el instante exacto de emisión y no rechazaba explícitamente `exp <= iat`. Corrección propuesta en este repositorio PR #14; la contraparte receptora está en Croco-Script PR #14.
+- **Supresión federada con HTTP 409:** el emisor trataba el conflicto de propiedad como confirmación y descartaba el pedido. Corrección propuesta en PR #15, dependiente de la rama de cola corrupta/PR #12: el conflicto se conserva para revisión manual y no se reintenta automáticamente.
+- Estos cambios están en ramas de revisión y **no están integrados en main**. Las pruebas añadidas todavía deben ejecutarse localmente; no se declara verificación dinámica.
