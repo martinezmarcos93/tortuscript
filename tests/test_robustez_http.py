@@ -59,8 +59,9 @@ class TestRobustezHTTP(unittest.TestCase):
             "<proyecto_id>": ["x"], "<etapa_id>": ["x"], "<ayuda_id>": ["x"], "<encuesta_id>": ["curso-terminado"],
             # Un perfil inexistente: archivar el perfil activo dejaría sin sesión educativa al resto del barrido.
             "<profile_id>": ["child_000000000000000000000000"],
-            "<proveedor>": ["prueba"], "<producto>": ["croco-script"],
+            "<proveedor>": ["prueba"], "<producto>": ["tortuscript-premium", "croco-script", "otro"],
             "<orden_id>": ["ord_000000000000000000000000"],
+            "<concepto>": ["inscripcion", "cuota", "otro"],
         }
 
     @classmethod

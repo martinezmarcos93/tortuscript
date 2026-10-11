@@ -193,7 +193,9 @@ class TestEliminarCuenta(Base):
         servicio = pagos.ServicioPagos(self.db)
         servicio.ensure_schema()
         servicio.confirmar_orden(servicio.crear_orden(self.cuenta, "tortuscript-premium", "transferencia", 100, "ARS", 30)["id"])
-        servicio.crear_orden(self.cuenta, "tortuscript-premium", "transferencia", 100, "ARS", 30)
+        # La cuota del mes ya está paga: la orden siguiente es la del mes que viene (ciclo por calendario, ADR-050).
+        servicio.crear_orden(self.cuenta, "tortuscript-premium", "transferencia", 100, "ARS", 30,
+                             ahora=datetime.now(timezone.utc) + timedelta(days=40))
         self.assertGreaterEqual(len(self.tablas_con(self.cuenta)), 6)
 
         self.pedir()

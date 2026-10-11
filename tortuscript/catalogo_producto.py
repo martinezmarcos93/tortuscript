@@ -3,6 +3,7 @@
 No procesa pagos ni depende de una implementación SaaS. El catálogo curricular
 sigue siendo la fuente conceptual; este módulo agrega el adaptador operativo.
 """
+import functools
 import json
 from datetime import date
 from pathlib import Path
@@ -196,6 +197,13 @@ def estado_acceso(unidad_id, progreso, _indice=None):
         return "no_publicado"
     if not _cumple_prerrequisitos(unidad, progreso, indice):
         return "bloqueado_por_prerrequisito"
+    return estado_comercial(unidad_id, indice)
+
+
+def estado_comercial(unidad_id, _indice=None):
+    """La disponibilidad comercial de una unidad (ADR-050): `gratuito`, `premium`… o `por_definir` si el catálogo no la fija.
+    Es independiente de los prerrequisitos: el motor pedagógico no sabe de pagos."""
+    unidad = (_indice or _indice_unidades())[unidad_id]
     declarado = unidad.get("estado_acceso")
     if declarado:
         return declarado
@@ -204,6 +212,28 @@ def estado_acceso(unidad_id, progreso, _indice=None):
             return segmento["estado_acceso"]
     # La decisión comercial queda deliberadamente fuera del motor.
     return ESTADO_COMERCIAL_POR_DEFINIR
+
+
+@functools.lru_cache(maxsize=1)
+def _unidades_por_contenido():
+    """({lección: unidad}, {proyecto: unidad}) según el mapa curricular. Se calcula una vez: el mapa no cambia en ejecución."""
+    lecciones, proyectos = {}, {}
+    for unidad_id, evidencia in cargar_mapa()["unidades"].items():
+        if evidencia.get("tipo") == "lecciones":
+            lecciones.update({leccion: unidad_id for leccion in evidencia.get("lecciones", [])})
+        elif evidencia.get("tipo") == "proyecto":
+            proyectos[evidencia.get("proyecto")] = unidad_id
+    return lecciones, proyectos
+
+
+def unidad_de_leccion(leccion_id):
+    """La unidad del catálogo a la que pertenece una lección, o None si la lección no figura en el mapa curricular."""
+    return _unidades_por_contenido()[0].get(leccion_id)
+
+
+def unidad_de_proyecto(proyecto_id):
+    """La unidad del catálogo que se completa con ese proyecto integrador, o None."""
+    return _unidades_por_contenido()[1].get(proyecto_id)
 
 
 def competencias(progreso):

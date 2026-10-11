@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Premium · TortuScript</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/tortuscript.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tortu.css') }}">
+</head>
+<body>
+<main id="contenido" class="columna-ancha pagina-error">
+  <section class="tarjeta centrado" id="puerta-de-pago">
+    <div class="mascota gran" aria-hidden="true">💎</div>
+    {% if cuota.vencida %}
+    <h1>El acceso Premium está pausado</h1>
+    <p class="texto-grande">La cuota venció el 10. «{{ unidad.titulo }}» y el resto de lo Premium vuelven a abrirse en cuanto un adulto pague la cuota. Tu progreso está guardado.</p>
+    {% else %}
+    <h1>¡Llegaste a lo Premium!</h1>
+    <p class="texto-grande">Completaste <b>{{ hechas }}</b> de las <b>{{ libres }}</b> unidades gratuitas. «{{ unidad.titulo }}» es parte de TortuScript Premium.</p>
+    {% endif %}
+    <p>Esto lo decide un adulto de la familia, desde su cuenta. Lo que ya hiciste no se pierde nunca.</p>
+    <p><b>{{ 'Inscripción' if cobro.concepto == 'inscripcion' else 'Cuota mensual' }}: {{ cobro.importe_legible }}</b> ({{ moneda }}){% if cobro.concepto == 'inscripcion' %}. Cubre este mes y el que viene; después, {{ plan.importe_legible }} por mes.{% else %}. Se paga del 1 al 10 de cada mes.{% endif %}</p>
+    <p><a class="boton verde grande" href="{{ url_for('cuenta.suscripcion') }}#plan-tortuscript-premium">Ver cómo activar Premium</a></p>
+    <p><a class="boton" href="{{ url_for('inicio') }}">Volver a TortuScript</a></p>
+  </section>
+</main>
+</body>
+</html>

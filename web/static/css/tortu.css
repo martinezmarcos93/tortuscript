@@ -744,3 +744,8 @@ p.error, div.error { border: 2px solid var(--rojo); border-radius: 12px; padding
 .siguiente-paso h2 { margin: 0 0 .3rem; }
 .siguiente-paso p { margin: .3rem 0; }
 .siguiente-paso.destacada { border: 2px solid var(--verde, #2e9e5b); }
+
+/* Aviso de cuota mensual y QR de pago */
+.aviso-cuota { margin: 1rem 0; border: 2px solid var(--amarillo); }
+.qr-de-pago { margin: .8rem 0; text-align: center; }
+.qr-de-pago img { background: #fff; padding: .5rem; border-radius: .6rem; }

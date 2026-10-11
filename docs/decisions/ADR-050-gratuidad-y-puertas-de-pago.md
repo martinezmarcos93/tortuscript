@@ -46,6 +46,31 @@ Croco-Script (nivel avanzado, 16–20 años): cursos `python-datos` (57 tareas),
 4. **Croco-Script: sin prueba de 7 días** (demasiado). En su lugar, **prueba gratuita de los primeros 3 niveles del primer curso**.
    Esto exige ampliar el contrato de entrada (hoy `Authorization.v1` exige `ent.activo: true`): ver «Consecuencias para Croco-Script».
 
+5. **Ciclo mensual por calendario (11/10/2026, tarde).** La cuota de cada mes se paga **del 1 al 10**; si el día 11 no está
+   paga, **se pausa el acceso premium** (lo gratis y el progreso se conservan). El cobro se hace con **dos enlaces/QR de Mercado
+   Pago por producto**: uno de **inscripción** y otro de **cuota mensual**.
+
+## Cómo funciona el ciclo (implementado)
+- **Cuota del mes M:** se paga del 1 al 10 de M y cubre hasta el 10 del mes M+1 inclusive. El 11 a las 00:00 **hora de Argentina**
+  se corta (`entitlements.expires_at`); Croco-Script se entera por `Entitlement.v1` en menos de 5 minutos.
+- **Inscripción:** cubre **solo el mes en vigencia**, sea cual sea el día en que se paga (decisión de Marcos, 11/10/2026); después se paga la cuota del 1 al 10 como cualquiera.
+  La primera cuota se paga del 1 al 10 del mes que sigue a esos dos. *(Supuesto de implementación: confirmar con Marcos.)*
+- **Pagar tarde** está permitido: quien paga el día 15 cubre el mes en curso (no se cobran meses sin acceso). **Pagar por adelantado
+  más allá del mes en curso no**: si la cuota de este mes ya está paga, la orden siguiente se abre el día 1.
+- **Quién ya se inscribió** se deduce de sus órdenes confirmadas; si deja vencer meses y vuelve, paga la **cuota**, no una inscripción
+  nueva. *(Supuesto: confirmar con Marcos.)*
+- **Pausar ≠ borrar:** al pasar el 10 sin pago, `tiene_entitlement` da `false`; la puerta dice «el acceso Premium está pausado» y no
+  se pierde nada.
+- **Aviso:** del 1 al 10, mientras la cuota del mes no esté paga, el inicio muestra «Quedan N días para pagar la cuota».
+
+## Cobro automático: lo que se sabe y lo que no
+Un enlace de pago estático de Mercado Pago **no lleva la cuenta de quien paga**, así que no alcanza para habilitar solo: hoy
+confirma una persona viendo el pago en Mercado Pago (`gestionar_pagos.py`). Para habilitar **automáticamente** hace falta que cada
+orden genere su **propia preferencia de pago por API** con `external_reference` = la orden y una `notification_url`: Mercado Pago
+avisa por webhook firmado (HMAC, `x-signature`) y el adaptador confirma la orden sin intervención. Requiere las credenciales de la
+cuenta de Mercado Pago de Marcos (access token y clave del webhook) y probarlo contra su entorno de pruebas. Qué hace Mercado Pago
+con una transferencia bancaria común (no con su dinero en cuenta, tarjeta o QR) **no está verificado**: se verifica al integrarlo.
+
 ## Propuesta
 
 ### 1. Un «nivel» es una unidad

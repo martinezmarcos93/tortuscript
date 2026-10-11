@@ -74,3 +74,4 @@ ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evoluci�
 | [ADR-048](ADR-048-sincronizacion-desktop-cloud.md) | Modelo de sincronización Desktop ↔ Cloud | **Aceptada** |
 | [ADR-049](ADR-049-no-se-importa-progreso-exportado.md) | El progreso exportado no se vuelve a importar | **Aceptada** |
 | [ADR-050](ADR-050-gratuidad-y-puertas-de-pago.md) | Qué es gratis y cuándo se pide pagar | **Aceptada** |
+| [ADR-051](ADR-051-registro-de-cuentas-y-confirmacion-de-pagos.md) | Registro de cuentas y confirmación de pagos en el panel de admin | Propuesta |
