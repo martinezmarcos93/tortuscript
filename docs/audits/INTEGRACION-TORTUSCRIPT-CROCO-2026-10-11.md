@@ -41,3 +41,11 @@ Croco mantiene huecos explícitos: CSS/JavaScript/TypeScript y partes de proyect
 ## Limitación de esta auditoría
 
 El conector permite inspeccionar y modificar texto en GitHub, pero no ejecutar el proyecto con Python, Docker, navegador ni dos servidores locales. Por eso no declaro una suite ejecutada, un test de integración repetido ni una auditoría de seguridad independiente. Los resultados numéricos de tests citados son los consignados en handoffs/PRs del propio repositorio, no una nueva ejecución de esta sesión.
+
+
+## Progreso de implementación documental en esta pasada
+
+- Croco-Script: se corrigió `docs/HANDOFF.md` para separar estado de código y evidencia real, actualizar el estado de contratos y enumerar los gates que impiden hosting.
+- Croco-Script: se rehízo `docs/ROADMAP.md` con estados actuales de las fases, dependencias y criterios de cierre; se removieron estados incompatibles con el handoff reciente.
+- Croco-Script: se actualizó `docs/contratos/README.md` para distinguir cliente/receptor implementado de la necesidad de reproducir integración desde ambos `main`.
+- Cada cambio documental quedó como un commit independiente; los commits y pruebas de ejecución se informan al cierre.
