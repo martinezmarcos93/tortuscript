@@ -738,3 +738,9 @@ p.error, div.error { border: 2px solid var(--rojo); border-radius: 12px; padding
 .pagina-error .pie { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
 .fila-perfil .etiqueta { flex-basis: auto; align-self: flex-start; }
 .fila-perfil .campo { flex-basis: 100%; margin-bottom: 0; }
+
+/* Tarjeta «Siguiente paso: Croco-Script» del inicio */
+.siguiente-paso { margin: 1rem 0; }
+.siguiente-paso h2 { margin: 0 0 .3rem; }
+.siguiente-paso p { margin: .3rem 0; }
+.siguiente-paso.destacada { border: 2px solid var(--verde, #2e9e5b); }

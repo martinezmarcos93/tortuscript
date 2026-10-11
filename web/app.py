@@ -48,6 +48,7 @@ from tortuscript.referencia import cargar_referencia  # noqa: E402
 from tortuscript.runtime_educativo import RuntimeEducativo, ContextoEducativoError  # noqa: E402
 from tortuscript.repaso import MODOS, cola_repaso, contar  # noqa: E402
 from tortuscript.translator import TraductorTortuScript, detectar_tipo  # noqa: E402
+from tortuscript.acceso import AccesoProducto  # noqa: E402
 from web.cuenta_routes import bp as cuenta_bp, _educativo  # noqa: E402
 from web.federacion_routes import bp as federacion_bp  # noqa: E402
 from web.pagos_routes import bp as pagos_bp  # noqa: E402
@@ -462,6 +463,13 @@ def create_app(token=None):
             _guardar_progreso(p)
         return None
 
+    def _croco_configurado():
+        return bool((app.config.get("FEDERACION") or {}).get("croco-script"))
+
+    def _croco_con_acceso():
+        """¿El perfil activo puede entrar a Croco-Script? (mismo criterio que `/cuenta/ir/croco-script`)."""
+        return AccesoProducto(_educativo().cuentas).puede_acceder(_contexto().perfil.id, "croco-script")
+
     @app.context_processor
     def _globales():
         # Las páginas de cuenta no tienen contexto educativo.
@@ -474,7 +482,8 @@ def create_app(token=None):
             "estado": _estado(),
             "perfil": contexto.perfil.display_name,
             "cuenta_email": contexto.cuenta.email,
-            "croco_configurado": bool((app.config.get("FEDERACION") or {}).get("croco-script")),
+            "croco_configurado": _croco_configurado(),
+            "croco_con_acceso": _croco_con_acceso() if _croco_configurado() else False,
             "cuenta_role": contexto.cuenta.role,
             "cuenta_csrf": request.cookies.get("tortu_csrf", ""),
             "avisos_pendientes": avisos,
@@ -670,8 +679,16 @@ def create_app(token=None):
         # ADR-005: se pregunta después de usar el producto: como mucho una encuesta por curso terminado
         terminados = sum(1 for c in camino if c["completo"])
         encuesta = intereses.pendiente(p, "curso-terminado", cupo=terminados) if terminados else None
-        return render_template("inicio.html", camino=camino, actual=motor.leccion_actual(camino),
-                               regreso=progreso.regreso(p), encuesta=encuesta)
+        actual = motor.leccion_actual(camino)
+        return render_template("inicio.html", camino=camino, actual=actual, regreso=progreso.regreso(p),
+                               encuesta=encuesta, siguiente_paso=_siguiente_paso_croco(terminaste=actual is None))
+
+    def _siguiente_paso_croco(terminaste):
+        """La tarjeta «Siguiente paso: Croco-Script» del inicio (ADR-037), o None si el puente no está configurado.
+        El acceso se decide acá, en servidor: la plantilla solo elige el texto y el destino."""
+        if not _croco_configurado():
+            return None
+        return {"con_acceso": _croco_con_acceso(), "terminaste": terminaste}
 
     @app.get("/aprender")
     def aprender():
