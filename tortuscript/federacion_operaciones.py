@@ -109,7 +109,8 @@ class OperacionesCroco:
             return False
         if not isinstance(intentos, int) or isinstance(intentos, bool) or intentos < 1:
             return False
-        return isinstance(creada, str) and bool(creada)
+        estado = entrada.get("estado", "pendiente")
+        return isinstance(creada, str) and bool(creada) and estado in ("pendiente", "conflicto_409")
 
     def _escribir(self, pendientes: list) -> None:
         self.archivo.parent.mkdir(parents=True, exist_ok=True)
@@ -138,6 +139,20 @@ class OperacionesCroco:
                 cola.append(entrada)
             self._escribir(cola)
 
+    def _encolar_conflicto(self, accion: str, cuenta: str, perfil: str | None) -> None:
+        """Conserva una operación rechazada por conflicto de propiedad sin reintentarla a ciegas."""
+        with _CANDADO:
+            cola = self._leer()
+            entrada = next((e for e in cola if e.get("accion") == accion and
+                            e.get("cuenta") == cuenta and e.get("perfil") == perfil), None)
+            if entrada is None:
+                entrada = {"accion": accion, "cuenta": cuenta, "perfil": perfil, "intentos": 1,
+                           "creada": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+                cola.append(entrada)
+            entrada["estado"] = "conflicto_409"
+            entrada["ultimo_error"] = "perfil_de_otra_cuenta"
+            self._escribir(cola)
+
     # ── interfaz ──
     def solicitar(self, accion: str, cuenta: str, perfil: str | None = None) -> bool:
         """Pide borrar. True si Croco-Script confirmó; False si quedó en cola. Nunca lanza: borrar acá ya ocurrió."""
@@ -152,8 +167,12 @@ class OperacionesCroco:
             logger.info("Croco-Script confirmó %s", accion)
             return True
         if estado == 409:
-            logger.error("Croco-Script rechazó %s: el perfil pertenece a otra cuenta. No se reintenta.", accion)
-            return True
+            logger.error("Croco-Script rechazó %s por conflicto de propiedad; se conserva para revisión manual.", accion)
+            try:
+                self._encolar_conflicto(accion, cuenta, perfil)
+            except OSError:
+                logger.error("No se pudo conservar el conflicto de la operación %s", accion, exc_info=True)
+            return False
         if estado is not None:
             logger.warning("Croco-Script respondió %s a %s; queda en cola", estado, accion)
         try:
@@ -172,6 +191,9 @@ class OperacionesCroco:
             return 0
         hechos, restantes = 0, []
         for posicion, entrada in enumerate(cola):
+            if entrada.get("estado", "pendiente") == "conflicto_409":
+                restantes.append(entrada)
+                continue
             if posicion >= MAXIMO_POR_PASADA:
                 restantes.append(entrada)
                 continue
@@ -179,8 +201,13 @@ class OperacionesCroco:
                 estado, _ = self._enviar(entrada["accion"], entrada["cuenta"], entrada.get("perfil"))
             except (OSError, KeyError, federacion.FederacionError):
                 estado = None
-            if estado in (200, 409):
+            if estado == 200:
                 hechos += 1
+                continue
+            if estado == 409:
+                entrada["estado"] = "conflicto_409"
+                entrada["ultimo_error"] = "perfil_de_otra_cuenta"
+                restantes.append(entrada)
                 continue
             entrada["intentos"] = int(entrada.get("intentos", 1)) + 1
             restantes.append(entrada)
