@@ -250,7 +250,7 @@ def _croco_configurado():
 
 
 def _concepto_de_orden(orden):
-    return "inscripcion" if orden["meses"] == pagos.MESES_DE_LA_INSCRIPCION else "cuota"
+    return "inscripcion" if orden["concepto"] == "inscripcion" else "cuota"
 
 
 @bp.get("/suscripcion/qr/<producto>/<concepto>.png")
@@ -336,7 +336,7 @@ def _operar_orden(operacion, aviso=None):
         return jsonify(ok=False, mensaje=str(exc)), 400
     if request.form:
         return redirect(url_for("cuenta.suscripcion", ok=aviso) if aviso else url_for("cuenta.suscripcion"))
-    publica = {k: orden[k] for k in ("id", "producto", "medio", "importe_centavos", "moneda", "dias", "meses", "referencia", "estado")}
+    publica = {k: orden[k] for k in ("id", "producto", "medio", "importe_centavos", "moneda", "dias", "meses", "concepto", "referencia", "estado")}
     return jsonify(ok=True, orden=publica)
 
 
@@ -354,7 +354,7 @@ def crear_orden_de_pago():
             raise pagos.PagoError("Ese plan no está disponible en esta instalación.")
         cobro = servicio.cobro_para(plan, cuenta_id)           # inscripción la primera vez, mantenimiento después
         return servicio.crear_orden(cuenta_id, plan["producto"], datos.get("medio"), cobro["importe_centavos"],
-                                    oferta.moneda, 30 * cobro["meses"], meses=cobro["meses"])
+                                    oferta.moneda, 30 * cobro["meses"], meses=cobro["meses"], concepto=cobro["concepto"])
     return _operar_orden(crear)
 
 

@@ -57,7 +57,7 @@ class TestCiclo(unittest.TestCase):
         primero, ultimo, corte = pagos.periodo_que_cubre_un_pago(ahora, None, 1)
         self.assertEqual((primero, ultimo, corte), ((2026, 11), (2026, 11), datetime(2026, 12, 11, tzinfo=AR)))
         _, ultimo, corte = pagos.periodo_que_cubre_un_pago(ahora, None, pagos.MESES_DE_LA_INSCRIPCION)
-        self.assertEqual((ultimo, corte), ((2026, 12), datetime(2027, 1, 11, tzinfo=AR)))
+        self.assertEqual((ultimo, corte), ((2026, 11), datetime(2026, 12, 11, tzinfo=AR)))
         # Con acceso vigente hasta el 10/12 (noviembre pago), pagar en la ventana cubre diciembre.
         _, ultimo, _ = pagos.periodo_que_cubre_un_pago(datetime(2026, 12, 3, tzinfo=AR), pagos.corte_del_mes((2026, 11)), 1)
         self.assertEqual(ultimo, (2026, 12))
@@ -116,30 +116,30 @@ class TestInscripcionYCuota(unittest.TestCase):
 
     def test_la_primera_vez_se_cobra_la_inscripcion_y_despues_la_cuota(self):
         primero = self.pagar(datetime(2026, 11, 5, 12, tzinfo=AR))
-        self.assertEqual((primero["concepto"], primero["importe_legible"], primero["meses"]), ("inscripcion", "$ 30.000", 2))
+        self.assertEqual((primero["concepto"], primero["importe_legible"], primero["meses"]), ("inscripcion", "$ 30.000", 1))
         self.assertEqual(self.servicio.cobro_para(self.plan, self.cuenta)["concepto"], "mensual")
         self.assertEqual(self.servicio.cobro_para(self.plan, self.cuenta)["importe_legible"], "$ 15.000")
 
     def test_sin_inscripcion_configurada_todo_es_el_mensual(self):
         self.assertEqual(self.servicio.cobro_para(oferta(inscripcion_centavos=0).plan(PREMIUM), self.cuenta)["concepto"], "mensual")
 
-    def test_la_inscripcion_cubre_dos_meses_y_el_11_se_corta(self):
-        self.pagar(datetime(2026, 11, 5, 12, tzinfo=AR))                     # inscripción: noviembre y diciembre
+    def test_la_inscripcion_cubre_solo_el_mes_en_vigencia_y_el_11_se_corta(self):
+        self.pagar(datetime(2026, 11, 28, 12, tzinfo=AR))                    # inscripción el 28: cubre noviembre
         t = lambda *a: datetime(*a, tzinfo=AR)                                # noqa: E731
         self.assertTrue(self.cuentas.tiene_entitlement(self.cuenta, PREMIUM))
-        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2026, 12, 20, 12))
+        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2026, 11, 29, 12))
         self.assertEqual((e["al_dia"], e["cuota_pagada"], e["debe_pagar"]), (True, True, False))
-        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2027, 1, 5, 12))
+        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2026, 12, 5, 12))
         self.assertEqual((e["al_dia"], e["cuota_pagada"], e["debe_pagar"], e["dias_para_pagar"]), (True, False, True, 6))
-        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2027, 1, 10, 23, 59))
+        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2026, 12, 10, 23, 59))
         self.assertEqual((e["al_dia"], e["dias_para_pagar"]), (True, 1))
-        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2027, 1, 11, 0, 1))
+        e = self.servicio.estado_cuota(self.cuenta, PREMIUM, t(2026, 12, 11, 0, 1))
         self.assertEqual((e["al_dia"], e["vencida"], e["debe_pagar"]), (False, True, True))
 
     def test_el_acceso_se_corta_en_la_base_el_11(self):
         self.pagar(datetime(2026, 11, 5, 12, tzinfo=AR))
         from unittest import mock
-        corte = pagos.corte_del_mes((2026, 12))
+        corte = pagos.corte_del_mes((2026, 11))
         with mock.patch("tortuscript.cuentas.datetime") as reloj:
             reloj.now.return_value = corte - timedelta(minutes=1)
             reloj.fromisoformat = datetime.fromisoformat
@@ -240,7 +240,7 @@ class TestPantallaDePago(_ConPuerta):
 
     def test_la_orden_de_inscripcion_muestra_su_boton_y_su_qr(self):
         orden = self.abrir_orden()
-        self.assertEqual((orden["importe_centavos"], orden["meses"]), (3000000, 2))
+        self.assertEqual((orden["importe_centavos"], orden["meses"]), (3000000, 1))
         pagina = self.c.get("/cuenta/suscripcion").get_data(as_text=True)
         self.assertIn("Inscripción", pagina)
         self.assertIn("$ 30.000", pagina)
@@ -251,7 +251,7 @@ class TestPantallaDePago(_ConPuerta):
     def test_la_cuota_usa_el_enlace_de_la_cuota(self):
         orden = self.abrir_orden()
         pagos.ServicioPagos(self.tmp / "cuentas.sqlite3").confirmar_orden(orden["id"])
-        # La inscripción cubre este mes y el siguiente: la cuota recién se pide dentro de dos meses.
+        # La inscripción cubre solo el mes en vigencia: la cuota de ese mes ya está paga.
         r = self.c.post("/cuenta/suscripcion/orden", json={"producto": PREMIUM, "medio": "transferencia"},
                         headers={"X-Tortu-CSRF": self.csrf})
         self.assertEqual(r.status_code, 400)

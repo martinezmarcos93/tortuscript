@@ -53,7 +53,7 @@ Croco-Script (nivel avanzado, 16–20 años): cursos `python-datos` (57 tareas),
 ## Cómo funciona el ciclo (implementado)
 - **Cuota del mes M:** se paga del 1 al 10 de M y cubre hasta el 10 del mes M+1 inclusive. El 11 a las 00:00 **hora de Argentina**
   se corta (`entitlements.expires_at`); Croco-Script se entera por `Entitlement.v1` en menos de 5 minutos.
-- **Inscripción:** cubre **dos meses** (el actual y el siguiente), igual que dos cuotas (30.000 = 2 × 15.000; 60.000 = 2 × 30.000).
+- **Inscripción:** cubre **solo el mes en vigencia**, sea cual sea el día en que se paga (decisión de Marcos, 11/10/2026); después se paga la cuota del 1 al 10 como cualquiera.
   La primera cuota se paga del 1 al 10 del mes que sigue a esos dos. *(Supuesto de implementación: confirmar con Marcos.)*
 - **Pagar tarde** está permitido: quien paga el día 15 cubre el mes en curso (no se cobran meses sin acceso). **Pagar por adelantado
   más allá del mes en curso no**: si la cuota de este mes ya está paga, la orden siguiente se abre el día 1.

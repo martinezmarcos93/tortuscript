@@ -84,7 +84,7 @@
       <p role="status"><b>Te quedan {{ plan.cuota.dias_para_pagar }} día{{ "s" if plan.cuota.dias_para_pagar != 1 }} para pagar la cuota de este mes</b> (hasta el 10 inclusive). Si no está paga el 11, se pausa el acceso.</p>
       {% endif %}
       {% if plan.cobro.concepto == 'inscripcion' %}
-      <p><b>Inscripción: {{ plan.cobro.importe_legible }}</b> ({{ oferta.moneda }}). Cubre este mes y el que viene. Después, la cuota es de <b>{{ plan.oferta.importe_legible }}</b> por mes, del 1 al 10.</p>
+      <p><b>Inscripción: {{ plan.cobro.importe_legible }}</b> ({{ oferta.moneda }}). Cubre el mes en curso, sea cual sea el día en que pagás. Después, la cuota es de <b>{{ plan.oferta.importe_legible }}</b> por mes, del 1 al 10.</p>
       {% else %}
       <p><b>Cuota mensual: {{ plan.cobro.importe_legible }}</b> ({{ oferta.moneda }}). Se paga del 1 al 10 de cada mes.</p>
       {% endif %}

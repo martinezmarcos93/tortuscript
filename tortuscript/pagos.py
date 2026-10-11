@@ -41,12 +41,12 @@ DIAS_DE_GRACIA = 7
 
 # ── Ciclo mensual por calendario (ADR-050) ──
 # La cuota de un mes se paga del 1 al 10 de ese mes y cubre hasta el día 10 del mes siguiente. El día 11 a las 00:00
-# (hora de Argentina) se corta el acceso premium si la cuota del mes no está paga. La inscripción cubre dos meses
-# (el actual y el siguiente): vale el doble de la cuota. Se puede pagar tarde (el mes que se paga queda cubierto), pero
+# (hora de Argentina) se corta el acceso premium si la cuota del mes no está paga. La inscripción cubre solo el mes en
+# vigencia, sea cual sea el día en que se paga; después se paga la cuota del 1 al 10. Se puede pagar tarde (el mes que se paga queda cubierto), pero
 # no por adelantado más allá del mes en curso.
 ZONA_HORARIA = ZoneInfo("America/Argentina/Buenos_Aires")
 ULTIMO_DIA_DE_PAGO = 10
-MESES_DE_LA_INSCRIPCION = 2
+MESES_DE_LA_INSCRIPCION = 1
 MESES_DE_LA_CUOTA = 1
 
 
@@ -381,6 +381,7 @@ class ServicioPagos:
                         currency TEXT NOT NULL,
                         days INTEGER NOT NULL CHECK (days > 0),
                         months INTEGER NOT NULL DEFAULT 1,
+                        concept TEXT NOT NULL DEFAULT 'mensual',
                         reference TEXT NOT NULL UNIQUE,
                         status TEXT NOT NULL CHECK (status IN ('pendiente','informada','confirmada','rechazada','cancelada')),
                         created_at TEXT NOT NULL,
@@ -391,6 +392,8 @@ class ServicioPagos:
                     )""")
                 if "months" not in {r["name"] for r in con.execute("PRAGMA table_info(payment_orders)")}:
                     con.execute("ALTER TABLE payment_orders ADD COLUMN months INTEGER NOT NULL DEFAULT 1")
+                if "concept" not in {r["name"] for r in con.execute("PRAGMA table_info(payment_orders)")}:
+                    con.execute("ALTER TABLE payment_orders ADD COLUMN concept TEXT NOT NULL DEFAULT 'mensual'")
                 con.execute("CREATE INDEX IF NOT EXISTS idx_payment_orders_account ON payment_orders(account_id, created_at)")
                 # Como mucho una orden abierta por cuenta y producto: pedirla dos veces devuelve la misma.
                 con.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_orders_abierta
@@ -495,7 +498,7 @@ class ServicioPagos:
     def _orden(fila) -> dict:
         return {"id": fila["id"], "cuenta": fila["account_id"], "producto": fila["product"], "medio": fila["method"],
                 "importe_centavos": fila["amount_cents"], "importe_legible": importe_legible(fila["amount_cents"]),
-                "moneda": fila["currency"], "dias": fila["days"], "meses": fila["months"],
+                "moneda": fila["currency"], "dias": fila["days"], "meses": fila["months"], "concepto": fila["concept"],
                 "referencia": fila["reference"], "estado": fila["status"], "creada": fila["created_at"],
                 "informada": fila["informed_at"], "resuelta": fila["resolved_at"], "nota": fila["payer_note"],
                 "nota_operador": fila["operator_note"]}
@@ -558,7 +561,8 @@ class ServicioPagos:
                 "importe_centavos": plan["importe_centavos"], "importe_legible": plan["importe_legible"]}
 
     def crear_orden(self, account_id: str, producto: str, medio: str, importe_centavos: int, moneda: str,
-                    dias: int, ahora: datetime | None = None, meses: int = MESES_DE_LA_CUOTA) -> dict:
+                    dias: int, ahora: datetime | None = None, meses: int = MESES_DE_LA_CUOTA,
+                    concepto: str = "mensual") -> dict:
         """Orden pendiente para pagar `producto`. Si la cuenta ya tiene una abierta para ese producto, devuelve esa."""
         definicion = medio_de_pago(medio)
         if definicion is None:
@@ -570,6 +574,8 @@ class ServicioPagos:
         if type(importe_centavos) is not int or importe_centavos <= 0 or type(dias) is not int or dias <= 0 \
                 or type(meses) is not int or not 1 <= meses <= 12:
             raise PagoError("El importe y la duración de la orden no son válidos.")
+        if concepto not in ("inscripcion", "mensual"):
+            raise PagoError("El concepto de la orden no es válido.")
         ahora = ahora or datetime.now(timezone.utc)
         if self.estado_cuota(account_id, producto, ahora)["cuota_pagada"]:
             raise PagoError("La cuota de este mes ya está paga. La del mes que viene se paga del 1 al 10.")
@@ -587,8 +593,8 @@ class ServicioPagos:
                     referencia = "TS-" + "".join(secrets.choice(_ALFABETO_REFERENCIA) for _ in range(6))
                     con.execute(
                         """INSERT INTO payment_orders(id,account_id,product,method,amount_cents,currency,days,months,
-                                                      reference,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                        (orden_id, account_id, producto, medio, importe_centavos, moneda, dias, meses, referencia,
+                                                      concept,reference,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        (orden_id, account_id, producto, medio, importe_centavos, moneda, dias, meses, concepto, referencia,
                          ORDEN_PENDIENTE, _iso(ahora)))
                     abierta = con.execute("SELECT * FROM payment_orders WHERE id=?", (orden_id,)).fetchone()
                 con.execute("COMMIT")
