@@ -68,15 +68,29 @@ class OperacionesCroco:
             return estado, None
 
     # ── cola ──
+    def _poner_en_cuarentena(self) -> None:
+        """Conserva una cola ilegible antes de permitir que una escritura la reemplace."""
+        marca = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        destino = self.archivo.with_name(f"{self.archivo.name}.corrupto-{marca}")
+        self.archivo.replace(destino)
+        logger.error("La cola de operaciones pendientes está dañada; se conservó en %s", destino.name)
+
     def _leer(self) -> list:
         try:
-            datos = json.loads(self.archivo.read_text(encoding="utf-8"))
+            contenido = self.archivo.read_text(encoding="utf-8")
         except FileNotFoundError:
             return []
-        except (OSError, ValueError):
-            logger.error("La cola de operaciones pendientes está dañada: %s", self.archivo.name, exc_info=True)
+        # Otros errores de E/S deben propagarse: asumir una cola vacía podría sobrescribir
+        # pedidos de supresión que no pudimos leer.
+        try:
+            datos = json.loads(contenido)
+        except ValueError:
+            self._poner_en_cuarentena()
             return []
-        return datos if isinstance(datos, list) else []
+        if not isinstance(datos, list) or any(not isinstance(e, dict) for e in datos):
+            self._poner_en_cuarentena()
+            return []
+        return datos
 
     def _escribir(self, pendientes: list) -> None:
         self.archivo.parent.mkdir(parents=True, exist_ok=True)
