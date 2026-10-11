@@ -10,7 +10,7 @@ consultan antes de fijarlos.
   a conocerlo y lleva al plan (aclara que es para 16 años o más y que lo activa un adulto); al terminar todo TortuScript pasa
   a ser la tarjeta destacada. El botón del menú de cuenta ahora dice «Conocer Croco-Script» cuando no hay acceso, en vez de
   llevar a una pantalla de «sin acceso». Sin el puente configurado no aparece nada.
-- **ADR-050 (Propuesta): qué es gratis y cuándo se pide pagar.** Plan de gratuidad y puertas de pago; no implementa nada.
+- **ADR-050 (Aceptada): qué es gratis y cuándo se pide pagar.** 19 unidades gratis, inscripción + mantenimiento mensual (la mitad) y Croco-Script con 3 niveles de prueba. Todavía no se implementa.
 - **TortuScript responde y pide lo que Croco-Script esperaba (ADR-037).** Tres contratos que faltaban de este lado:
   `GET /federacion/v1/acceso` (`Entitlement.v1`: si la cuenta conserva el acceso, para cortar sesiones abiertas),
   `GET /federacion/v1/progreso` (`ProgressQuery.v1`: el `Progress.v1` de un perfil con acceso, con los identificadores de

@@ -1,8 +1,8 @@
 # ADR-050 — Qué es gratis y cuándo se pide pagar
 
-- **Estado:** Propuesta (no autoriza implementar; la aceptan Marcos o un cambio de estado explícito)
+- **Estado:** Aceptada por Marcos el 11/10/2026 (con las decisiones de la sección «Decisiones de Marcos»)
 - **Fecha:** 2026-10-11
-- **Decide:** Marcos. Este documento propone números y deja las preguntas abiertas al final.
+- **Decide:** Marcos. Las secciones «Propuesta» son el razonamiento original; lo que rige está en «Decisiones de Marcos».
 - **Relacionadas:** ADR-019 (estados de acceso), ADR-032 (pagos y entitlements), ADR-036/037 (Croco-Script), ADR-040, ADR-047 (transferencia)
 
 ## Contexto
@@ -27,6 +27,24 @@ cada pago lo confirma una persona a mano (ADR-047).
 
 Croco-Script (nivel avanzado, 16–20 años): cursos `python-datos` (57 tareas), `orquestacion-streaming-llm` (33),
 `desarrollo-aplicaciones` y `cybersecurity-lab` (68), cada uno con su unidad inicial.
+
+## Decisiones de Marcos (11/10/2026) — lo que rige
+
+1. **Gratis: 19 unidades / 20 lecciones** (Alfabetización completa + primera unidad de Python, Web y SQL). Tienen que alcanzar para
+   enganchar al chico y convencer al adulto de que es un producto de calidad.
+2. **Una sola puerta con renovación mensual.** Modelo: **inscripción** (primer pago) y **mantenimiento mensual** de la **mitad**
+   de la inscripción: más atractivo para la familia y ingreso constante para el negocio. Importes (ARS):
+
+   | Producto | Inscripción (primer pago) | Mantenimiento mensual |
+   |---|---|---|
+   | TortuScript Premium | 30.000 | 15.000 |
+   | Croco-Script | 60.000 | 30.000 |
+
+3. **Promociones y referidos:** habrá promociones con enlaces de referido; el usuario obtiene descuentos cuando un referido paga
+   la inscripción (en TortuScript y en Croco-Script). **Diseño pendiente de análisis**, incluido el rol de la inteligencia
+   artificial; no se implementa hasta una ADR propia.
+4. **Croco-Script: sin prueba de 7 días** (demasiado). En su lugar, **prueba gratuita de los primeros 3 niveles del primer curso**.
+   Esto exige ampliar el contrato de entrada (hoy `Authorization.v1` exige `ent.activo: true`): ver «Consecuencias para Croco-Script».
 
 ## Propuesta
 
@@ -64,7 +82,7 @@ Se propone **una puerta de pago** (al terminar el tramo gratis), no repetirla ca
 5. Los umbrales viven en el **catálogo** (`estado_acceso` por unidad), no en el código: se pueden mover sin tocar el
    motor, tras ver cómo se comporta la primera cohorte.
 
-### 5. Croco-Script
+### 5. Croco-Script (reemplazado por la decisión 4: 3 niveles gratis en vez de 7 días)
 - **Sin nivel gratis en v1.** `Authorization.v1` exige `ent.activo: true`; un nivel gratis obligaría a un contrato nuevo.
 - **Prueba de 7 días** concedida como entitlement con vencimiento (ya soportado: `expires_at`), una vez por cuenta y a
   pedido del adulto. La puerta de pago de Croco-Script es su plan propio (ya existe, `TORTU_PAGO_IMPORTE_CROCO`).
@@ -81,7 +99,20 @@ Se propone **una puerta de pago** (al terminar el tramo gratis), no repetirla ca
 5. **Medición** (eventos estructurados, sin datos personales): `puerta_vista`, `puerta_clic_plan`, `pago_informado`,
    `pago_confirmado`, para validar los umbrales antes de cobrar a escala.
 
-## Qué falta decidir (Marcos)
+## Consecuencias para Croco-Script
+- Un nivel gratis significa que un perfil **sin** plan puede entrar. Hay que definir en el contrato (una versión nueva, sin romper
+  `Authorization.v1`) un acceso `gratuito` distinto de `activo`, y que Croco-Script solo abra las 3 primeras unidades del primer
+  curso y pida el plan para el resto. Hasta entonces, TortuScript no ofrece el paso a Croco-Script a cuentas sin plan salvo
+  admin.
+- Con inscripción distinta de mantenimiento, el cobro necesita saber si una cuenta **ya pagó la inscripción** (primer pago por
+  producto) para ofrecer el importe correcto; hoy `TORTU_PAGO_IMPORTE*` es un único importe por producto.
+
+## Preguntas que quedaron abiertas
+- Descuentos exactos de los referidos y su mecánica antifraude (ADR propia, después).
+- Período anual, política de reembolsos y revisión comercial/legal antes de cobrar de verdad.
+- Si la inscripción se paga de nuevo tras un tiempo largo sin renovar (hoy se asume que no: se reactiva con el mantenimiento).
+
+## Lo que se pidió decidir originalmente (histórico)
 1. ¿Confirmás **19 unidades / 20 lecciones gratis** (Alfabetización + primera unidad de cada camino)? Opciones: más cerca de
    un tercio (Alfabetización + `python-puente` solamente) o más generosa (+ el itinerario Python completo).
 2. ¿**Una puerta con renovación mensual** (recomendado) o **tres por itinerario** (alternativa B)?
