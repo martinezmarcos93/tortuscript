@@ -7,6 +7,10 @@
 - [Roadmap pedagógico adaptativo](ROADMAP_PEDAGOGIA_ADAPTATIVA.md): secuenciación, modelo de dominio, repaso adaptativo, pistas y transferencia.
 - [Roadmap Mimo para chicos](ROADMAP_MIMO_KIDS.md): auditoría histórica y base de la metodología de lecciones cortas.
 - [Flujo de ramas e integración en prod](FLUJO_DE_RAMAS_PROD.md): reglas obligatorias para el trabajo paralelo y la integración.
+- [Validación pedagógica y coordinación](VALIDACION_PEDAGOGICA_Y_COORDINACION.md): distribución de responsabilidades, reglas de ramas y puerta de integración.
+- [Baseline de pedagogía adaptativa](audits/BASELINE_PEDAGOGIA_ADAPTATIVA_2026-10-14.md): contratos y riesgos confirmados por inspección estática.
+- [Matriz de cobertura y regresión pedagógica](audits/MATRIZ_COBERTURA_REGRESION_PEDAGOGICA.md): evidencias y controles mínimos para validar cambios.
+- [Revisión de contratos de contenido y progreso](audits/REVISION_CONTRATOS_CONTENIDO_PROGRESO.md): invariantes de contenido, evaluación, progreso, XP y repaso que debe preservar cualquier cambio.
 
 ## Regla de integración para las mejoras pedagógicas
 
