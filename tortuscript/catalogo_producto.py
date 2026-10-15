@@ -8,6 +8,8 @@ import json
 from datetime import date
 from pathlib import Path
 
+from . import practica
+
 RAIZ = Path(__file__).resolve().parent.parent
 CATALOGO = RAIZ / "docs" / "catalogo_curricular_v1.json"
 MAPA = RAIZ / "contenido" / "mapa_curricular.json"
@@ -99,7 +101,7 @@ def _evidencia_lecciones(progreso, unidad_id):
     repaso = progreso.get("repaso") or {}
     claves = {f"{evidencia['curso']}:{i}" for i in lecciones}
     repasar = any(
-        item.get("proximo") and item.get("proximo") <= str(date.today())
+        (proximo := practica.fecha_programada(item)) is not None and proximo <= date.today()
         for clave, item in repaso.items()
         if clave in claves
     )
