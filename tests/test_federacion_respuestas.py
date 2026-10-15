@@ -201,10 +201,13 @@ class TestOperaciones(unittest.TestCase):
                 self.assertEqual([(e["accion"], e["cuenta"]) for e in pendientes],
                                  [("suprimir_cuenta", "acc_sintetica")])
 
-    def test_un_perfil_de_otra_cuenta_no_se_reintenta(self):
+    def test_un_perfil_de_otra_cuenta_no_se_reintenta_ni_se_da_por_borrado(self):
+        # Contrato vigente (#15): el 409 se conserva para revisión manual; ver test_federacion_conflictos.
         self.salidas = [_http_error(409)]
-        self.assertTrue(self.ops().solicitar("suprimir_perfil", "acc_1", "p1"))
-        self.assertEqual(self.ops().pendientes(), [])
+        self.assertFalse(self.ops().solicitar("suprimir_perfil", "acc_1", "p1"))
+        pendientes = self.ops().pendientes()
+        self.assertEqual([(e["accion"], e["estado"]) for e in pendientes], [("suprimir_perfil", "conflicto_409")])
+        self.assertEqual(self.ops().reintentar_pendientes(), 0)
 
     def test_exportar_devuelve_los_datos_o_el_motivo(self):
         datos = {"formato": "crocoscript-datos-de-perfil", "version": 1, "entregas": []}
