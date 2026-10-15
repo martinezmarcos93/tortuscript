@@ -68,6 +68,45 @@ class TestCursosReales(unittest.TestCase):
         self.assertEqual(ej[3]["solucion"], "edad es 12\nmostrar edad")
         self.assertEqual(ej[29]["leccion_id"], "desafio-final")
 
+    def test_identidad_y_posicion_de_los_30_ejercicios_historicos(self):
+        # El índice global de cada ejercicio "escribir" se persiste como clave del progreso.
+        # Estos pares identifican cada ejercicio sin depender del texto visible ni de su solución.
+        esperados = [
+            ("hola-mundo", 5),
+            ("texto-o-cuenta", 5),
+            ("dos-lineas", 4),
+            ("tu-primera-variable", 5),
+            ("variable-de-texto", 5),
+            ("dos-variables", 5),
+            ("pedir-el-nombre", 5),
+            ("saludo", 5),
+            ("comida-favorita", 5),
+            ("suma", 4),
+            ("resta-y-multiplicacion", 5),
+            ("sumar-variables", 4),
+            ("si-es-grande", 5),
+            ("par", 5),
+            ("par-o-impar", 5),
+            ("repetir", 5),
+            ("contador", 5),
+            ("sumar-en-un-bucle", 5),
+            ("tu-primera-funcion", 6),
+            ("funcion-con-dos-datos", 5),
+            ("funcion-que-devuelve", 5),
+            ("saludo-repetido", 4),
+            ("el-mayor", 4),
+            ("tabla-del-2", 4),
+            ("cuenta-regresiva", 5),
+            ("texto-y-numeros", 4),
+            ("solo-los-pares", 5),
+            ("contrasena", 5),
+            ("mientras", 5),
+            ("desafio-final", 4),
+        ]
+        observados = [(e["leccion_id"], e["paso"]) for e in contenido.ejercicios()]
+        self.assertEqual(observados, esperados)
+
+
     def test_cada_leccion_del_principal_tiene_practica_y_termina_escribiendo(self):
         for _, lec in contenido.lecciones(contenido.cargar_curso()):
             with self.subTest(leccion=lec["id"]):
