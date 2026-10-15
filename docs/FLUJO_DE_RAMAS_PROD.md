@@ -83,3 +83,8 @@ Hasta esa autorización, `main` no recibe estos cambios.
 ## 8. Alcance de esta política
 
 Esta política regula el ciclo de nuevas mejoras pedagógicas de TortuScript y sus documentos relacionados. No modifica retroactivamente releases ya publicadas ni autoriza cambios en otros repositorios. Cualquier extensión del flujo a otros proyectos debe indicarse expresamente.
+
+
+## 9. Excepción de bootstrap documental
+
+La creación inicial de `prod` y la incorporación de este documento, el roadmap pedagógico, el índice de roadmaps y la ADR-052 se realizaron directamente en `prod` como bootstrap documental explícitamente solicitado por Marcos. Esta excepción queda limitada a la preparación inicial de las reglas y documentos de gobierno; **no es precedente para implementar funcionalidades directamente en `prod`**. Desde este punto, todo cambio nuevo debe seguir el flujo de ramas paralelas y revisión establecido arriba.
