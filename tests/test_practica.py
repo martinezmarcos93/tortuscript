@@ -73,6 +73,55 @@ class TestElegir(unittest.TestCase):
         self.assertEqual(len(practica.elegir(p, CURSOS, HOY, cantidad=6)), 4)             # hay 4 en total
         self.assertEqual(len(practica.elegir(p, CURSOS, HOY, cantidad=3)), 3)
 
+
+class TestLimitePredeterminado(unittest.TestCase):
+    """La sesión de práctica trae a lo sumo 6 tarjetas cuando nadie pide otra cantidad (así la llama la web).
+
+    Estas pruebas NO pasan `cantidad`: fijan el valor por defecto de `practica.elegir`, que el resto de los
+    tests no cubre porque siempre lo piden explícitamente.
+    """
+    # lecciones del curso principal con 4 pasos rápidos (1..4) cada una
+    LECCIONES = ("hola-mundo", "texto-o-cuenta", "tu-primera-variable", "variable-de-texto")
+
+    def test_el_valor_predeterminado_es_seis(self):
+        self.assertEqual(practica.POR_SESION, 6)
+
+    def test_con_mas_de_seis_tarjetas_la_sesion_trae_seis_sin_repetir(self):
+        p = con_pasos(*((l, [1, 2, 3, 4]) for l in self.LECCIONES))                    # 16 tarjetas vencidas
+        self.assertEqual(practica.pendientes(p, CURSOS, HOY), 16)
+        elegidas = practica.elegir(p, CURSOS, HOY)
+        self.assertEqual(len(elegidas), 6)
+        self.assertEqual(len(set(elegidas)), 6)
+
+    def test_el_limite_se_respeta_con_variedad_a_lo_sumo_dos_por_leccion(self):
+        p = con_pasos(*((l, [1, 2, 3, 4]) for l in self.LECCIONES))
+        elegidas = practica.elegir(p, CURSOS, HOY)
+        for leccion_id in {l for l, _ in elegidas}:
+            self.assertLessEqual(sum(1 for l, _ in elegidas if l == leccion_id), 2)
+
+    def test_frontera_justo_seis_y_siete_tarjetas(self):
+        seis = con_pasos(("hola-mundo", [1, 2, 3]), ("texto-o-cuenta", [1, 2, 3]))
+        self.assertEqual(practica.pendientes(seis, CURSOS, HOY), 6)
+        self.assertEqual(len(practica.elegir(seis, CURSOS, HOY)), 6)
+        siete = con_pasos(("hola-mundo", [1, 2, 3, 4]), ("texto-o-cuenta", [1, 2, 3]))
+        self.assertEqual(practica.pendientes(siete, CURSOS, HOY), 7)
+        self.assertEqual(len(practica.elegir(siete, CURSOS, HOY)), 6)
+
+    def test_con_menos_de_seis_trae_las_que_hay(self):
+        cinco = con_pasos(("hola-mundo", [1, 2, 3]), ("texto-o-cuenta", [1, 2]))
+        self.assertEqual(len(practica.elegir(cinco, CURSOS, HOY)), 5)
+        una_leccion = con_pasos(("hola-mundo", [1, 2, 3, 4]))
+        self.assertEqual(len(practica.elegir(una_leccion, CURSOS, HOY)), 4)
+
+    def test_sin_tarjetas_vencidas_la_sesion_esta_vacia(self):
+        self.assertEqual(practica.elegir(con_pasos(), CURSOS, HOY), [])
+        recien = con_pasos(("hola-mundo", [1, 2, 3, 4]), fecha=str(HOY))               # recién hechas: tocan mañana
+        self.assertEqual(practica.elegir(recien, CURSOS, HOY), [])
+
+    def test_lo_predeterminado_equivale_a_pedir_seis(self):
+        p = con_pasos(*((l, [1, 2, 3, 4]) for l in self.LECCIONES))
+        self.assertEqual(practica.elegir(p, CURSOS, HOY), practica.elegir(p, CURSOS, HOY, cantidad=6))
+
     def test_sin_nada_pendiente(self):
         self.assertEqual(practica.elegir({}, CURSOS, HOY), [])
         self.assertEqual(practica.elegir(con_pasos(("hola-mundo", [1]), fecha=str(HOY)), CURSOS, HOY), [])
