@@ -38,18 +38,18 @@
                 "Un dispositivo físico"
               ],
               "correcta": 0,
-              "pista": "Antes de calcular, la app necesita saber qué número recibió."
+              "pista": "Una app, un juego o una calculadora siguen una lista de instrucciones."
             },
             {
               "tipo": "elegir",
-              "pregunta": "¿Qué necesita un programa para realizar una tarea?",
+              "pregunta": "¿Qué hace una computadora con las instrucciones de un programa?",
               "opciones": [
-                "Un conjunto de instrucciones para una tarea",
-                "Una red de computadoras",
-                "Un dispositivo físico"
+                "Las sigue en orden para hacer una tarea",
+                "Las ignora hasta que alguien las traduzca",
+                "Las guarda sin ejecutar nada"
               ],
               "correcta": 0,
-              "pista": "Primero llegan los datos, después se calcula y al final se muestra el resultado."
+              "pista": "Un programa es una lista de pasos que la computadora puede seguir."
             }
           ]
         },
@@ -92,7 +92,7 @@
                 "Una base de datos"
               ],
               "correcta": 0,
-              "pista": "Python es el idioma con el que se escribieron sus instrucciones."
+              "pista": "Python, JavaScript y Kotlin son lenguajes: sirven para escribir instrucciones."
             }
           ]
         },
@@ -117,14 +117,14 @@
             },
             {
               "tipo": "elegir",
-              "pregunta": "¿Qué describe mejor al código?",
+              "pregunta": "Leer código se parece a leer…",
               "opciones": [
-                "Las instrucciones escritas de un programa",
-                "El monitor",
-                "La conexión Wi-Fi"
+                "una receta: importa qué dice y en qué orden",
+                "una foto: se mira todo de una vez",
+                "un mapa: no tiene ningún orden"
               ],
               "correcta": 0,
-              "pista": "Cambiar una instrucción puede cambiar el resultado."
+              "pista": "Una receta se sigue paso a paso, igual que un programa."
             },
             {
               "tipo": "elegir",
@@ -173,9 +173,9 @@
               "tipo": "elegir",
               "pregunta": "¿Qué ocurre cuando un navegador visita un sitio?",
               "opciones": [
-                "Pedir y mostrar recursos de sitios web",
-                "Guardar toda la Internet",
-                "Crear hardware"
+                "Pide los recursos del sitio y los muestra en pantalla",
+                "Copia toda Internet en tu computadora",
+                "Convierte la página en un aparato físico"
               ],
               "correcta": 0,
               "pista": "Primero indicás qué querés visitar; después el navegador pide lo necesario."
@@ -214,14 +214,14 @@
             },
             {
               "tipo": "elegir",
-              "pregunta": "¿Qué describe mejor a Internet?",
+              "pregunta": "Mandás un mensaje desde tu celular a otro país. ¿Qué lo hace posible?",
               "opciones": [
-                "Una red de redes",
-                "Un único servidor",
-                "Un lenguaje"
+                "Muchas redes conectadas entre sí que se pasan la información",
+                "Un único servidor gigante que guarda todos los mensajes",
+                "Que los dos celulares usen el mismo navegador"
               ],
               "correcta": 0,
-              "pista": "La función principal de una red es permitir comunicación entre dispositivos."
+              "pista": "Pensá en muchas redes unidas, no en una sola máquina."
             }
           ]
         },
@@ -257,11 +257,11 @@
             },
             {
               "tipo": "elegir",
-              "pregunta": "¿Por qué un servidor necesita recibir pedidos?",
+              "pregunta": "Pedís una página y el servidor te la devuelve. ¿Qué rol cumple?",
               "opciones": [
-                "Recibir pedidos y ofrecer recursos o datos",
-                "Ser el navegador",
-                "Ser una contraseña"
+                "Responde al pedido con los recursos o datos",
+                "Hace el pedido por vos",
+                "Dibuja los botones en tu pantalla"
               ],
               "correcta": 0,
               "pista": "La respuesta del servidor llega después del pedido."
@@ -389,7 +389,7 @@
                 "Un navegador"
               ],
               "correcta": 0,
-              "pista": "\"Ana\" es información de texto."
+              "pista": "Un nombre como \"Ana\" es un dato de texto."
             },
             {
               "tipo": "elegir",
@@ -427,23 +427,23 @@
               "tipo": "elegir",
               "pregunta": "¿Qué tipo de información puede guardar una base de datos?",
               "opciones": [
-                "Información organizada que se puede guardar y consultar",
-                "Una pantalla",
-                "Un lenguaje"
+                "Productos, precios y stock de una tienda",
+                "La señal de Wi-Fi de la tienda",
+                "El color del monitor"
               ],
               "correcta": 0,
-              "pista": "La base de datos puede almacenar y devolver el precio."
+              "pista": "En la explicación: una tienda guarda productos, precios y stock."
             },
             {
               "tipo": "elegir",
               "pregunta": "¿Qué ocurre cuando un programa consulta una base de datos?",
               "opciones": [
-                "Información organizada que se puede guardar y consultar",
-                "Una pantalla",
-                "Un lenguaje"
+                "Pide información y recibe la que coincide con el pedido",
+                "Cambia el lenguaje del programa",
+                "Apaga la pantalla"
               ],
               "correcta": 0,
-              "pista": "Primero se hace el pedido y después se consulta la información."
+              "pista": "Primero se hace el pedido y después la base devuelve lo que se pidió."
             }
           ]
         },
@@ -470,9 +470,9 @@
               "tipo": "elegir",
               "pregunta": "¿Qué permite una API?",
               "opciones": [
-                "Una forma definida para que programas se comuniquen",
-                "Una base de datos",
-                "Un monitor"
+                "Que un programa pida algo a otro con reglas conocidas",
+                "Guardar información organizada en tablas",
+                "Mostrar una página al usuario"
               ],
               "correcta": 0,
               "pista": "La API permite pedir datos y recibir una respuesta del servicio."
@@ -556,9 +556,9 @@
               "tipo": "elegir",
               "pregunta": "¿Cómo se relacionan la interfaz, la lógica y los datos?",
               "opciones": [
-                "Separar y conectar responsabilidades entre interfaz, lógica y datos",
-                "Usar solo el frontend",
-                "Eliminar los datos"
+                "La interfaz inicia el pedido, la lógica lo procesa y los datos se consultan",
+                "Los tres hacen siempre lo mismo",
+                "Los datos dibujan la interfaz"
               ],
               "correcta": 0,
               "pista": "La gracia de una arquitectura es separar responsabilidades."
@@ -567,12 +567,12 @@
               "tipo": "elegir",
               "pregunta": "¿Qué recorrido puede seguir una acción dentro de una aplicación?",
               "opciones": [
-                "Programas, lenguajes, navegador, redes, servidores, frontend, backend, datos, bases, API y seguridad",
-                "Solo nombres de navegadores",
-                "Solo cómo escribir Python"
+                "Botón en la interfaz, pedido al servidor, consulta de datos y respuesta de vuelta",
+                "Los datos se dibujan solos y después aparece el botón",
+                "El monitor envía el pedido al navegador"
               ],
               "correcta": 0,
-              "pista": "Este nivel construye el mapa mental que vas a usar antes de profundizar en programación."
+              "pista": "Pensá el recorrido: tocás, se procesa, se consulta y vuelve la respuesta."
             }
           ]
         }
@@ -596,7 +596,8 @@
               "pregunta": "¿Para qué puede servir un archivo JSON?",
               "opciones": [
                 "Guardar datos estructurados que un programa puede leer",
-                "Reemplazar físicamente el teclado"
+                "Reemplazar físicamente el teclado",
+                "Conectar dos computadoras con un cable"
               ],
               "correcta": 0,
               "pista": "JSON describe datos; no es una pieza de hardware."
@@ -606,7 +607,8 @@
               "pregunta": "¿Qué representa mejor una clave en un objeto JSON?",
               "opciones": [
                 "El nombre que identifica un dato",
-                "Un programa que ejecuta instrucciones"
+                "Un programa que ejecuta instrucciones",
+                "La velocidad de la conexión"
               ],
               "correcta": 0,
               "pista": "En JSON una clave ayuda a saber qué significa un valor."
@@ -626,7 +628,8 @@
               "pregunta": "¿Para qué sirve Git?",
               "opciones": [
                 "Registrar y organizar cambios de un proyecto",
-                "Navegar por sitios web"
+                "Navegar por sitios web",
+                "Diseñar los colores de una página"
               ],
               "correcta": 0,
               "pista": "Git trabaja con la historia del código."
@@ -636,7 +639,8 @@
               "pregunta": "¿Qué es un commit?",
               "opciones": [
                 "Un registro de cambios guardado en la historia del proyecto",
-                "Una base de datos de usuarios"
+                "Una base de datos de usuarios",
+                "Un navegador para ver la historia"
               ],
               "correcta": 0,
               "pista": "Un commit deja una fotografía lógica de cambios del proyecto."
@@ -656,7 +660,8 @@
               "pregunta": "¿Qué es un repositorio en este contexto?",
               "opciones": [
                 "Un proyecto con sus archivos e historia de versiones",
-                "Un navegador instalado en la computadora"
+                "Un navegador instalado en la computadora",
+                "Un tipo de contraseña"
               ],
               "correcta": 0,
               "pista": "El repositorio reúne archivos y la historia que Git registra."
@@ -666,7 +671,8 @@
               "pregunta": "¿Qué relación tienen Git y GitHub?",
               "opciones": [
                 "Git registra versiones; GitHub puede alojar y compartir repositorios Git",
-                "Son dos lenguajes de programación"
+                "Son dos lenguajes de programación",
+                "Son el mismo programa con dos nombres"
               ],
               "correcta": 0,
               "pista": "Git es la herramienta de control de versiones; GitHub es una plataforma que trabaja con repositorios."
