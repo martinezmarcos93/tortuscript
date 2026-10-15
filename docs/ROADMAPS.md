@@ -11,6 +11,8 @@
 - [Baseline de pedagogía adaptativa](audits/BASELINE_PEDAGOGIA_ADAPTATIVA_2026-10-14.md): contratos y riesgos confirmados por inspección estática.
 - [Matriz de cobertura y regresión pedagógica](audits/MATRIZ_COBERTURA_REGRESION_PEDAGOGICA.md): evidencias y controles mínimos para validar cambios.
 - [Revisión de contratos de contenido y progreso](audits/REVISION_CONTRATOS_CONTENIDO_PROGRESO.md): invariantes de contenido, evaluación, progreso, XP y repaso que debe preservar cualquier cambio.
+- [Auditoría dinámica P0](audits/AUDITORIA_DINAMICA_P0_2026-10-14.md): línea de base ejecutada, cobertura real de cada invariante y hallazgos de contenido.
+- [Informe de integración del primer ciclo](audits/INFORME_INTEGRACION_PEDAGOGICA_2026-10-15.md): qué se integró a `prod`, validaciones, riesgos y backlog de la segunda tanda.
 
 ## Regla de integración para las mejoras pedagógicas
 
