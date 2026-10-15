@@ -1,10 +1,12 @@
-# Informe de integración — primer ciclo pedagógico (preparado, **no ejecutado**)
+# Informe de integración — primer ciclo pedagógico (**integrado a `prod`** el 15/10/2026)
 
 **Fecha:** 15/10/2026
-**Estado:** la integración a `prod` **no se hizo** y espera la autorización expresa de Marcos. `main` no se tocó.
+**Estado:** integrado a `prod` con autorización expresa de Marcos (15/10/2026). `main` no se tocó. Este informe se
+escribió como preparación y se actualizó con lo ocurrido; las secciones 1 a 8 conservan el análisis previo a la
+integración, la §11 registra la integración real.
 **Base:** `origin/prod` en `2ac6b2a`.
-**Combinación candidata:** rama `candidata/pedagogia-2026-10-15` (fusiona los cinco cambios de §1 sobre `prod` con
-`--no-ff`, sin conflictos). Existe solo para validar; no es una rama de integración.
+**Combinación candidata:** rama `candidata/pedagogia-2026-10-15` (cinco cambios fusionados con `--no-ff`, sin conflictos),
+usada solo para validar.
 
 > Convención: **[EJECUTADO]** salida real obtenida; **[ESTÁTICO]** lectura sin ejecutar; **[NO VERIFICADO]** no
 > comprobable en este entorno.
@@ -204,3 +206,36 @@ Cualquier cambio posterior que toque código, contenido o tests obliga a repetir
 - Ramas y PR: #19, #20, #21, #23 (míos), #18 (ChatGPT, borrador). Ninguno fusionado.
 - `prod` sigue en `2ac6b2a`; `main` sigue en `717d621`. Ninguna rama fue borrada.
 - Candidata: `4e131d8` con suite completa; ramas posteriores solo suman documentación (§8-bis). El #24 no está en la candidata.
+
+## 11. Integración realizada (15/10/2026)
+
+Con autorización expresa de Marcos, en este orden y con `merge` revisable (`gh pr merge --merge`):
+
+| Orden | PR | Merge en `prod` |
+|---|---|---|
+| 1 | #19 test del 409 | `b8fc40c` |
+| 2 | #23 identidad de los 30 ejercicios | `9fb0ecc` |
+| 3 | #20 contenido de alfabetización digital | `f692900` |
+| 4 | #18 matriz y revisión de ChatGPT (sacado de borrador tras revisarlo) | `91b5732` |
+| 5 | #21 esta auditoría e informes | ver `git log --first-parent prod` |
+
+El #24 **no** se integró (decisión de Marcos): sigue abierto como auditoría complementaria; su backlog está en §5-bis.
+
+### Condiciones de §9 resueltas antes de integrar
+- **Autorización de Marcos:** otorgada.
+- **Recorrido en navegador real [EJECUTADO]:** Playwright se instaló en un entorno aparte, fuera del proyecto (el repo no
+  cambió). Con `servidor_de_prueba.py --todo-desbloqueado` y `jugar_cursos.py`:
+  `alfabetizacion-digital`: 16 lecciones, 61 pasos, **sin errores de consola**; los nueve cursos: **108/108 lecciones, 541
+  pasos, XP 4520, sin errores de consola**. Se corrió sobre la candidata `b4d75cf`, cuyo contenido es el integrado.
+- **Revisión humana del texto del #20:** Marcos autorizó la integración conociendo el contenido; la revisión pedagógica
+  paso a paso fue la descrita en §4.
+- **Índice de documentación:** `docs/ROADMAPS.md` ahora enlaza la auditoría P0 y este informe.
+
+### Hallazgo durante la integración
+Existe la rama `test/proteger-identidad-ejercicios-historicos` (commit `6cf738c`, 14/10, sin PR), anterior al #23. Contiene
+**un solo test con los mismos 30 pares** (comparados uno por uno: idénticos) y confirma de forma independiente la
+fotografía. Está **redundante** con el #23 ya integrado y entraría en conflicto en `tests/test_contenido.py`. No se
+fusionó ni se borró (no es una rama integrada); queda a decisión de Marcos.
+
+### Verificación posterior a la integración
+Ver §12.
