@@ -17,6 +17,7 @@
 | #20 | `feature/alfabetizacion-preguntas-coherentes` | `8c0bca1` | Corrige 19 pasos `elegir` de `alfabetizacion-digital` (preguntas incoherentes, pistas, distractores, 6 preguntas de 2 opciones). | `contenido/cursos/alfabetizacion-digital.json` |
 | #23 | `test/identidad-ejercicios-historicos` | `e6b3b7a` | Fija los 30 pares `(leccion_id, paso)` de los `escribir` históricos de `primeros-pasos` (2 tests nuevos). | `tests/test_contenido.py` |
 | #21 | `docs/auditoria-dinamica-pedagogica` | `deac677` (+ ajuste de referencia) | Auditoría P0 (segunda pasada), este informe y entradas del CHANGELOG. | `docs/audits/…`, `CHANGELOG.md` |
+| #24 | `docs/revision-regresiones-contratos` (borrador, de ChatGPT) | `076580d` | Revisión estática de brechas de regresión (progreso, XP, migración, repaso). **Fuera de la candidata por decisión de Marcos**; se mantiene abierto y sus hallazgos pasan al backlog (§5-bis). | `docs/audits/REVISION_REGRESIONES_CONTRATOS_2026-10-15.md` |
 | #18 | `docs/validacion-pedagogica-chatgpt` (borrador, de ChatGPT) | `8803c50` | Matriz de cobertura y revisión de contratos (estáticas). **No lo marqué como listo ni lo modifiqué.** | `docs/audits/MATRIZ_…`, `REVISION_…`, `docs/ROADMAPS.md` |
 
 ## 2. Diff y conflictos semánticos
@@ -35,7 +36,7 @@
 
 ## 3. Resultados de pruebas
 
-### Combinación candidata (`4e131d8` + este informe, solo documentación)
+### Combinación candidata (suite completa sobre `4e131d8`; ediciones posteriores solo documentación, ver §8-bis)
 | Comando | Resultado |
 |---|---|
 | `python -m unittest discover -s tests -v` | **[EJECUTADO]** 1017 tests, **OK**, 0 fallos, 0 errores, 2 omitidos (≈273 s) |
@@ -118,6 +119,24 @@ con claves históricas.
 `navegador` 2–3, `servidor` 2–3 y `lenguaje` 1–3 preguntan lo mismo con otras palabras. Requiere diseño pedagógico
 (un ángulo distinto con el mismo tipo `elegir`, p. ej. escenarios), no es corrección de errores.
 
+### 5-bis. Backlog de segunda tanda (origen: PR #24, fuera de esta candidata)
+
+El #24 es **inspección estática**. Contrasté sus cuatro hallazgos ejecutando casos mínimos sobre `prod` (solo lectura;
+scripts descartables, sin tocar el repo). Es evidencia puntual, no una suite:
+
+| Hallazgo del #24 | Prioridad | Resultado de mi comprobación [EJECUTADO] | Acción |
+|---|---|---|---|
+| Registros internos dañados (`lecciones[id].pasos` con clave no entera) | Alta | **Reproducido**: `practica.candidatos` lanza `ValueError: invalid literal for int()` sobre un perfil que pasa `_migrar`. | Primero tests que fijen la política (descartar el registro o normalizar en la migración), luego el cambio |
+| Registros internos dañados (`repaso`) | Alta | **Reproducido en dos de cuatro casos**: `proximo` inválido → `ValueError: Invalid isoformat string`; tarjeta que no es dict → `AttributeError`. Con `caja` no entera o fuera de rango **no** hay excepción (`candidatos` y `elegir` devuelven resultado) | Igual que arriba; definir qué hace con `caja` fuera de rango |
+| XP guardado de un ejercicio puede retroceder | Media (invariante) | **Reproducido solo con entrada artificial**: `(2★, 20 XP)` y luego `(3★, 10 XP)` deja el `xp` almacenado en 10 y el total en 20 (no baja). La secuencia siguiente `(3★, 30 XP)` no concede XP extra (no hay mejora de estrellas). No se demostró duplicación de XP. La tabla de premios actual hace improbable el caso | Test del invariante «el XP histórico no retrocede»; decidir y documentar la política antes de cambiar código |
+| Matriz de migración por versión | Media | Ya propuesta como **T4** (mi evidencia ad hoc coincide) | Trabajo separado con fixtures |
+| Límite por defecto de 6 tarjetas | Baja | Ya propuesto como **T5**: ningún test referencia `POR_SESION` | Test directo llamando a `practica.elegir(...)` sin `cantidad` |
+
+**Alcance de la segunda tanda:** ninguna de estas correcciones toca contenido ni depende de la ADR-052, pero sí cambia
+`progreso.py`/`practica.py`; por eso van con tests primero, en ramas propias desde `prod`, y con su propia validación.
+Las dos primeras son robustez ante archivos de progreso editados a mano o dañados que siguen siendo JSON válido, un
+caso distinto del JSON corrupto que ya está cubierto.
+
 ### Riesgos residuales del lote actual
 1. Sin recorrido en navegador real: el sustituto HTTP no valida DOM ni JS de página (los tests JS de la suite sí corren).
 2. No hay medición con alumnos: se corrigieron defectos objetivos, no se demuestra mejora de aprendizaje.
@@ -160,6 +179,16 @@ migración y la de límite de sesión, y marcar la brecha de los 30 ejercicios c
 Integrar uno por uno con `merge` revisable y repetir `discover -s tests` + validador tras el último. Reversión: cada PR
 es revertible por separado (`git revert -m 1 <merge>`) porque no se solapan.
 
+## 8-bis. Qué se validó y cuándo
+
+| Estado de la candidata | Qué se ejecutó |
+|---|---|
+| `4e131d8` (cinco merges, sin este informe) | **Suite completa** (1017 tests, OK), validador, recorrido HTTP, comparación estructural de cursos |
+| `15f80c5` (+ informe y corrección de §4.2, solo `docs/audits/`) | `test_coherencia_repo` (8, OK), `test_contenido` OK, validador exit 0. **La suite completa no se repitió**: la diferencia con `4e131d8` es únicamente documentación |
+| Candidata tras las últimas ediciones de esta sección | Se repite la misma validación rápida que en `15f80c5` (ver §10) |
+
+Cualquier cambio posterior que toque código, contenido o tests obliga a repetir la suite completa.
+
 ## 9. Condiciones que todavía impiden dar el visto bueno
 1. **Autorización expresa de Marcos** para fusionar a `prod`.
 2. **PR #18 en borrador:** hasta que ChatGPT lo marque listo, la puerta del documento de coordinación no se cumple.
@@ -167,11 +196,11 @@ es revertible por separado (`git revert -m 1 <merge>`) porque no se solapan.
    Playwright (dependencia opcional, no está en `requirements.txt`) para correr `jugar_cursos.py alfabetizacion-digital`.
 4. **Revisión humana del texto del #20:** la revisión pedagógica fue mía; conviene que Marcos o quien enseñe valide
    el vocabulario y los distractores antes de publicar.
-5. **Índice de documentación:** `docs/ROADMAPS.md` aún no enlaza la auditoría P0 ni este informe; añadirlo tras
+5. **Decisión sobre el #24:** queda fuera; mantenerlo abierto como auditoría complementaria (§5-bis).
+6. **Índice de documentación:** `docs/ROADMAPS.md` aún no enlaza la auditoría P0 ni este informe; añadirlo tras
    integrar #18 para no generar conflicto.
 
 ## 10. Trazabilidad
 - Ramas y PR: #19, #20, #21, #23 (míos), #18 (ChatGPT, borrador). Ninguno fusionado.
 - `prod` sigue en `2ac6b2a`; `main` sigue en `717d621`. Ninguna rama fue borrada.
-- Candidata validada: `4e131d8` (suite completa). Las ediciones posteriores de la candidata son solo este informe y
-  la corrección de §4.2 del informe P0; se revalidaron los tests rápidos relacionados (§3).
+- Candidata: `4e131d8` con suite completa; ramas posteriores solo suman documentación (§8-bis). El #24 no está en la candidata.
