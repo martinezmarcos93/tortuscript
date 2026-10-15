@@ -16,7 +16,7 @@
 | #19 | `fix/test-409-contrato-obsoleto` | `acea87a` | Alinea un test obsoleto con el contrato del #15 (el 409 se conserva en cola y no se da por borrado ni se reintenta). Solo test. | `tests/test_federacion_respuestas.py` |
 | #20 | `feature/alfabetizacion-preguntas-coherentes` | `8c0bca1` | Corrige 19 pasos `elegir` de `alfabetizacion-digital` (preguntas incoherentes, pistas, distractores, 6 preguntas de 2 opciones). | `contenido/cursos/alfabetizacion-digital.json` |
 | #23 | `test/identidad-ejercicios-historicos` | `e6b3b7a` | Fija los 30 pares `(leccion_id, paso)` de los `escribir` históricos de `primeros-pasos` (2 tests nuevos). | `tests/test_contenido.py` |
-| #21 | `docs/auditoria-dinamica-pedagogica` | ver §10 | Auditoría P0 (segunda pasada), este informe y entradas del CHANGELOG. | `docs/audits/…`, `CHANGELOG.md` |
+| #21 | `docs/auditoria-dinamica-pedagogica` | `deac677` (+ ajuste de referencia) | Auditoría P0 (segunda pasada), este informe y entradas del CHANGELOG. | `docs/audits/…`, `CHANGELOG.md` |
 | #18 | `docs/validacion-pedagogica-chatgpt` (borrador, de ChatGPT) | `8803c50` | Matriz de cobertura y revisión de contratos (estáticas). **No lo marqué como listo ni lo modifiqué.** | `docs/audits/MATRIZ_…`, `REVISION_…`, `docs/ROADMAPS.md` |
 
 ## 2. Diff y conflictos semánticos
