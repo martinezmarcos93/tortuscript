@@ -68,6 +68,36 @@ class TestCursosReales(unittest.TestCase):
         self.assertEqual(ej[3]["solucion"], "edad es 12\nmostrar edad")
         self.assertEqual(ej[29]["leccion_id"], "desafio-final")
 
+    # Fotografía de la v1.0.0 (idéntica en la rama de backup). Para el motor, la identidad PERSISTIDA de cada
+    # ejercicio histórico es solo su índice 0..29 en `ejercicios()` (clave de `progreso["ejercicios"]`); lo que
+    # ata ese índice a un contenido es el par (leccion_id, paso), y `paso` es además la clave de
+    # `progreso["lecciones"][id]["pasos"]`. Si este test falla, un cambio movió, insertó o quitó un `escribir`
+    # histórico y el progreso guardado de los chicos quedaría apuntando a otro ejercicio: migrar antes de tocar.
+    EJERCICIOS_HISTORICOS = (
+        ("hola-mundo", 5), ("texto-o-cuenta", 5), ("dos-lineas", 4), ("tu-primera-variable", 5),
+        ("variable-de-texto", 5), ("dos-variables", 5), ("pedir-el-nombre", 5), ("saludo", 5),
+        ("comida-favorita", 5), ("suma", 4), ("resta-y-multiplicacion", 5), ("sumar-variables", 4),
+        ("si-es-grande", 5), ("par", 5), ("par-o-impar", 5), ("repetir", 5), ("contador", 5),
+        ("sumar-en-un-bucle", 5), ("tu-primera-funcion", 6), ("funcion-con-dos-datos", 5),
+        ("funcion-que-devuelve", 5), ("saludo-repetido", 4), ("el-mayor", 4), ("tabla-del-2", 4),
+        ("cuenta-regresiva", 5), ("texto-y-numeros", 4), ("solo-los-pares", 5), ("contrasena", 5),
+        ("mientras", 5), ("desafio-final", 4)
+    )
+
+    def test_los_30_ejercicios_historicos_conservan_leccion_y_paso(self):
+        actual = tuple((e["leccion_id"], e["paso"]) for e in contenido.ejercicios())
+        self.assertEqual(len(self.EJERCICIOS_HISTORICOS), 30)
+        for indice, (esperado, obtenido) in enumerate(zip(self.EJERCICIOS_HISTORICOS, actual)):
+            with self.subTest(indice=indice):
+                self.assertEqual(obtenido, esperado, f"el ejercicio histórico {indice} cambió de lugar")
+        self.assertEqual(actual, self.EJERCICIOS_HISTORICOS)
+
+    def test_el_indice_de_cada_ejercicio_historico_se_resuelve_por_su_paso(self):
+        # `indices_ejercicio` es el puente paso -> clave del progreso: debe invertir exactamente la fotografía.
+        for indice, (leccion_id, paso) in enumerate(self.EJERCICIOS_HISTORICOS):
+            with self.subTest(indice=indice):
+                self.assertEqual(contenido.indices_ejercicio(leccion_id)[paso], indice)
+
     def test_cada_leccion_del_principal_tiene_practica_y_termina_escribiendo(self):
         for _, lec in contenido.lecciones(contenido.cargar_curso()):
             with self.subTest(leccion=lec["id"]):
