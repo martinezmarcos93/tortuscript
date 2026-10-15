@@ -38,14 +38,14 @@
                 "Un dispositivo físico"
               ],
               "correcta": 0,
-              "pista": "Una app, un juego o una calculadora siguen una lista de instrucciones."
+              "pista": "Pensá qué tienen en común una app, un juego y una calculadora."
             },
             {
               "tipo": "elegir",
               "pregunta": "¿Qué hace una computadora con las instrucciones de un programa?",
               "opciones": [
                 "Las sigue en orden para hacer una tarea",
-                "Las ignora hasta que alguien las traduzca",
+                "Las ignora y espera que una persona haga la tarea",
                 "Las guarda sin ejecutar nada"
               ],
               "correcta": 0,
@@ -92,7 +92,7 @@
                 "Una base de datos"
               ],
               "correcta": 0,
-              "pista": "Python, JavaScript y Kotlin son lenguajes: sirven para escribir instrucciones."
+              "pista": "Python, JavaScript y Kotlin son ejemplos: ¿qué se hace con ellos?"
             }
           ]
         },
@@ -124,7 +124,7 @@
                 "un mapa: no tiene ningún orden"
               ],
               "correcta": 0,
-              "pista": "Una receta se sigue paso a paso, igual que un programa."
+              "pista": "Pensá en algo que se hace siguiendo pasos, uno después de otro."
             },
             {
               "tipo": "elegir",
@@ -221,7 +221,7 @@
                 "Que los dos celulares usen el mismo navegador"
               ],
               "correcta": 0,
-              "pista": "Pensá en muchas redes unidas, no en una sola máquina."
+              "pista": "Pensá si el mensaje pasa por una sola máquina o por muchas conexiones."
             }
           ]
         },
@@ -432,15 +432,15 @@
                 "El color del monitor"
               ],
               "correcta": 0,
-              "pista": "En la explicación: una tienda guarda productos, precios y stock."
+              "pista": "Pensá qué necesita saber una tienda para vender: qué tiene y a qué precio."
             },
             {
               "tipo": "elegir",
               "pregunta": "¿Qué ocurre cuando un programa consulta una base de datos?",
               "opciones": [
                 "Pide información y recibe la que coincide con el pedido",
-                "Cambia el lenguaje del programa",
-                "Apaga la pantalla"
+                "Borra la información para empezar de nuevo",
+                "Muestra una página sin buscar nada"
               ],
               "correcta": 0,
               "pista": "Primero se hace el pedido y después la base devuelve lo que se pidió."
@@ -572,7 +572,7 @@
                 "El monitor envía el pedido al navegador"
               ],
               "correcta": 0,
-              "pista": "Pensá el recorrido: tocás, se procesa, se consulta y vuelve la respuesta."
+              "pista": "Seguí el camino de un toque: ¿adónde va primero y qué vuelve al final?"
             }
           ]
         }
@@ -597,7 +597,7 @@
               "opciones": [
                 "Guardar datos estructurados que un programa puede leer",
                 "Reemplazar físicamente el teclado",
-                "Conectar dos computadoras con un cable"
+                "Mostrar una página web en el navegador"
               ],
               "correcta": 0,
               "pista": "JSON describe datos; no es una pieza de hardware."
@@ -608,7 +608,7 @@
               "opciones": [
                 "El nombre que identifica un dato",
                 "Un programa que ejecuta instrucciones",
-                "La velocidad de la conexión"
+                "El valor que se guarda dentro del dato"
               ],
               "correcta": 0,
               "pista": "En JSON una clave ayuda a saber qué significa un valor."
@@ -629,7 +629,7 @@
               "opciones": [
                 "Registrar y organizar cambios de un proyecto",
                 "Navegar por sitios web",
-                "Diseñar los colores de una página"
+                "Hacer que una página cargue más rápido"
               ],
               "correcta": 0,
               "pista": "Git trabaja con la historia del código."
@@ -640,7 +640,7 @@
               "opciones": [
                 "Un registro de cambios guardado en la historia del proyecto",
                 "Una base de datos de usuarios",
-                "Un navegador para ver la historia"
+                "Una copia del proyecto en otra computadora"
               ],
               "correcta": 0,
               "pista": "Un commit deja una fotografía lógica de cambios del proyecto."
@@ -661,7 +661,7 @@
               "opciones": [
                 "Un proyecto con sus archivos e historia de versiones",
                 "Un navegador instalado en la computadora",
-                "Un tipo de contraseña"
+                "Un programa para escribir código"
               ],
               "correcta": 0,
               "pista": "El repositorio reúne archivos y la historia que Git registra."
