@@ -40,38 +40,41 @@ Las medidas de endurecimiento que no condicionan el modelo de producto, por ejem
 | [ADR-026](ADR-026-privacidad-menores.md) | Privacidad y menores | Aceptada |
 | [ADR-027](ADR-027-ux-por-edades.md) | UX diferenciada por edad | Aceptada |
 | [ADR-028](ADR-028-fuentes-curriculares-avanzadas.md) | Fuentes curriculares avanzadas externas | Aceptada |
-| [ADR-029](ADR-029-transicion-a-producto-web-comercial.md) | Transición a producto web comercial | **Aceptada** |
-| [ADR-030](ADR-030-cuenta-familiar-y-perfiles-infantiles.md) | Cuenta familiar y perfiles infantiles | **Aceptada** |
-| [ADR-031](ADR-031-autenticacion-sesiones-y-seguridad-web.md) | Autenticación, sesiones y seguridad web | **Aceptada** |
-| [ADR-032](ADR-032-pagos-y-entitlements-familiares.md) | Pagos y entitlements familiares | **Aceptada** |
-| [ADR-033](ADR-033-sandbox-remoto-para-ejecucion-de-codigo.md) | Sandbox remoto para ejecución de código | **Aceptada** |
-| [ADR-034](ADR-034-mobile-ux-y-sistema-visual-comercial.md) | Mobile-first, UX y sistema visual | **Aceptada** |
-| [ADR-035](ADR-035-tortu-llm-como-asistente-pedagogico.md) | Tortu-LLM como asistente pedagógico | **Aceptada** |
-| [ADR-036](ADR-036-croco-script-como-producto-avanzado.md) | Croco-Script como producto avanzado separado | **Aceptada** |
-| [ADR-037](ADR-037-integracion-tortuscript-croco-script.md) | Integración entre TortuScript y Croco-Script | **Aceptada** |
-| [ADR-038](ADR-038-persistencia-cuenta-familiar.md) | Persistencia de cuenta familiar y perfiles | **Aceptada** |
+| [ADR-029](ADR-029-transicion-a-producto-web-comercial.md) | Transición a producto web comercial | Aceptada |
+| [ADR-030](ADR-030-cuenta-familiar-y-perfiles-infantiles.md) | Cuenta familiar y perfiles infantiles | Aceptada |
+| [ADR-031](ADR-031-autenticacion-sesiones-y-seguridad-web.md) | Autenticación, sesiones y seguridad web | Aceptada |
+| [ADR-032](ADR-032-pagos-y-entitlements-familiares.md) | Pagos y entitlements familiares | Aceptada |
+| [ADR-033](ADR-033-sandbox-remoto-para-ejecucion-de-codigo.md) | Sandbox remoto para ejecución de código | Aceptada |
+| [ADR-034](ADR-034-mobile-ux-y-sistema-visual-comercial.md) | Mobile-first, UX y sistema visual | Aceptada |
+| [ADR-035](ADR-035-tortu-llm-como-asistente-pedagogico.md) | Tortu-LLM como asistente pedagógico | Aceptada |
+| [ADR-036](ADR-036-croco-script-como-producto-avanzado.md) | Croco-Script como producto avanzado separado | Aceptada |
+| [ADR-037](ADR-037-integracion-tortuscript-croco-script.md) | Integración entre TortuScript y Croco-Script | Aceptada |
+| [ADR-038](ADR-038-persistencia-cuenta-familiar.md) | Persistencia de cuenta familiar y perfiles | Aceptada |
+| [ADR-039](ADR-039-autenticacion-adulta-y-sesiones.md) | Autenticación adulta y sesiones server-side | Aceptada |
+| [ADR-040](ADR-040-autorizacion-comercial-por-perfil.md) | Servicio de autorización comercial por perfil | Aceptada |
+| [ADR-041](ADR-041-progreso-por-childprofile.md) | Contrato de progreso asociado a ChildProfile | Aceptada |
+| [ADR-042](ADR-042-adaptador-progreso-childprofile.md) | Adaptador de progreso por ChildProfile | Aceptada |
+| [ADR-043](ADR-043-contexto-educativo-autenticado.md) | Contexto educativo autenticado por ChildProfile | Aceptada |
+| [ADR-044](ADR-044-migracion-progreso-local.md) | Migración explícita de progreso local | Aceptada |
+| [ADR-045](ADR-045-runtime-educativo-childprofile.md) | Adaptador del runtime educativo para ChildProfile | Aceptada |
+| [ADR-046](ADR-046-supresion-de-cuenta-y-perfiles.md) | Supresión de cuenta y de perfiles | Aceptada |
+| [ADR-047](ADR-047-transferencia-como-primer-medio-de-pago.md) | Transferencia como primer medio de pago | Aceptada |
+| [ADR-048](ADR-048-sincronizacion-desktop-cloud.md) | Modelo de sincronización Desktop ↔ Cloud | Aceptada |
+| [ADR-049](ADR-049-no-se-importa-progreso-exportado.md) | El progreso exportado no se vuelve a importar | Aceptada |
+| [ADR-050](ADR-050-gratuidad-y-puertas-de-pago.md) | Qué es gratis y cuándo se pide pagar | Aceptada |
+| [ADR-051](ADR-051-registro-de-cuentas-y-confirmacion-de-pagos.md) | Registro de cuentas y confirmación de pagos en el panel de admin | Propuesta |
+| [ADR-052](ADR-052-modelo-de-dominio-pedagogico.md) | Modelo de dominio pedagógico y planificación adaptativa | Propuesta |
 
 ## Documentos de producto
 
 - [PRODUCTO_V1](../PRODUCTO_V1.md)
+- [Roadmaps](../ROADMAPS.md)
 - [ROADMAP V1 educativo](../ROADMAP_V1_2026-12-31.md)
 - [ROADMAP V1 comercial](../ROADMAP_COMERCIAL_V1_2026-12-31.md)
+- [Roadmap pedagógico adaptativo](../ROADMAP_PEDAGOGIA_ADAPTATIVA.md)
 - [Catálogo curricular V1](../catalogo_curricular_v1.json)
 
 ## Regla de transición comercial
 
 ADR-025 a ADR-037 forman ahora el bloque de arquitectura comercial y de evolución de producto. Las ADR anteriores siguen vigentes salvo contradicción explícita. La implementación comercial debe respetar las separaciones entre núcleo educativo, identidad adulta, perfiles infantiles, acceso comercial, ejecución remota y producto avanzado Croco-Script.
 
-| [ADR-039](ADR-039-autenticacion-adulta-y-sesiones.md) | Autenticación adulta y sesiones server-side | **Aceptada** |
-| [ADR-040](ADR-040-autorizacion-comercial-por-perfil.md) | Servicio de autorización comercial por perfil | **Aceptada** |
-| [ADR-041](ADR-041-progreso-por-childprofile.md) | Contrato de progreso asociado a ChildProfile | **Aceptada** |
-| [ADR-042](ADR-042-adaptador-progreso-childprofile.md) | Adaptador de progreso por ChildProfile | **Aceptada** |
-| [ADR-043](ADR-043-contexto-educativo-autenticado.md) | Contexto educativo autenticado por ChildProfile | **Aceptada** |
-| [ADR-044](ADR-044-migracion-progreso-local.md) | Migración explícita de progreso local | **Aceptada** |
-| [ADR-045](ADR-045-runtime-educativo-childprofile.md) | Adaptador del runtime educativo para ChildProfile | **Aceptada** |
-| [ADR-046](ADR-046-supresion-de-cuenta-y-perfiles.md) | Supresión de cuenta y de perfiles | **Aceptada** |
-| [ADR-047](ADR-047-transferencia-como-primer-medio-de-pago.md) | Transferencia como primer medio de pago | **Aceptada** |
-| [ADR-048](ADR-048-sincronizacion-desktop-cloud.md) | Modelo de sincronización Desktop ↔ Cloud | **Aceptada** |
-| [ADR-049](ADR-049-no-se-importa-progreso-exportado.md) | El progreso exportado no se vuelve a importar | **Aceptada** |
-| [ADR-050](ADR-050-gratuidad-y-puertas-de-pago.md) | Qué es gratis y cuándo se pide pagar | **Aceptada** |
-| [ADR-051](ADR-051-registro-de-cuentas-y-confirmacion-de-pagos.md) | Registro de cuentas y confirmación de pagos en el panel de admin | Propuesta |
