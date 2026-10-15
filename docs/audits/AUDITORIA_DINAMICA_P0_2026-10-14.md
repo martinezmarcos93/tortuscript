@@ -88,9 +88,12 @@ pista propia del paso.
 - Redundancia semántica que persiste: en `navegador` 2–3, `servidor` 2–3 y `lenguaje` 1–3 se pregunta
   lo mismo con otras palabras; solo se cambió lo incoherente.
 - `proyectos` solo usa `escribir`; sin recuperación previa a cada etapa.
-- Dos avisos del validador en `primeros-pasos` (pasos `ordenar` de «6. Dos variables» paso 5 y «24. Tabla del 2»
-  paso 4: otro orden muestra lo mismo; hay que aceptar ambos). No se tocó `primeros-pasos` por la restricción de
-  posiciones 0–29.
+- Dos avisos del validador en `primeros-pasos` (`dos-variables` paso 5 y `tabla-del-2` paso 4, numeración 1-based del
+  validador; índices 4 y 3): son `ordenar` donde otro orden produce la misma salida. **Clasificación: aviso informativo
+  esperado, no defecto.** La consigna de ambos pasos ya declara qué órdenes valen, y el motor acepta cualquier orden con
+  el mismo resultado (`test_ordenar_acepta_otro_orden_que_muestra_lo_mismo` **[ESTÁTICO]**; la lógica está en
+  `validacion.py` líneas 334–343, que solo avisa). No requieren cambio de contenido; tocarlos solo agregaría riesgo
+  sobre `primeros-pasos`.
 - P2/P3: sin cambios funcionales (ADR-052 en Propuesta).
 
 ## 5. Qué protege realmente cada invariante (cuerpo de los tests leído)
