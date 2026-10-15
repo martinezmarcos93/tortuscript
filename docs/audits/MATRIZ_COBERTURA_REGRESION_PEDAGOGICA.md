@@ -42,6 +42,8 @@ Se contrastaron los nombres de los métodos de prueba en los siete archivos prin
 | Intervalos, error y límite de sesión del repaso | `tests/test_practica.py::test_cajas_e_intervalos`, `test_un_error_vuelve_a_la_caja_1_y_toca_mañana`, `test_a_lo_sumo_dos_por_leccion_si_hay_variedad` | Protege reglas existentes de repaso espaciado |
 | Recorrido completo de dos perfiles | `tests/test_ciclo_alumno.py::test_recorrido_completo_con_dos_perfiles` | Cubre un flujo de integración de extremo a extremo con aislamiento |
 
+**Brecha concreta detectada al leer las aserciones:** `test_el_curso_principal_conserva_sus_30_ejercicios_en_orden` comprueba la cantidad total, la secuencia de niveles, la solución de los índices 0 y 3 y la lección del índice 29; no compara la identidad de los 30 ejercicios uno por uno. Por eso, el test actual puede detectar ciertos desplazamientos, pero no demuestra por sí solo que cada ejercicio conserve exactamente su posición histórica. Se recomienda reforzarlo con una huella/fixture explícito de los 30 pares `(leccion_id, paso_id)` o con una lista de IDs estable, después de confirmar cuál es la identidad persistida real.
+
 **Cobertura que sigue pendiente de confirmar:** que los tests existentes cubran todos los casos límite de la iniciativa, y que la suite completa pase sobre la combinación final. La existencia de un test con nombre pertinente no reemplaza la lectura de sus aserciones ni su ejecución.
 
 ## 2. Casos de regresión adicionales recomendados
