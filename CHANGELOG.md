@@ -39,6 +39,7 @@ consultan antes de fijarlos.
   concede el otro. El pedido solo elige qué plan; el importe y la duración siguen saliendo del servidor.
 
 ### Corregido
+- **Test del límite predeterminado de la práctica del día.** `practica.elegir` sin `cantidad` trae a lo sumo 6 tarjetas (con más de 6 vencidas, justo 6 o 7, menos de 6 y ninguna). Antes ningún test fijaba ese valor, porque todos lo pedían explícitamente; la web lo llama sin pasarlo. Sin cambios en el comportamiento.
 - **Test que fija la identidad de los 30 ejercicios históricos de «primeros pasos».** Compara uno por uno el par `(leccion_id, paso)` de cada `escribir` (la clave del progreso guardado es su índice 0 a 29). Antes solo se comprobaban la cantidad, los niveles y tres casos sueltos.
 - **Alfabetización digital: preguntas coherentes (ver `docs/audits/AUDITORIA_DINAMICA_P0_2026-10-14.md`).** En varias lecciones el paso 3 repetía la respuesta del paso anterior con una pregunta que no le correspondía, algunas pistas eran de otra pregunta y cuatro preguntas tenían solo dos opciones. Mismos IDs, tipos y posiciones de paso: el progreso guardado no cambia.
 - **Test del 409 de supresión alineado con el contrato vigente.** `test_un_perfil_de_otra_cuenta_no_se_reintenta` afirmaba el comportamiento anterior a #15; ahora comprueba que el conflicto se conserva para revisión manual y no se da por borrado.
