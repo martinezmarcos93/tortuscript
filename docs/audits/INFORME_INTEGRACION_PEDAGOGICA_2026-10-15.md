@@ -239,3 +239,36 @@ fusionó ni se borró (no es una rama integrada); queda a decisión de Marcos.
 
 ### Verificación posterior a la integración
 Ver §12.
+
+## 12. Verificación de `prod` tras la integración
+
+Se ejecutó sobre el árbol de la rama `docs/auditoria-dinamica-pedagogica` en `d9960b6`, que contiene `prod` con los PR #19,
+#23, #20 y #18 ya integrados y suma solo documentación (`CHANGELOG.md`, `docs/ROADMAPS.md`, `docs/audits/`). Al fusionar
+el #21 el árbol de `prod` es ese mismo, salvo esta sección y la corrección de referencias, también solo documentación.
+
+| Comando | Resultado **[EJECUTADO]** |
+|---|---|
+| `python -m unittest discover -s tests` | 1017 tests, **OK**, 0 fallos, 2 omitidos (Job Object de Windows), ≈270 s |
+| `python herramientas/validar_contenido.py` | exit 0, 0 errores, 2 avisos informativos en `primeros-pasos` (T3) |
+| Contrato `curriculum-v1.json` | «está al día» |
+| Recorrido HTTP de `alfabetizacion-digital` | 16 lecciones, 45 correctas aceptadas, 90 incorrectas rechazadas con su pista |
+| Navegador real (Playwright, sobre la candidata `b4d75cf`, mismo contenido) | 108/108 lecciones, 541 pasos, sin errores de consola |
+
+Fallos preexistentes: el único conocido (test del 409) quedó corregido por el #19. Regresiones introducidas: ninguna.
+
+## 13. Preparación de la segunda tanda
+
+Ramas por crear desde `prod` (una por unidad, tests primero, sin tocar contenido ni depender de la ADR-052). Ver §5-bis
+para la evidencia de cada hallazgo.
+
+| Rama | Contenido | Tipo de cambio |
+|---|---|---|
+| `test/robustez-registros-progreso` | Tests de `practica.candidatos` con `pasos` de clave no entera y tarjetas de `repaso` con `proximo` inválido o no-dict; fijan la política antes de cambiar código | Solo tests (algunos fallarán hasta el fix) |
+| `fix/saneamiento-registros-progreso` | Saneamiento determinista: descartar solo el registro dañado y conservar los válidos hermanos | Código (`progreso.py`/`practica.py`) |
+| `test/xp-ejercicio-no-retrocede` | Invariante: el XP almacenado de un ejercicio no baja; documentar la política (máximo por campo o rechazo de combinaciones incoherentes) | Test; el fix solo si se decide la política |
+| `test/limite-repaso-por-defecto` | `practica.elegir(...)` sin `cantidad` devuelve como máximo `POR_SESION` | Solo test |
+| `test/migracion-por-version` | Fixture por versión de esquema (v1 a v10) + idempotencia de `_migrar` | Solo test |
+| `feature/regla-respuesta-repetida` (T1) | Aviso del validador si dos `elegir` de una lección comparten respuesta correcta | Código de herramienta + tests |
+
+Orden sugerido: limite-repaso (trivial) → robustez (tests) → saneamiento (fix) → xp → migracion-por-version → T1. El #24 queda
+abierto como referencia de ese trabajo. No se crearon estas ramas todavía: esperan la orden de Marcos.
