@@ -4,10 +4,13 @@ La persistencia local de archivos y la identidad de perfiles están aisladas en
 `persistencia_local.py`.
 """
 import copy
+import logging
 import re
 from datetime import date, timedelta
 
 from . import practica
+
+logger = logging.getLogger(__name__)
 
 VERSION_ESQUEMA = 11
 
@@ -329,10 +332,17 @@ def registrar_sesion_hoy(progreso, indice):
 # REGISTRO DE EJERCICIO
 # ─────────────────────────────────────────
 def registrar_ejercicio(progreso, indice, estrellas, xp_ganado):
-    """Registra un ejercicio RESUELTO. Solo suma XP si mejora el puntaje anterior."""
+    """Registra un ejercicio RESUELTO. Solo suma XP si mejora el puntaje anterior.
+
+    Combinación incoherente (XP negativo, o más estrellas con menos XP que lo guardado): se rechaza sin tocar
+    nada, para que el XP almacenado de un ejercicio nunca retroceda (decisión de Marcos, 18/10/2026)."""
     key = str(indice)
     anterior = progreso["ejercicios"].get(key, {})
     hubo_mejora = estrellas > anterior.get("estrellas", 0)
+    if xp_ganado < 0 or (hubo_mejora and xp_ganado < anterior.get("xp", 0)):
+        logger.warning("Ejercicio %s: %s estrellas con %s XP es incoherente frente a lo guardado (%s estrellas, %s XP); "
+                       "no se registra", key, estrellas, xp_ganado, anterior.get("estrellas", 0), anterior.get("xp", 0))
+        return False
 
     if hubo_mejora:
         sumar_xp(progreso, xp_ganado - anterior.get("xp", 0))
