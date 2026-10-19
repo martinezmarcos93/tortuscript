@@ -57,7 +57,16 @@ class TestClaveDePasoDanada(unittest.TestCase):
         p = perfil(("hola-mundo", [1]))
         p["lecciones"]["hola-mundo"]["pasos"]["9" * 5000] = {"fecha": "2026-09-20"}
         self.assertEqual(ids(practica.candidatos(p, CURSOS, HOY)), sorted(SANAS + [("hola-mundo", 1)]))
-        self.assertTrue(any(d["paso"] == "9" * 5000 for d in practica.diagnosticar(p, CURSOS, HOY)))
+        pasos = [d["paso"] for d in practica.diagnosticar(p, CURSOS, HOY)]
+        self.assertEqual(pasos, ["9" * 20 + "…"])               # la clave se acota: no infla diagnóstico ni log
+
+    def test_el_log_de_una_clave_enorme_queda_acotado(self):
+        p = perfil(("hola-mundo", [1]))
+        p["lecciones"]["hola-mundo"]["pasos"]["9" * 5000] = {"fecha": "2026-09-20"}
+        with self.assertLogs("tortuscript.practica", level="WARNING") as capturado:
+            practica.candidatos(p, CURSOS, HOY)
+        self.assertTrue(capturado.output)
+        self.assertLess(max(len(linea) for linea in capturado.output), 500)
 
     def test_registro_de_leccion_o_de_paso_que_no_es_un_objeto(self):
         for malo in ("x", ["x"], 7, None):

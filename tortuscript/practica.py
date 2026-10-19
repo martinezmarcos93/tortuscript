@@ -75,6 +75,8 @@ def _analizar(progreso, cursos, hoy):
     salida, defectos = [], []
 
     def defecto(leccion_id, paso, motivo):
+        if isinstance(paso, str) and len(paso) > 20:
+            paso = paso[:20] + "…"                       # una clave dañada enorme no debe inflar el log
         defectos.append({"leccion": leccion_id, "paso": paso, "motivo": motivo})
 
     for leccion_id, datos in lecciones.items():
@@ -187,7 +189,7 @@ def registrar(progreso, leccion_id, paso, acierto, hoy):
         t = tarjetas[k] = {}
     for campo, valido in (("caja", _caja_valida), ("aciertos", _contador_valido), ("fallos", _contador_valido)):
         if not valido(t.get(campo, 0)):
-            logger.warning("Repaso: %s.%s estaba dañado (%r); se reinicia a 0", k, campo, t[campo])
+            logger.warning("Repaso: %s.%s estaba dañado (%.60r); se reinicia a 0", k, campo, t[campo])
             t[campo] = 0
         t.setdefault(campo, 0)
     if acierto:
