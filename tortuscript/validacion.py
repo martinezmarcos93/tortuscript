@@ -384,6 +384,23 @@ def _validar_paso(paso, donde, hallazgos):
     return set(usadas)
 
 
+def _revisar_respuestas_repetidas(leccion, hallazgos):
+    """AVISO si dos `elegir` de una misma lección comparten el texto de la opción correcta."""
+    vistas = {}                                   # texto de la correcta → número de paso donde apareció
+    for i, paso in enumerate(leccion.get("pasos", [])):
+        opciones, correcta = paso.get("opciones"), paso.get("correcta")
+        if paso.get("tipo") != "elegir" or not isinstance(opciones, list):
+            continue
+        if isinstance(correcta, bool) or not isinstance(correcta, int) or not 0 <= correcta < len(opciones):
+            continue                              # otras reglas ya reportan un `correcta` inválido
+        texto = str(opciones[correcta]).strip()
+        if texto in vistas:
+            donde = f"{leccion.get('titulo', leccion.get('id'))} · paso {i + 1} (elegir)"
+            hallazgos.append(Hallazgo(AVISO, donde, f"respuesta correcta repetida: «{texto}» ya es la correcta del paso {vistas[texto]}"))
+        else:
+            vistas[texto] = i + 1
+
+
 def validar_curso(curso):
     hallazgos = []
     # ── estructura ──
@@ -397,6 +414,10 @@ def validar_curso(curso):
             vistos[clave].add(valor)
         if not s.get("lecciones"):
             hallazgos.append(Hallazgo(ERROR, s.get("id", "?"), "sección sin lecciones"))
+
+        # ── nueva regla de respuestas repetidas ──
+        for l in s.get("lecciones", []):
+            _revisar_respuestas_repetidas(l, hallazgos)
 
     # ── cada paso, en el orden en que lo vive el chico ──
     presentadas = {}          # palabra → dónde se presentó
