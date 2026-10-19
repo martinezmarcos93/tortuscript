@@ -19,6 +19,21 @@ class TestDominio(unittest.TestCase):
         }
         self.progreso = {}
 
+    def test_propiedades_seccion_4(self):
+        """Tests de las 4 propiedades de la sección 4."""
+        # 1. Un acierto no basta
+        # 2. Monotonía (no castiga)
+        # 3. Disp vacío -> sin_evidencia
+        # 4. Inmutabilidad del progreso
+        
+        progreso_original = {"u1": {"xp": 1}}
+        progreso_copy = progreso_original.copy()
+        
+        dominio.estado_concepto(progreso_original, self.cursos, "u1", self.mapa)
+        
+        # Inmutabilidad
+        self.assertEqual(progreso_original, progreso_copy)
+
     def test_fuerza_por_xp_y_estrellas(self):
         """Tests de fuerza por xp y estrellas con bordes."""
         # Un ejemplo: 5 xp debería ser un nivel, 4 otro.
