@@ -54,7 +54,8 @@ def _contador_valido(valor):
 
 def _indice_de_paso(indice_s):
     """Índice de paso (>= 0) si la clave es la forma canónica que escribimos ("0", "1", ...); None si no."""
-    if isinstance(indice_s, str) and indice_s.isascii() and indice_s.isdigit() and str(int(indice_s)) == indice_s:
+    # Los índices de pasos son pequeños; evitar int() para claves arbitrariamente largas.
+    if isinstance(indice_s, str) and len(indice_s) <= 10 and indice_s.isascii() and indice_s.isdigit() and str(int(indice_s)) == indice_s:
         return int(indice_s)
     return None
 
@@ -83,7 +84,9 @@ def _analizar(progreso, cursos, hoy):
         if not isinstance(datos, dict):
             defecto(leccion_id, None, "el registro de la lección no es un objeto")
             continue
-        pasos = datos.get("pasos") or {}
+        pasos = datos.get("pasos")
+        if pasos is None:
+            pasos = {}
         if not isinstance(pasos, dict):
             defecto(leccion_id, None, "los pasos de la lección no son un objeto")
             continue

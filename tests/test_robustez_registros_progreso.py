@@ -53,6 +53,12 @@ class TestClaveDePasoDanada(unittest.TestCase):
         p["lecciones"]["hola-mundo"]["pasos"]["-1"] = {"xp": 5, "perfecto": True, "fecha": "2026-09-20"}
         self.assertEqual(ids(practica.candidatos(p, CURSOS, HOY)), [("hola-mundo", 1)])
 
+    def test_clave_de_miles_de_digitos_se_ignora_y_lo_sano_sigue(self):
+        p = perfil(("hola-mundo", [1]))
+        p["lecciones"]["hola-mundo"]["pasos"]["9" * 5000] = {"fecha": "2026-09-20"}
+        self.assertEqual(ids(practica.candidatos(p, CURSOS, HOY)), sorted(SANAS + [("hola-mundo", 1)]))
+        self.assertTrue(any(d["paso"] == "9" * 5000 for d in practica.diagnosticar(p, CURSOS, HOY)))
+
     def test_registro_de_leccion_o_de_paso_que_no_es_un_objeto(self):
         for malo in ("x", ["x"], 7, None):
             with self.subTest(registro=malo):
@@ -65,6 +71,25 @@ class TestClaveDePasoDanada(unittest.TestCase):
                 r = perfil(("hola-mundo", [1]))
                 r["lecciones"]["hola-mundo"]["pasos"] = malo
                 self.assertEqual(ids(practica.candidatos(r, CURSOS, HOY)), sorted(SANAS))
+
+    def test_contenedor_de_pasos_no_diccionario_se_diagnostica(self):
+        for roto in ([], "x", 0):
+            with self.subTest(contenedor=roto):
+                p = perfil(("hola-mundo", [1]))
+                p["lecciones"]["hola-mundo"]["pasos"] = roto
+                with self.assertLogs("tortuscript.practica", level="WARNING"):
+                    self.assertEqual(ids(practica.candidatos(p, CURSOS, HOY)), sorted(SANAS))
+                self.assertEqual(len(practica.diagnosticar(p, CURSOS, HOY)), 1)
+        for ausencia in ("ausente", None):
+            with self.subTest(contenedor=ausencia):
+                p = perfil(("hola-mundo", [1]))
+                if ausencia == "ausente":
+                    del p["lecciones"]["hola-mundo"]["pasos"]
+                else:
+                    p["lecciones"]["hola-mundo"]["pasos"] = None
+                with self.assertNoLogs("tortuscript.practica", level="WARNING"):
+                    self.assertEqual(ids(practica.candidatos(p, CURSOS, HOY)), sorted(SANAS))
+                self.assertEqual(practica.diagnosticar(p, CURSOS, HOY), [])
 
 
 class TestFechaDelPasoInvalida(unittest.TestCase):
@@ -182,8 +207,17 @@ class TestCorrupcionParcial(unittest.TestCase):
     def test_el_orden_y_los_datos_de_las_tarjetas_sanas_no_cambian(self):
         sano = con_pasos(("hola-mundo", [3, 4]), ("texto-o-cuenta", [3, 4]), ("tu-primera-variable", [2, 3, 4]))
         roto = self._perfil_mezclado()
-        self.assertEqual(sorted(practica.candidatos(sano, CURSOS, HOY), key=lambda c: (c["leccion"], c["paso"])),
-                         sorted(practica.candidatos(roto, CURSOS, HOY), key=lambda c: (c["leccion"], c["paso"])))
+        esperadas = [
+            {"leccion": leccion, "paso": paso, "vencido": 4, "caja": 0}
+            for leccion, pasos in (("hola-mundo", (3, 4)), ("texto-o-cuenta", (3, 4)),
+                                   ("tu-primera-variable", (2, 3, 4)))
+            for paso in pasos
+        ]
+        self.assertEqual(practica.candidatos(sano, CURSOS, HOY), esperadas)
+        self.assertEqual(practica.candidatos(roto, CURSOS, HOY), esperadas)
+        elegidas = [(leccion, paso) for leccion, paso in practica.elegir(roto, CURSOS, HOY)]
+        self.assertEqual(elegidas, [("hola-mundo", 3), ("texto-o-cuenta", 3), ("tu-primera-variable", 2),
+                                    ("hola-mundo", 4), ("texto-o-cuenta", 4), ("tu-primera-variable", 3)])
 
     def test_un_perfil_sano_no_tiene_diagnostico(self):
         self.assertEqual(practica.diagnosticar(con_pasos(("hola-mundo", [1, 2, 3, 4])), CURSOS, HOY), [])
@@ -280,6 +314,12 @@ class TestEvidenciaDelCatalogo(unittest.TestCase):
         for malo in ("x", ["x"], 7, None):
             with self.subTest(tarjeta=malo):
                 self.assertFalse(self._repasar(malo))
+
+    def test_contenedor_repaso_que_no_es_diccionario_no_rompe_la_evidencia(self):
+        for repaso in ("x", ["x"], 0, []):
+            with self.subTest(repaso=repaso):
+                p = {"lecciones": {"nivel0-programa": {"pasos": {}, "completada": True}}, "repaso": repaso}
+                self.assertFalse(catalogo_producto._evidencia_lecciones(p, self.UNIDAD)["repasar"])
 
 
 @unittest.skipUnless(HAY_FLASK, "Flask no instalado")

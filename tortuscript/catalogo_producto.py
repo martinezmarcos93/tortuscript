@@ -98,7 +98,8 @@ def _evidencia_lecciones(progreso, unidad_id):
     estados = [datos.get(i, {}) for i in lecciones]
     estudiada = any(bool(e) for e in estados)
     completada = bool(estados) and all(e.get("completada") for e in estados)
-    repaso = progreso.get("repaso") or {}
+    repaso = progreso.get("repaso")
+    repaso = repaso if isinstance(repaso, dict) else {}
     claves = {f"{evidencia['curso']}:{i}" for i in lecciones}
     repasar = any(
         (proximo := practica.fecha_programada(item)) is not None and proximo <= date.today()
