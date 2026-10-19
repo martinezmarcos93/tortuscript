@@ -1,192 +1,148 @@
+"""Modelo de dominio pedagógico V1 (ADR-052, P2): cuánta evidencia de dominio hay por concepto.
+
+Función pura sobre el progreso que ya existe: no guarda nada, no cambia el esquema y no lee la fecha.
+Reglas exactas en docs/MODELO_DOMINIO_V1.md. Un dato dañado se ignora; nunca lanza (salvo KeyError por
+una unidad que no existe o que no es de tipo 'lecciones').
+"""
 import json
-from pathlib import Path
+
 from . import contenido
 
 ESTADOS = ("sin_evidencia", "visto", "reconocido", "aplicado", "autonomo", "consolidado")
 CATEGORIAS = ("reconocimiento", "prediccion", "construccion", "produccion")
 
-def cargar_mapa() -> dict:
-    """Devuelve `unidades` de contenido/mapa_curricular.json."""
-    ruta = Path(__file__).resolve().parent.parent / "contenido" / "mapa_curricular.json"
-    with open(ruta, encoding="utf-8") as f:
-        return json.load(f)
+_CATEGORIA_POR_TIPO = {
+    "elegir": "reconocimiento",
+    "predecir": "prediccion",
+    "completar": "construccion",
+    "ordenar": "construccion",
+    "escribir": "produccion",
+}
+XP_PRIMER_INTENTO = 5      # mismo valor que leccion.XP_PRIMER_INTENTO (no se importa: el modelo no depende del motor)
+ESTRELLAS_AUTONOMAS = 3
+CAJA_RETENCION = 3
+ACIERTOS_RETENCION = 2
+MAX_DIGITOS_INDICE = 10
 
-def _es_fuerte(tipo_paso: str, registro: dict) -> str:
-    """Calcula fuerza: 'fuerte', 'debil', 'ayudado'."""
+
+def cargar_mapa():
+    """Las `unidades` de contenido/mapa_curricular.json."""
+    with open(contenido.CARPETA.parent / "mapa_curricular.json", encoding="utf-8") as f:
+        return json.load(f)["unidades"]
+
+
+def _entero(valor):
+    return isinstance(valor, int) and not isinstance(valor, bool)
+
+
+def _dict(valor):
+    return valor if isinstance(valor, dict) else {}
+
+
+def _fuerza(tipo, registro):
+    """'fuerte' | 'debil' | 'ayudado' según el registro del paso, o None si está dañado."""
     if not isinstance(registro, dict):
-        return ""
-    
-    if tipo_paso == "escribir":
+        return None
+    if tipo == "escribir":
         if "estrellas" in registro:
-            if isinstance(registro["estrellas"], int):
-                if registro["estrellas"] >= 3: return "fuerte"
-                if registro["estrellas"] >= 1: return "debil"
-                return "ayudado"
-        elif registro.get("perfecto") is True:
-            return "fuerte"
-        elif registro.get("perfecto") is False:
-            return "debil"
-        return "ayudado"
-    
+            estrellas = registro["estrellas"]
+            if not _entero(estrellas):
+                return None
+            if estrellas >= ESTRELLAS_AUTONOMAS:
+                return "fuerte"
+            return "debil" if estrellas >= 1 else "ayudado"
+        return "fuerte" if registro.get("perfecto") is True else "debil"
     xp = registro.get("xp")
-    if isinstance(xp, int):
-        if xp >= 5: return "fuerte"
-        if xp >= 1: return "debil"
-        if xp <= 0: return "ayudado"
-    return ""
+    if not _entero(xp):
+        return None
+    if xp >= XP_PRIMER_INTENTO:
+        return "fuerte"
+    return "debil" if xp >= 1 else "ayudado"
 
-def _categoria_de_paso(tipo: str) -> str:
-    mapping = {
-        "elegir": "reconocimiento",
-        "predecir": "prediccion",
-        "completar": "construccion",
-        "ordenar": "construccion",
-        "escribir": "produccion"
-    }
-    return mapping.get(tipo, "")
 
-def _hay_retencion(progreso: dict, leccion_id: str) -> bool:
-    """Verifica retención para una lección."""
-    repaso = progreso.get("repaso", {})
-    if not isinstance(repaso, dict):
-        return False
-    for clave, datos in repaso.items():
-        if not isinstance(datos, dict):
+def _pasos_de_leccion(cursos, curso_id, leccion_id):
+    """Pasos de la lección en el curso indicado; [] si el curso o la lección no existen."""
+    for curso in cursos if isinstance(cursos, list) else []:
+        if not isinstance(curso, dict) or curso.get("id") != curso_id:
             continue
-        if clave.startswith(f"{leccion_id}:"):
-            caja = datos.get("caja")
-            aciertos = datos.get("aciertos")
-            if isinstance(caja, int) and isinstance(aciertos, int):
-                if caja >= 3 and aciertos >= 2:
-                    return True
+        for seccion in curso.get("secciones") or []:
+            for leccion in _dict(seccion).get("lecciones") or []:
+                if _dict(leccion).get("id") == leccion_id:
+                    pasos = leccion.get("pasos")
+                    return pasos if isinstance(pasos, list) else []
+    return []
+
+
+def _hay_retencion(progreso, lecciones):
+    """¿Alguna tarjeta de repaso de estas lecciones llegó a la caja 3 con 2 aciertos?"""
+    for clave, tarjeta in _dict(progreso.get("repaso")).items():
+        if not isinstance(clave, str) or not isinstance(tarjeta, dict):
+            continue
+        leccion_id, _, indice = clave.rpartition(":")
+        if leccion_id not in lecciones or not (indice.isascii() and indice.isdigit()) or len(indice) > MAX_DIGITOS_INDICE:
+            continue
+        caja, aciertos = tarjeta.get("caja"), tarjeta.get("aciertos")
+        if _entero(caja) and _entero(aciertos) and caja >= CAJA_RETENCION and aciertos >= ACIERTOS_RETENCION:
+            return True
     return False
 
-def estado_concepto(progreso: dict, cursos: list, unidad_id: str, mapa: dict | None = None) -> dict:
-    """KeyError si `unidad_id` no está en el mapa o no es de tipo 'lecciones'."""
-    if mapa is None:
-        mapa = cargar_mapa()
-    
-    unidades = mapa.get("unidades", {})
-    if unidad_id not in unidades:
+
+def _nivel(disponibles, fuertes, hay_evidencia, retencion):
+    """Nivel 0-5 según la tabla de la sección 4 de la especificación."""
+    if not disponibles:
+        return 0
+    if fuertes >= disponibles:
+        return 5 if retencion else 4
+    if fuertes and len(fuertes) >= min(2, len(disponibles)):
+        return 3
+    if fuertes:
+        return 2
+    return 1 if hay_evidencia else 0
+
+
+def estado_concepto(progreso, cursos, unidad_id, mapa=None):
+    """Estado de un concepto (unidad de tipo 'lecciones'). KeyError si no existe o es de otro tipo."""
+    unidades = cargar_mapa() if mapa is None else mapa
+    unidad = unidades[unidad_id]
+    if not isinstance(unidad, dict) or unidad.get("tipo") != "lecciones":
         raise KeyError(unidad_id)
-        
-    tipo_unidad = unidades[unidad_id].get("tipo")
-    if tipo_unidad != "lecciones" and tipo_unidad != "leccion":
-        raise KeyError(unidad_id)
-        
-    progreso_lecciones = progreso.get("lecciones", {})
-    if not isinstance(progreso_lecciones, dict):
-        progreso_lecciones = {}
-        
-    disp = set()
-    fuertes = set()
-    evidencias = {cat: {"fuerte": 0, "debil": 0, "ayudado": 0} for cat in CATEGORIAS}
-    retencion_total = False
-    
-    # Mapeo de lecciones del concepto
-    lecciones_concepto = unidades[unidad_id].get("lecciones", [])
-    if not isinstance(lecciones_concepto, list):
-        lecciones_concepto = []
-        
-    # Si la unidad es ella misma una lección (como en tests sintéticos), la agregamos a la lista
-    if not lecciones_concepto:
-        lecciones_concepto = [unidad_id]
+    progreso = _dict(progreso)
+    registros = _dict(progreso.get("lecciones"))
+    declaradas = unidad.get("lecciones")
+    lecciones = [l for l in declaradas if isinstance(l, str)] if isinstance(declaradas, list) else []
 
-    # También considerar si la estructura del test o datos trae directamente en lecciones los dicts de paso
-    # Si leccion_id está en `progreso_lecciones` o el test pasa la evidencia directamente en el nivel superior de `progreso`:
-    if not isinstance(progreso, dict):
-        progreso = {}
-
-    # Por si se pasan pasos directamente en progreso (caso del test sintético):
-    # 'progreso_original = {"u1": {"xp": 1}}'
-    
-    # Procesar evidencias
-    for leccion_id in lecciones_concepto:
-        if _hay_retencion(progreso, leccion_id):
-            retencion_total = True
-            
-        # Buscar en cursos para encontrar pasos
-        pasos_leccion = []
-        for curso in cursos:
-            # En los tests, `self.cursos` en test_dominio.py es {'c1': {'lecciones': ...}}
-            # Pero el código espera una lista de objetos curso.
-            # `cursos` en la spec y `todos_los_cursos()` devuelven lista de dicts.
-            # Debemos verificar si el elemento es un dict.
-            if not isinstance(curso, dict):
+    disponibles, fuertes = set(), set()
+    evidencias = {}
+    for leccion_id in lecciones:
+        pasos_registrados = _dict(_dict(registros.get(leccion_id)).get("pasos"))
+        for indice, paso in enumerate(_pasos_de_leccion(cursos, unidad.get("curso"), leccion_id)):
+            categoria = _CATEGORIA_POR_TIPO.get(_dict(paso).get("tipo"))
+            if categoria is None:
                 continue
-            for sec in curso.get("secciones", []):
-                for lec in sec.get("lecciones", []):
-                    if lec.get("id") == leccion_id:
-                        pasos_leccion = lec.get("pasos", [])
-                        break
-        
-        datos_leccion = progreso_lecciones.get(leccion_id, {}).get("pasos", {})
-        if not isinstance(datos_leccion, dict):
-            datos_leccion = {}
-
-        for i, paso in enumerate(pasos_leccion):
-            tipo = paso.get("tipo")
-            cat = _categoria_de_paso(tipo)
-            if not cat:
-                continue
-                
-            disp.add(cat)
-            registro = datos_leccion.get(str(i))
-            fuerza = _es_fuerte(tipo, registro)
-            
-            if fuerza:
-                evidencias[cat][fuerza] += 1
+            disponibles.add(categoria)
+            cuentas = evidencias.setdefault(categoria, {"fuerte": 0, "debil": 0, "ayudado": 0})
+            fuerza = _fuerza(paso["tipo"], pasos_registrados.get(str(indice)))
+            if fuerza is not None:
+                cuentas[fuerza] += 1
                 if fuerza == "fuerte":
-                    fuertes.add(cat)
-                    
-    # Calcular nivel
-    nivel = 0
-    estado = "sin_evidencia"
-    
-    if disp:
-        nivel = 1
-        estado = "visto"
-        
-        if len(fuertes) >= 1:
-            nivel = 2
-            estado = "reconocido"
-            
-            if len(fuertes) >= min(2, len(disp)):
-                nivel = 3
-                estado = "aplicado"
-                
-                if len(fuertes) >= len(disp):
-                    nivel = 4
-                    estado = "autonomo"
-                    
-                    if retencion_total:
-                        nivel = 5
-                        estado = "consolidado"
-                        
-    # Limpiar evidencias no disponibles
-    evidencias_final = {cat: evidencias[cat] for cat in CATEGORIAS if cat in disp}
-    
+                    fuertes.add(categoria)
+
+    retencion = _hay_retencion(progreso, set(lecciones))
+    hay_evidencia = any(sum(c.values()) for c in evidencias.values())
+    nivel = _nivel(disponibles, fuertes, hay_evidencia, retencion)
     return {
         "unidad": unidad_id,
         "nivel": nivel,
-        "estado": estado,
-        "disponibles": sorted(list(disp)),
-        "fuertes": sorted(list(fuertes)),
-        "evidencias": evidencias_final,
-        "retencion": retencion_total
+        "estado": ESTADOS[nivel],
+        "disponibles": sorted(disponibles),
+        "fuertes": sorted(fuertes),
+        "evidencias": {c: evidencias[c] for c in sorted(disponibles)},
+        "retencion": retencion,
     }
 
-def dominio(progreso: dict, cursos: list, mapa: dict | None = None) -> dict:
-    """{unidad_id: estado_concepto(...)} para todas las unidades 'lecciones' del mapa."""
-    if mapa is None:
-        mapa = cargar_mapa()
-    
-    unidades = mapa.get("unidades", {})
-    resultado = {}
-    for uid, data in unidades.items():
-        if data.get("tipo") == "lecciones":
-            try:
-                resultado[uid] = estado_concepto(progreso, cursos, uid, mapa)
-            except KeyError:
-                continue
-    return resultado
+
+def dominio(progreso, cursos, mapa=None):
+    """{unidad_id: estado_concepto(...)} para las unidades de tipo 'lecciones', en el orden del mapa."""
+    unidades = cargar_mapa() if mapa is None else mapa
+    return {uid: estado_concepto(progreso, cursos, uid, unidades)
+            for uid, unidad in unidades.items() if isinstance(unidad, dict) and unidad.get("tipo") == "lecciones"}
