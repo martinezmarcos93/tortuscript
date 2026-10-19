@@ -44,9 +44,6 @@ class Hallazgo:
     donde: str
     mensaje: str
 
-    def __getitem__(self, item):
-        return getattr(self, item)
-
     def __str__(self):
         icono = "❌" if self.nivel == ERROR else "⚠️ "
         return f"{icono} {self.donde}: {self.mensaje}"
@@ -388,25 +385,20 @@ def _validar_paso(paso, donde, hallazgos):
 
 
 def _revisar_respuestas_repetidas(leccion, hallazgos):
-    """Revisa si hay respuestas correctas repetidas dentro de una lección."""
-    vistas = {} # texto_respuesta -> id_paso
-    for paso in leccion.get("pasos", []):
-        if paso.get("tipo") != "elegir":
+    """AVISO si dos `elegir` de una misma lección comparten el texto de la opción correcta."""
+    vistas = {}                                   # texto de la correcta → número de paso donde apareció
+    for i, paso in enumerate(leccion.get("pasos", [])):
+        opciones, correcta = paso.get("opciones"), paso.get("correcta")
+        if paso.get("tipo") != "elegir" or not isinstance(opciones, list):
             continue
-        
-        opciones = paso.get("opciones")
-        correcta = paso.get("correcta")
-        
-        if not isinstance(opciones, list) or not isinstance(correcta, int) or not (0 <= correcta < len(opciones)):
-            continue
-            
-        texto_correcta = str(opciones[correcta]).strip()
-        donde = f"{leccion.get('titulo', leccion.get('id'))} · paso {paso.get('id', '?')} (elegir)"
-        
-        if texto_correcta in vistas:
-                hallazgos.append(Hallazgo(AVISO, donde, f"respuesta correcta repetida: «{texto_correcta}» (ya se marcó como correcta en {vistas[texto_correcta]})" ))
+        if isinstance(correcta, bool) or not isinstance(correcta, int) or not 0 <= correcta < len(opciones):
+            continue                              # otras reglas ya reportan un `correcta` inválido
+        texto = str(opciones[correcta]).strip()
+        if texto in vistas:
+            donde = f"{leccion.get('titulo', leccion.get('id'))} · paso {i + 1} (elegir)"
+            hallazgos.append(Hallazgo(AVISO, donde, f"respuesta correcta repetida: «{texto}» ya es la correcta del paso {vistas[texto]}"))
         else:
-            vistas[texto_correcta] = paso.get('id', '?')
+            vistas[texto] = i + 1
 
 
 def validar_curso(curso):

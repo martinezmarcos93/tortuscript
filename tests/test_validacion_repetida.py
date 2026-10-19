@@ -1,19 +1,6 @@
 import unittest
-from unittest.mock import MagicMock, patch
 
-# Se asume que tortuscript.validacion y tortuscript.contenido existen en el path.
-# Estos imports fallarán hoy porque la regla no existe y por lo tanto
-# el módulo validar_curso no contiene AVISO/ERROR ni la lógica para el hallazgo.
-# La idea es que fallen y luego el otro worker los implemente.
-try:
-    from tortuscript.validacion import validar_curso, AVISO, ERROR
-except ImportError:
-    # Proporcionar mocks para que los tests puedan correr y fallar con AssertionError
-    # en lugar de ImportError. El oráculo espera AssertionError.
-    AVISO = "AVISO"
-    ERROR = "ERROR"
-    def validar_curso(curso):
-        return [] # Siempre retorna vacío, causando el AssertionError esperado
+from tortuscript.validacion import validar_curso, AVISO, ERROR
 
 class TestRespuestaCorrectaRepetida(unittest.TestCase):
 
@@ -71,7 +58,7 @@ class TestRespuestaCorrectaRepetida(unittest.TestCase):
         }
         curso = self._crear_curso_base(lecciones_data)
         hallazgos = validar_curso(curso)
-        avisos_repetidos = [h for h in hallazgos if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
+        avisos_repetidos = [h for h in hallazgos if h.nivel == AVISO and "respuesta correcta repetida" in h.mensaje]
         self.assertEqual(len(avisos_repetidos), 1, "Debería haber exactamente 1 AVISO de respuesta correcta repetida.")
 
     def test_b_tres_elegir_misma_leccion_igual_correcta_dos_avisos(self):
@@ -103,7 +90,7 @@ class TestRespuestaCorrectaRepetida(unittest.TestCase):
         }
         curso = self._crear_curso_base(lecciones_data)
         hallazgos = validar_curso(curso)
-        avisos_repetidos = [h for h in hallazgos if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
+        avisos_repetidos = [h for h in hallazgos if h.nivel == AVISO and "respuesta correcta repetida" in h.mensaje]
         self.assertEqual(len(avisos_repetidos), 2, "Debería haber exactamente 2 AVISOS de respuesta correcta repetida.")
 
     def test_c_misma_correcta_lecciones_distintas_ningun_aviso(self):
@@ -130,7 +117,7 @@ class TestRespuestaCorrectaRepetida(unittest.TestCase):
         }
         curso = self._crear_curso_base(lecciones_data)
         hallazgos = validar_curso(curso)
-        avisos_repetidos = [h for h in hallazgos if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
+        avisos_repetidos = [h for h in hallazgos if h.nivel == AVISO and "respuesta correcta repetida" in h.mensaje]
         self.assertEqual(len(avisos_repetidos), 0, "No debería haber AVISOS de respuesta correcta repetida en lecciones distintas.")
 
     def test_d_correctas_distintas_ningun_aviso(self):
@@ -155,7 +142,7 @@ class TestRespuestaCorrectaRepetida(unittest.TestCase):
         }
         curso = self._crear_curso_base(lecciones_data)
         hallazgos = validar_curso(curso)
-        avisos_repetidos = [h for h in hallazgos if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
+        avisos_repetidos = [h for h in hallazgos if h.nivel == AVISO and "respuesta correcta repetida" in h.mensaje]
         self.assertEqual(len(avisos_repetidos), 0, "No debería haber AVISOS si las respuestas correctas son distintas.")
 
     def test_e_diferencia_solo_espacios_cuenta_como_repetida_un_aviso(self):
@@ -180,7 +167,7 @@ class TestRespuestaCorrectaRepetida(unittest.TestCase):
         }
         curso = self._crear_curso_base(lecciones_data)
         hallazgos = validar_curso(curso)
-        avisos_repetidos = [h for h in hallazgos if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
+        avisos_repetidos = [h for h in hallazgos if h.nivel == AVISO and "respuesta correcta repetida" in h.mensaje]
         self.assertEqual(len(avisos_repetidos), 1, "Debería haber 1 AVISO si la diferencia es solo de espacios.")
 
     def test_f_opcion_incorrecta_igual_a_correcta_otro_paso_no_cuenta_ningun_aviso(self):
@@ -205,43 +192,64 @@ class TestRespuestaCorrectaRepetida(unittest.TestCase):
         }
         curso = self._crear_curso_base(lecciones_data)
         hallazgos = validar_curso(curso)
-        avisos_repetidos = [h for h in hallazgos if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
+        avisos_repetidos = [h for h in hallazgos if h.nivel == AVISO and "respuesta correcta repetida" in h.mensaje]
         self.assertEqual(len(avisos_repetidos), 0, "No debería haber AVISOS si una opción incorrecta es igual a una correcta de otro paso.")
 
     def test_g_los_avisos_no_son_error(self):
         # Caso (g): los avisos no son ERROR
         self.assertNotEqual(AVISO, ERROR, "AVISO y ERROR deben ser distintos.")
 
-    @patch('tortuscript.contenido.cargar_curso')
-    def test_h_cursos_reales_no_tienen_avisos_repetidos(self, mock_cargar_curso):
-        # Caso (h): un curso real: alfabetizacion-digital y primeros-pasos no aparece ningún hallazgo
-        # con esa frase (hoy esto pasa; es la garantía de no-falsos-positivos).
-        # Mockeamos cargar_curso para devolver cursos sin respuestas correctas repetidas intencionadamente.
+    def test_h_cursos_reales_no_tienen_avisos_repetidos(self):
+        # Garantía de no-falsos-positivos: ningún curso real dispara la regla.
+        from tortuscript.contenido import CARPETA, cargar_curso
+        ids = sorted(p.stem for p in CARPETA.glob("*.json"))
+        self.assertGreaterEqual(len(ids), 9)
+        for curso_id in ids:
+            with self.subTest(curso=curso_id):
+                self.assertEqual(_repetidos(cargar_curso(curso_id)), [])
 
-        mock_cargar_curso.side_effect = {
-            "alfabetizacion-digital": self._crear_curso_base({
-                "leccion-ad-1": [
-                    {"tipo": "elegir", "pregunta": "AD1_Q1", "opciones": ["AD1_C1", "AD1_I1"], "correcta": 0, "pista": "Pista"},
-                    {"tipo": "elegir", "pregunta": "AD1_Q2", "opciones": ["AD1_C2", "AD1_I2"], "correcta": 0, "pista": "Pista"},
-                ]
-            }),
-            "primeros-pasos": self._crear_curso_base({
-                "leccion-pp-1": [
-                    {"tipo": "elegir", "pregunta": "PP1_Q1", "opciones": ["PP1_C1", "PP1_I1"], "correcta": 0, "pista": "Pista"},
-                    {"tipo": "elegir", "pregunta": "PP1_Q2", "opciones": ["PP1_C2", "PP1_I2"], "correcta": 0, "pista": "Pista"},
-                ]
-            }),
-        }.get
 
-        curso_ad = mock_cargar_curso("alfabetizacion-digital")
-        hallazgos_ad = validar_curso(curso_ad)
-        avisos_ad = [h for h in hallazgos_ad if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
-        self.assertEqual(len(avisos_ad), 0, "Curso 'alfabetizacion-digital' no debería tener AVISOS de respuesta correcta repetida hoy.")
+def _elegir(opciones, correcta):
+    return {"tipo": "elegir", "pregunta": "¿?", "opciones": opciones, "correcta": correcta, "pista": "p"}
 
-        curso_pp = mock_cargar_curso("primeros-pasos")
-        hallazgos_pp = validar_curso(curso_pp)
-        avisos_pp = [h for h in hallazgos_pp if h["nivel"] == AVISO and "respuesta correcta repetida" in h["mensaje"]]
-        self.assertEqual(len(avisos_pp), 0, "Curso 'primeros-pasos' no debería tener AVISOS de respuesta correcta repetida hoy.")
 
-if __name__ == '__main__':
-    unittest.main()
+def _curso(pasos):
+    return {"id": "c", "titulo": "C", "secciones": [{"id": "s", "titulo": "S", "lecciones": [
+        {"id": "l", "titulo": "L", "pasos": pasos}]}]}
+
+
+def _repetidos(curso):
+    return [h for h in validar_curso(curso) if "respuesta correcta repetida" in h.mensaje]
+
+
+class TestRespuestaRepetidaDetalle(unittest.TestCase):
+    def test_el_aviso_nombra_el_paso_repetido_y_el_primero(self):
+        (h,) = _repetidos(_curso([_elegir(["A", "B"], 0), _elegir(["X", "A"], 1)]))
+        self.assertIn("paso 2 (elegir)", h.donde)
+        self.assertIn("paso 1", h.mensaje)
+
+    def test_el_tercero_apunta_al_primero_y_cuenta_desde_uno(self):
+        pasos = [_elegir(["A", "B"], 0), {"tipo": "explicacion", "texto": "t"}, _elegir(["A", "C"], 0), _elegir(["C", "A"], 1)]
+        h1, h2 = _repetidos(_curso(pasos))
+        self.assertIn("paso 3 (elegir)", h1.donde)
+        self.assertIn("paso 4 (elegir)", h2.donde)
+        self.assertTrue(h1.mensaje.endswith("paso 1") and h2.mensaje.endswith("paso 1"))
+
+    def test_correcta_en_el_limite_o_negativa_se_ignora_sin_romper(self):
+        for malo in (2, -1):
+            with self.subTest(correcta=malo):
+                self.assertEqual(_repetidos(_curso([_elegir(["A", "B"], 0), _elegir(["X", "A"], malo)])), [])
+
+    def test_correcta_booleana_o_no_entera_se_ignora(self):
+        for malo in (True, "1", 1.0, None):
+            with self.subTest(correcta=malo):
+                self.assertEqual(_repetidos(_curso([_elegir(["B", "A"], 1), _elegir(["X", "A"], malo)])), [])
+
+    def test_opciones_que_no_son_lista_se_ignoran(self):
+        self.assertEqual(_repetidos(_curso([_elegir(["A"], 0), _elegir("A", 0)])), [])
+
+    def test_correcta_cero_cuenta(self):
+        self.assertEqual(len(_repetidos(_curso([_elegir(["A", "B"], 0), _elegir(["A", "C"], 0)]))), 1)
+
+    def test_correcta_en_la_ultima_opcion_cuenta(self):
+        self.assertEqual(len(_repetidos(_curso([_elegir(["B", "A"], 1), _elegir(["C", "A"], 1)]))), 1)
