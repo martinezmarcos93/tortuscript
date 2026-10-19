@@ -6,6 +6,7 @@ consultan antes de fijarlos.
 ## Sin publicar
 
 ### Agregado
+- **ADR-052 aceptada y especificación del modelo de dominio pedagógico V1** (`docs/MODELO_DOMINIO_V1.md`). El dominio por concepto se deriva del progreso existente: no cambia el esquema ni recopila datos nuevos. Todavía sin código.
 - **Puerta de pago, ciclo mensual y cobro con inscripción (ADR-050).** El catálogo marca 19 unidades gratuitas (Alfabetización
   completa + la primera de Python, Web y SQL) y 18 premium; el servidor no abre lo premium sin acceso vigente, ni por la
   interfaz, ni por la URL, ni por la API (402), y una pantalla de puerta explica qué logró el chico y que lo decide un adulto.
