@@ -183,3 +183,12 @@ Imprime las métricas de un archivo de progreso local en texto legible. Solo lec
 
 `docs/audits/VALIDACION_PEDAGOGICA_P6.md`: línea de base, qué se puede y qué no se puede medir con los datos actuales,
 qué es hipótesis y qué está demostrado, y decisiones recomendadas. Lo escribe el director.
+
+---
+
+## Acceso de las lecciones fuera del mapa (ADR-053, aceptada el 19/10/2026)
+
+- `catalogo_producto.unidad_de_cobro(leccion_id) -> str | None`: la unidad del mapa si la lección está en él; si no, la
+  primera unidad **premium** (orden del mapa) entre `transferencia.conceptos` o `conceptos` de la lección; si no hay, `None`.
+- `web/app.py`: `_unidad_del_pedido` y la marca `de_pago` del camino usan `unidad_de_cobro`.
+- Validador: en `desafios-*` y en los cursos de juegos nuevos, toda lección declara conceptos.
