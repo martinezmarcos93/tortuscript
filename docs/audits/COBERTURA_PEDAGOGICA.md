@@ -1,6 +1,6 @@
 # Cobertura pedagógica por unidad (P1)
 
-Generado con `herramientas/cobertura_pedagogica.py --escribir` el 2026-10-19. No editar a mano.
+Generado con `herramientas/cobertura_pedagogica.py --escribir` el 2026-10-20. No editar a mano.
 
 Categorías según el tipo de paso (`docs/MODELO_DOMINIO_V1.md`): `elegir` → reconocimiento, `predecir` → predicción, `completar`/`ordenar` → construcción, `escribir` → producción.
 
@@ -8,7 +8,7 @@ Categorías según el tipo de paso (`docs/MODELO_DOMINIO_V1.md`): `elegir` → r
 
 - Unidades de lecciones: **35**
 - Con las cuatro categorías: **18**
-- Con una sola categoría (8): `nivel0-datos`, `nivel0-base-datos`, `nivel0-api`, `nivel0-seguridad`, `nivel0-integracion`, `nivel0-json`, `nivel0-git`, `nivel0-github`
+- Con una sola categoría (0): ninguna
 - Sin producción autónoma (16): `nivel0-programa`, `nivel0-lenguaje`, `nivel0-codigo`, `nivel0-navegador`, `nivel0-internet`, `nivel0-servidor`, `nivel0-frontend`, `nivel0-backend`, `nivel0-datos`, `nivel0-base-datos`, `nivel0-api`, `nivel0-seguridad`, `nivel0-integracion`, `nivel0-json`, `nivel0-git`, `nivel0-github`
 
 ## Por unidad
@@ -23,14 +23,14 @@ Categorías según el tipo de paso (`docs/MODELO_DOMINIO_V1.md`): `elegir` → r
 | `nivel0-servidor` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
 | `nivel0-frontend` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
 | `nivel0-backend` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
-| `nivel0-datos` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-base-datos` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-api` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-seguridad` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-integracion` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-json` | alfabetizacion-digital | 3 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-git` | alfabetizacion-digital | 3 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-github` | alfabetizacion-digital | 3 | ✅ | — | — | — | Predicción, Construcción, Producción |
+| `nivel0-datos` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-base-datos` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-api` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-seguridad` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-integracion` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-json` | alfabetizacion-digital | 5 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-git` | alfabetizacion-digital | 5 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-github` | alfabetizacion-digital | 5 | ✅ | ✅ | ✅ | — | Producción |
 | `python-puente` | python-real | 14 | ✅ | ✅ | ✅ | ✅ | — |
 | `python-control` | python-real | 14 | ✅ | ✅ | ✅ | ✅ | — |
 | `python-funciones` | python-real | 6 | ✅ | ✅ | ✅ | ✅ | — |
