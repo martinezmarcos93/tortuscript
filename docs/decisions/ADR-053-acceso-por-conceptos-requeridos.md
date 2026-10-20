@@ -17,12 +17,13 @@ regla general, un desafío de Python avanzado quedaría gratis aunque su conteni
 Decisión de Marcos (19/10/2026): **un ejercicio es gratuito si todo lo que hace falta para resolverlo se aprende en la
 versión gratuita; si necesita alguna lección que se desbloquea con el pago, queda bloqueado.**
 
-1. Una lección fuera del mapa puede declarar los conceptos que necesita: `transferencia.conceptos` (desafíos) o `conceptos`
-   (juegos y otras lecciones). Son ids de unidades `lecciones` del mapa.
+1. Una lección fuera del mapa declara **las lecciones que hace falta saber** para resolverla: `transferencia.conceptos`
+   (desafíos) o `conceptos` (juegos y otras lecciones). Son **ids de lecciones** ya existentes en cursos anteriores, no ids
+   de unidades: así también se pueden nombrar las 30 prácticas de «primeros pasos», que no están en el mapa y son gratis.
 2. `catalogo_producto.unidad_de_cobro(leccion_id)` decide qué unidad cobra esa lección:
    - si la lección está en el mapa, su unidad (como hoy, `unidad_de_leccion`);
-   - si no, **la primera unidad premium** entre los conceptos declarados, en el orden del mapa;
-   - si ninguno es premium o no declara conceptos, `None`: queda abierta (como hoy).
+   - si no, entre las lecciones declaradas, la unidad de la primera (en el orden del mapa) que sea **premium**;
+   - si ninguna lección declarada pertenece a una unidad premium, o no declara nada, `None`: queda abierta (como hoy).
 3. La puerta de pago (`_unidad_del_pedido`) y la marca 💎 del camino usan `unidad_de_cobro` en lugar de `unidad_de_leccion`.
    Al cobrar por una unidad que ya existe, la pantalla de la puerta, el 402 de la API y la regla «solo donde hay pagos
    configurados» no cambian.
