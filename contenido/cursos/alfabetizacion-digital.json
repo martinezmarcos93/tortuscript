@@ -1182,7 +1182,11 @@
                 "Mostrar una página web en el navegador"
               ],
               "correcta": 0,
-              "pista": "JSON describe datos; no es una pieza de hardware."
+              "pista": "JSON describe datos; no es una pieza de hardware.",
+              "pistas": [
+                "Es un lenguaje para organizar información.",
+                "Se usa para transmitir datos entre computadoras."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1193,7 +1197,44 @@
                 "El valor que se guarda dentro del dato"
               ],
               "correcta": 0,
-              "pista": "En JSON una clave ayuda a saber qué significa un valor."
+              "pista": "En JSON una clave ayuda a saber qué significa un valor.",
+              "pistas": [
+                "Es la etiqueta del dato.",
+                "Funciona como el título de una caja."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená la estructura de un dato JSON básico.",
+              "lineas": [
+                "Abrir llave.",
+                "Escribir clave.",
+                "Escribir valor.",
+                "Cerrar llave."
+              ],
+              "pista": "Un objeto JSON empieza con una llave y tiene claves y valores adentro.",
+              "pistas": [
+                "La apertura inicia el objeto.",
+                "La clave va antes que el valor."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si falta una llave de cierre en JSON?",
+              "codigo": "{\n  \"nombre\": \"Juan\"\n(falta cierre)",
+              "opciones": [
+                "El programa da un error y no puede leer los datos",
+                "El programa ignora el error y funciona",
+                "La computadora arregla el formato sola"
+              ],
+              "correcta": 0,
+              "pista": "JSON es estricto con sus reglas de formato.",
+              "pistas": [
+                "Sin todas las piezas, la estructura está rota.",
+                "Es como una oración sin punto final."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
