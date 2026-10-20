@@ -66,6 +66,7 @@ Las medidas de endurecimiento que no condicionan el modelo de producto, por ejem
 | [ADR-052](ADR-052-modelo-de-dominio-pedagogico.md) | Modelo de dominio pedagógico y planificación adaptativa | Aceptada |
 | [ADR-053](ADR-053-acceso-por-conceptos-requeridos.md) | Acceso a desafíos y juegos según los conceptos que requieren | Aceptada |
 | [ADR-054](ADR-054-depurador-paso-a-paso.md) | Depurador paso a paso para programas de texto | Aceptada |
+| [ADR-055](ADR-055-nido-de-tortuguitas.md) | Nido de tortuguitas: constancia diaria, premios y ayudas especiales | Aceptada |
 
 ## Documentos de producto
 
