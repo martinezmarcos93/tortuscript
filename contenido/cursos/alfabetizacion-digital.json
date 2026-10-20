@@ -71,7 +71,7 @@
                 "Ejecuta cada instrucción en orden.",
                 "La tarea se completa."
               ],
-              "pista": "Primero se lee, luego se hace y finalmente termina.",
+              "pista": "Pensá qué tiene que pasar antes de que la computadora pueda hacer algo.",
               "pistas": [
                 "El proceso empieza leyendo.",
                 "La ejecución ocurre antes de completar la tarea."
@@ -90,8 +90,8 @@
               "correcta": 0,
               "pista": "Las instrucciones son necesarias para los pasos.",
               "pistas": [
-                "Las recetas necesitan todos sus pasos.",
-                "Sin una instrucción, la máquina se detiene o falla."
+                "Una receta a la que le falta un paso, ¿sale bien?",
+                "La computadora solo hace lo que está escrito."
               ],
               "lenguaje": "web-conceptual"
             }
@@ -132,7 +132,7 @@
               "pista": "Python es un lenguaje; Internet es una red y Chrome es un navegador.",
               "pistas": [
                 "Internet es una conexión, no un idioma.",
-                "Python es una herramienta para escribir código."
+                "Buscá el nombre que se usa para escribir programas."
               ]
             },
             {
@@ -155,10 +155,10 @@
               "consigna": "Ordená cómo se usa un lenguaje.",
               "lineas": [
                 "Escribir instrucciones.",
-                "El lenguaje las traduce.",
+                "Un programa las traduce para la computadora.",
                 "La computadora ejecuta el programa."
               ],
-              "pista": "Primero escribís, luego se traduce y finalmente se ejecuta.",
+              "pista": "Pensá qué hace la persona y qué hace la computadora.",
               "pistas": [
                 "La escritura es el primer paso.",
                 "La ejecución ocurre después de la traducción."
@@ -245,7 +245,7 @@
                 "Usar el dato en una función.",
                 "Mostrar el resultado."
               ],
-              "pista": "Primero definís, luego usás y finalmente mostrás.",
+              "pista": "Un dato tiene que existir antes de poder usarlo.",
               "pistas": [
                 "La definición ocurre al principio.",
                 "Mostrar es el último paso del proceso."
@@ -333,7 +333,7 @@
                 "El servidor responde.",
                 "El navegador la muestra."
               ],
-              "pista": "Primero escribís, se pide, responde el servidor y finalmente se muestra.",
+              "pista": "Pensá quién pide y quién responde.",
               "pistas": [
                 "El pedido va antes de la respuesta.",
                 "Mostrás la web al final."
@@ -352,8 +352,8 @@
               "correcta": 0,
               "pista": "Sin red, el navegador no puede obtener los recursos de la web.",
               "pistas": [
-                "No puede descargar la información.",
-                "Te avisa que no se pudo conectar."
+                "Para mostrar una página, el navegador primero tiene que conseguirla.",
+                "Pensá qué puede hacer si no consigue nada."
               ],
               "lenguaje": "web-conceptual"
             }
@@ -421,7 +421,7 @@
                 "Los paquetes viajan por cables.",
                 "El destino recibe y une los paquetes."
               ],
-              "pista": "Primero sale, se divide, viaja y se vuelve a unir.",
+              "pista": "Seguí el mensaje desde que sale hasta que llega.",
               "pistas": [
                 "El envío inicia todo.",
                 "Los paquetes se unen al llegar."
@@ -509,7 +509,7 @@
                 "Servidor recibe y busca datos.",
                 "Servidor envía respuesta."
               ],
-              "pista": "Primero pedís, viaja, se busca y vuelve.",
+              "pista": "Un pedido tiene que llegar antes de que alguien lo conteste.",
               "pistas": [
                 "El pedido va antes que la búsqueda.",
                 "El envío es lo último."
@@ -528,8 +528,8 @@
               "correcta": 0,
               "pista": "El servidor te avisa cuando no encuentra lo que buscás.",
               "pistas": [
-                "Un error es la forma de decir 'no está'.",
-                "No puede inventar archivos."
+                "El servidor solo puede entregar lo que tiene.",
+                "Pensá cómo te enterás de que algo no está."
               ],
               "lenguaje": "web-conceptual"
             }
@@ -590,16 +590,17 @@
             },
             {
               "tipo": "ordenar",
-              "consigna": "Ordená los elementos de una interfaz.",
+              "consigna": "Ordená qué pasa cuando tocás un botón en una página.",
               "lineas": [
-                "Título principal.",
-                "Botones de acción.",
-                "Imagen de perfil."
+                "Tocás el botón «Me gusta».",
+                "El frontend detecta el toque.",
+                "Le avisa al backend.",
+                "El frontend cambia el corazón a rojo."
               ],
-              "pista": "El título va primero, luego acciones y la imagen al final.",
+              "pista": "Pensá qué pasa en tu pantalla y qué pasa por detrás.",
               "pistas": [
-                "El título encabeza todo.",
-                "La imagen es un detalle final."
+                "Todo empieza con algo que hacés vos.",
+                "Lo último es lo que ves cambiar en la pantalla."
               ],
               "lenguaje": "web-conceptual"
             },
@@ -684,7 +685,7 @@
                 "Restar el producto del inventario.",
                 "Enviar confirmación."
               ],
-              "pista": "Recibe, verifica, actualiza y confirma.",
+              "pista": "Antes de cambiar el inventario hay que comprobar algo.",
               "pistas": [
                 "La verificación es antes de cambiar el inventario.",
                 "La confirmación es el paso final."
@@ -703,8 +704,8 @@
               "correcta": 0,
               "pista": "Si el backend falla, la lógica de negocio se detiene.",
               "pistas": [
-                "Sin validación del backend no hay cobro.",
-                "Se cancela la operación de forma segura."
+                "Sin el backend, ¿quién comprueba el pago?",
+                "Pensá qué es lo más seguro para quien compra."
               ],
               "lenguaje": "web-conceptual"
             }
