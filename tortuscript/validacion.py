@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 
 from . import tortuga, tortugame
-from .contenido import HUECO, TIPOS, pasos
+from .contenido import HUECO, ORDEN_CURSOS, TIPOS, lecciones, pasos
 from .evaluacion import SEMILLA_EVALUACION, normalizar_salida
 from .executor import ejecutar_codigo
 from .translator import TraductorTortuScript, detectar_tipo, palabras_usadas
@@ -425,6 +425,31 @@ def _revisar_respuestas_repetidas(leccion, hallazgos):
             hallazgos.append(Hallazgo(AVISO, donde, f"respuesta correcta repetida: «{texto}» ya es la correcta del paso {vistas[texto]}"))
         else:
             vistas[texto] = i + 1
+
+
+def validar_transferencias(cursos):
+    """Valida referencias de transferencia entre cursos según su orden."""
+    hallazgos = []
+    cursos = list(cursos)
+    orden = {curso_id: i for i, curso_id in enumerate(ORDEN_CURSOS)}
+    indices = {leccion.get("id"): curso.get("id") for curso in cursos for _, leccion in lecciones(curso)}
+    for curso in cursos:
+        for _, reto in lecciones(curso):
+            transferencia = reto.get("transferencia")
+            if transferencia is None:
+                continue
+            donde = reto.get("id", "lección")
+            conceptos = transferencia.get("conceptos") if isinstance(transferencia, dict) else None
+            distintos = set(conceptos) if isinstance(conceptos, list) and all(isinstance(x, str) for x in conceptos) else set()
+            if len(distintos) < 2:
+                hallazgos.append(Hallazgo(ERROR, donde, "transferencia necesita al menos 2 conceptos distintos"))
+            elif any(concepto not in indices or indices[concepto] == curso.get("id")
+                     or orden.get(indices[concepto], len(orden)) >= orden.get(curso.get("id"), -1)
+                     for concepto in distintos):
+                hallazgos.append(Hallazgo(ERROR, donde, "transferencia debe referir lecciones de otros cursos anteriores"))
+            if not isinstance(transferencia, dict) or transferencia.get("asistencia") not in {"guiada", "autonoma"}:
+                hallazgos.append(Hallazgo(ERROR, donde, "transferencia.asistencia debe ser «guiada» o «autonoma»"))
+    return hallazgos
 
 
 def validar_curso(curso):

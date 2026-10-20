@@ -1,0 +1,117 @@
+{
+  "id": "desafios-tortuscript",
+  "titulo": "Desafíos de TortuScript",
+  "icono": "🐢",
+  "descripcion": "Desafíos para combinar lo que ya aprendiste.",
+  "version": 1,
+  "requiere": {
+    "curso": "primeros-pasos"
+  },
+  "secciones": [
+    {
+      "id": "desafios",
+      "nivel": 1,
+      "titulo": "Desafíos",
+      "lecciones": [
+        {
+          "id": "mensaje-en-ronda",
+          "titulo": "Mensaje en ronda",
+          "transferencia": {
+            "conceptos": [
+              "tu-primera-variable",
+              "repetir"
+            ],
+            "asistencia": "guiada"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "En la radio escolar, guardá «Luz» en una variable y mostrá exactamente «Hola Luz» tres veces.",
+              "codigo": "saludo es \"Buen día\"\nrepetir 2 veces:\n    mostrar saludo"
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "nombre es \"Luz\"\nrepetir 3 veces:\n    mostrar \"Hola \" + nombre",
+              "pista": "Guardá el nombre antes de repetir; el mensaje se arma juntando texto y variable."
+            }
+          ]
+        },
+        {
+          "id": "puntos-del-juego",
+          "titulo": "Puntos del juego",
+          "transferencia": {
+            "conceptos": [
+              "suma",
+              "si-es-grande"
+            ],
+            "asistencia": "autonoma"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "En un juego juntaste 7 puntos y ganaste 5 más. Mostrá exactamente «¡Nivel nuevo!» si el total llega a 10 o más; si no, mostrá el total.",
+              "codigo": "total es 4\nsi total > 3:\n    mostrar \"Pasa\"\nsino:\n    mostrar \"Seguí\""
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "puntos es 7 + 5\nsi puntos >= 10:\n    mostrar \"¡Nivel nuevo!\"\nsino:\n    mostrar puntos",
+              "pista": "Pensá primero cómo guardar el total y después qué condición separa los dos mensajes."
+            }
+          ]
+        },
+        {
+          "id": "clave-secreta",
+          "titulo": "Clave secreta",
+          "transferencia": {
+            "conceptos": [
+              "pedir-el-nombre",
+              "contrasena"
+            ],
+            "asistencia": "autonoma"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "Un robot pregunta una clave. Con la respuesta «mate», muestra exactamente «Adelante»; con la respuesta «sol», muestra exactamente «Probá otra vez».",
+              "codigo": "respuesta es preguntar(\"¿Color? \")\nsi respuesta == \"verde\":\n    mostrar \"Sí\"\nsino:\n    mostrar \"No\""
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "clave es preguntar(\"¿Clave? \")\nsi clave == \"mate\":\n    mostrar \"Adelante\"\nsino:\n    mostrar \"Probá otra vez\"",
+              "pista": "La respuesta de preguntar queda en una variable; comparala con el texto esperado.",
+              "entradas_prueba": [
+                "mate"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tabla-relampago",
+          "titulo": "Tabla relámpago",
+          "transferencia": {
+            "conceptos": [
+              "contador",
+              "tabla-del-2"
+            ],
+            "asistencia": "autonoma"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "Para una competencia, mostrá los números 3, 6, 9, 12 y 15, cada uno en una línea."
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "n es 1\nrepetir 5 veces:\n    mostrar 3 * n\n    n es n + 1",
+              "pista": "Una variable puede marcar cada vuelta; repetí cinco veces y hacela avanzar."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
