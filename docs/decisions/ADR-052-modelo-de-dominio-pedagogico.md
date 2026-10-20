@@ -1,6 +1,6 @@
 # ADR-052 — Modelo de dominio pedagógico y planificación adaptativa
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada (Marcos, 18/10/2026)
 - **Fecha:** 14/10/2026
 - **Responsable de decisión:** Marcos
 - **Relacionado:** ADR-002, ADR-003, ADR-004, ADR-024; `docs/ROADMAP_PEDAGOGIA_ADAPTATIVA.md`; `docs/FLUJO_DE_RAMAS_PROD.md`
@@ -79,4 +79,11 @@ La inspiración procede de principios pedagógicos públicos empleados por plata
 
 ## Decisión
 
-Esta ADR es una **propuesta documental** y no autoriza por sí misma la implementación de cambios arquitectónicos. Marcos debe cambiar su estado a `Aceptada` antes de que las decisiones aquí descritas se utilicen como fundamento arquitectónico. La auditoría inicial y la documentación del roadmap pueden continuar bajo el alcance ya solicitado.
+**Aceptada por Marcos el 18/10/2026.** Las decisiones de esta ADR pasan a ser fundamento arquitectónico para las fases P2 (modelo de dominio) y P3 (planificador adaptativo) de `docs/ROADMAP_PEDAGOGIA_ADAPTATIVA.md`, siempre dentro de los límites y garantías de arriba y del flujo de ramas de `docs/FLUJO_DE_RAMAS_PROD.md` (ramas de trabajo → `prod`; nada a `main` sin orden expresa).
+
+Precisiones de la primera implementación (18/10/2026):
+
+1. **El dominio se deriva, no se guarda.** `tortuscript/dominio.py` calcula el estado por concepto leyendo el progreso que ya existe (`lecciones`, `ejercicios`, `repaso`). No agrega claves al progreso, no cambia `VERSION_ESQUEMA` y no recopila datos nuevos de menores. Si más adelante hiciera falta persistir, será otra decisión con migración propia.
+2. **El concepto es la unidad de `contenido/mapa_curricular.json`** (37 unidades). No se crea una taxonomía paralela.
+3. **El planificador es un módulo independiente con interruptor** y fallback al repaso actual de `practica.py`.
+4. Ver `docs/MODELO_DOMINIO_V1.md` para las reglas exactas.

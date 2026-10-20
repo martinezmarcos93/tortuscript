@@ -6,6 +6,9 @@ consultan antes de fijarlos.
 ## Sin publicar
 
 ### Agregado
+- **Modelo de dominio pedagógico V1 (`tortuscript/dominio.py`, ADR-052).** Estima por concepto (las 37 unidades del mapa curricular) cuánta evidencia de dominio hay, en 6 estados de `sin_evidencia` a `consolidado`, derivándola del progreso existente: no guarda datos nuevos, no cambia el esquema y no castiga la ayuda. Todavía no lo usa ninguna pantalla ni el repaso.
+- **ADR-052 aceptada y especificación del modelo de dominio pedagógico V1** (`docs/MODELO_DOMINIO_V1.md`). El dominio por concepto se deriva del progreso existente: no cambia el esquema ni recopila datos nuevos. Todavía sin código.
+- **El XP de un ejercicio ya no puede retroceder (T3).** `progreso.registrar_ejercicio` rechaza, sin tocar nada y con aviso en el log, una combinación incoherente: XP negativo, o más estrellas con menos XP que lo ya guardado. Política decidida por Marcos el 18/10/2026. No cambia el esquema ni el XP ya ganado.
 - **Puerta de pago, ciclo mensual y cobro con inscripción (ADR-050).** El catálogo marca 19 unidades gratuitas (Alfabetización
   completa + la primera de Python, Web y SQL) y 18 premium; el servidor no abre lo premium sin acceso vigente, ni por la
   interfaz, ni por la URL, ni por la API (402), y una pantalla de puerta explica qué logró el chico y que lo decide un adulto.
@@ -39,6 +42,7 @@ consultan antes de fijarlos.
   concede el otro. El pedido solo elige qué plan; el importe y la duración siguen saliendo del servidor.
 
 ### Corregido
+- **Repaso espaciado: un registro de progreso dañado ya no rompe el resto.** Un perfil que era JSON válido pero tenía una clave de paso no numérica, una fecha mal formada (del paso o `proximo`), una tarjeta de repaso que no era un objeto o una caja inválida hacía fallar `practica` y devolvía HTTP 500 en `/api/estado`. Ahora ese registro se ignora (con aviso en el log y `practica.diagnosticar`), las tarjetas sanas siguen funcionando y no se modifica nada al leer. La clave `"-1"` ya no se lee como el último paso, y en el catálogo una fecha dañada ya no marca «repasar». Intervalos (1, 2, 4, 8, 16), XP, rachas y ejercicios históricos sin cambios. Contrato y límites en `docs/audits/ROBUSTEZ_REGISTROS_PROGRESO.md`.
 - **Test del límite predeterminado de la práctica del día.** `practica.elegir` sin `cantidad` trae a lo sumo 6 tarjetas (con más de 6 vencidas, justo 6 o 7, menos de 6 y ninguna). Antes ningún test fijaba ese valor, porque todos lo pedían explícitamente; la web lo llama sin pasarlo. Sin cambios en el comportamiento.
 - **Test que fija la identidad de los 30 ejercicios históricos de «primeros pasos».** Compara uno por uno el par `(leccion_id, paso)` de cada `escribir` (la clave del progreso guardado es su índice 0 a 29). Antes solo se comprobaban la cantidad, los niveles y tres casos sueltos.
 - **Alfabetización digital: preguntas coherentes (ver `docs/audits/AUDITORIA_DINAMICA_P0_2026-10-14.md`).** En varias lecciones el paso 3 repetía la respuesta del paso anterior con una pregunta que no le correspondía, algunas pistas eran de otra pregunta y cuatro preguntas tenían solo dos opciones. Mismos IDs, tipos y posiciones de paso: el progreso guardado no cambia.
