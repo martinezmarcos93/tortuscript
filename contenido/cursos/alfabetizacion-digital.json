@@ -114,7 +114,11 @@
                 "Para guardar fotos en una carpeta"
               ],
               "correcta": 0,
-              "pista": "El lenguaje permite expresar las instrucciones del programa."
+              "pista": "El lenguaje permite expresar las instrucciones del programa.",
+              "pistas": [
+                "Los idiomas permiten hablar; los de programación permiten ordenar.",
+                "Son reglas para comunicarse con la computadora."
+              ]
             },
             {
               "tipo": "elegir",
@@ -125,7 +129,11 @@
                 "Chrome"
               ],
               "correcta": 0,
-              "pista": "Python es un lenguaje; Internet es una red y Chrome es un navegador."
+              "pista": "Python es un lenguaje; Internet es una red y Chrome es un navegador.",
+              "pistas": [
+                "Internet es una conexión, no un idioma.",
+                "Python es una herramienta para escribir código."
+              ]
             },
             {
               "tipo": "elegir",
@@ -136,7 +144,43 @@
                 "Una base de datos"
               ],
               "correcta": 0,
-              "pista": "Python, JavaScript y Kotlin son ejemplos: ¿qué se hace con ellos?"
+              "pista": "Python, JavaScript y Kotlin son ejemplos: ¿qué se hace con ellos?",
+              "pistas": [
+                "Sirven para crear programas.",
+                "Son la forma de hablarle a la computadora."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo se usa un lenguaje.",
+              "lineas": [
+                "Escribir instrucciones.",
+                "El lenguaje las traduce.",
+                "La computadora ejecuta el programa."
+              ],
+              "pista": "Primero escribís, luego se traduce y finalmente se ejecuta.",
+              "pistas": [
+                "La escritura es el primer paso.",
+                "La ejecución ocurre después de la traducción."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si escribís mal una palabra del lenguaje?",
+              "codigo": "1. Escribir instrucción\n2. (error de ortografía)\n3. Ejecutar",
+              "opciones": [
+                "La computadora no entiende y no puede ejecutar",
+                "El programa funciona igual",
+                "Se arregla solo automáticamente"
+              ],
+              "correcta": 0,
+              "pista": "La computadora es muy estricta con las reglas del lenguaje.",
+              "pistas": [
+                "Un idioma requiere reglas claras.",
+                "Si la orden no es exacta, la máquina no entiende."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
