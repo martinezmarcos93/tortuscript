@@ -455,7 +455,7 @@ def validar_curso(curso):
             if isinstance(texto, tuple):
                 temporales = []
                 _revisar_texto(texto[1], donde, temporales)
-                hallazgos.extend(Hallazgo(ERROR, h.donde, f"pistas: {h.mensaje}") for h in temporales)
+                hallazgos.extend(Hallazgo(h.nivel, h.donde, f"pistas: {h.mensaje}") for h in temporales)
             else:
                 _revisar_texto(texto, donde, hallazgos)
 
