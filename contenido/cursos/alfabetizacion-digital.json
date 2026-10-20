@@ -823,7 +823,11 @@
                 "Para conectar el monitor al teclado"
               ],
               "correcta": 0,
-              "pista": "Una base de datos está pensada para almacenar y consultar información."
+              "pista": "Una base de datos está pensada para almacenar y consultar información.",
+              "pistas": [
+                "Es un sistema para gestionar muchos datos juntos.",
+                "Permite encontrar rápido lo que necesitás."
+              ]
             },
             {
               "tipo": "elegir",
@@ -834,7 +838,11 @@
                 "El color del monitor"
               ],
               "correcta": 0,
-              "pista": "Pensá qué necesita saber una tienda para vender: qué tiene y a qué precio."
+              "pista": "Pensá qué necesita saber una tienda para vender: qué tiene y a qué precio.",
+              "pistas": [
+                "Guarda detalles sobre las cosas.",
+                "Almacena los valores que cambian, como el stock."
+              ]
             },
             {
               "tipo": "elegir",
@@ -845,7 +853,44 @@
                 "Muestra una página sin buscar nada"
               ],
               "correcta": 0,
-              "pista": "Primero se hace el pedido y después la base devuelve lo que se pidió."
+              "pista": "Primero se hace el pedido y después la base devuelve lo que se pidió.",
+              "pistas": [
+                "La base de datos responde a un pedido específico.",
+                "Es como preguntarle a un bibliotecario por un libro."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo una tienda usa su base de datos al vender.",
+              "lineas": [
+                "El cliente elige un producto.",
+                "El programa consulta el precio.",
+                "El programa resta el stock.",
+                "Se registra la venta."
+              ],
+              "pista": "Primero sabés el precio, luego actualizás el stock.",
+              "pistas": [
+                "Consultar es antes de modificar.",
+                "El registro de la venta es el cierre."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si pedís un producto que figura sin stock?",
+              "codigo": "1. Pedir producto\n2. Consultar stock: 0\n3. ???",
+              "opciones": [
+                "El programa te avisa que no hay stock",
+                "El programa vende igual y lo inventa",
+                "La base de datos se borra"
+              ],
+              "correcta": 0,
+              "pista": "Los programas actúan según la información que encuentran.",
+              "pistas": [
+                "Si el dato dice que no hay, el programa no lo vende.",
+                "La base de datos da la verdad sobre el producto."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
