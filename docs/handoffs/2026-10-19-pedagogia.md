@@ -11,9 +11,12 @@ Pausado por Marcos (límite de tokens). Rama `pedagogia/p1-p6` (local, sin push)
 - P6: `docs/audits/VALIDACION_PEDAGOGICA_P6.md`. Roadmap del libro: `docs/ROADMAP_INVENTAR_CON_PYTHON.md`.
 - Tests afectados en verde y validador sin errores al momento del último merge (suite completa sin correr).
 
-## Pendiente (worktrees en `~/src/`)
-1. `tortuscript-alfabetizacion-b` (encargo 016): commits de seguridad, integracion, json; falta revisar el archivo sin commitear y hacer `git`, `github`. Revisar pistas que regalan la respuesta antes de integrar.
-2. `tortuscript-metricas-impl` (encargo 017): P6 implementado por el worker (`53ecff5`), **sin revisar**: correr `test_metricas_pedagogicas` y mutación.
-3. Encargo 019 (casos de prueba ocultos, Codex): cortado antes de empezar; relanzar.
-4. Correr la suite completa, regenerar el informe de cobertura y abrir PR de `pedagogia/p1-p6` hacia `prod` con OK de Marcos.
-5. Proxy LiteLLM: el fallback a Groq/Cerebras rechaza `reasoning_content` y corta las sesiones de OpenCode; arreglo propuesto, pendiente del OK de Marcos.
+## Actualización 20/10 (madrugada)
+Completado: P6 (métricas, revisado y corregido), Alfabetización entera (16 lecciones), casos de prueba ocultos (Codex),
+CHANGELOG. Suite completa: 1238 tests OK (antes del merge de casos ocultos); validador sin errores.
+
+## Pendiente
+1. OK de Marcos para push de `pedagogia/p1-p6` y PR hacia `prod` (después de #27, o apilado sobre él).
+2. Proxy LiteLLM: el fallback a Groq/Cerebras rechaza `reasoning_content` y corta las sesiones de OpenCode; arreglo pendiente del OK de Marcos.
+3. Roadmap del libro (`docs/ROADMAP_INVENTAR_CON_PYTHON.md`): L1 a L7 sin empezar; L5 tiene ADR-054 aceptada.
+4. Limpiar worktrees `~/src/tortuscript-*` ya integrados.
