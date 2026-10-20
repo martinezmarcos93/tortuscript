@@ -112,10 +112,6 @@
                 "print",
                 "="
               ],
-              "pistas": [
-                "Recordá usar comillas para los textos y el signo igual para guardar.",
-                "Primero asigná el valor a la variable y luego usá print con la variable entre paréntesis."
-              ],
               "nota": "Escribilo en Python, como lo escriben los programadores."
             }
           ]
