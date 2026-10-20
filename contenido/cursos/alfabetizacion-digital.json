@@ -639,7 +639,11 @@
                 "Cambiar el color de una pared"
               ],
               "correcta": 0,
-              "pista": "El backend puede ejecutar lógica y trabajar con datos."
+              "pista": "El backend puede ejecutar lógica y trabajar con datos.",
+              "pistas": [
+                "Es el motor que no se ve.",
+                "Se encarga de procesar las reglas y guardar los datos."
+              ]
             },
             {
               "tipo": "elegir",
@@ -650,7 +654,11 @@
                 "El teclado"
               ],
               "correcta": 0,
-              "pista": "El backend puede aplicar lógica y consultar datos antes de responder."
+              "pista": "El backend puede aplicar lógica y consultar datos antes de responder.",
+              "pistas": [
+                "No es la pantalla ni la interfaz.",
+                "Es la lógica que corre por detrás."
+              ]
             },
             {
               "tipo": "elegir",
@@ -661,7 +669,44 @@
                 "Sí: uno reemplaza al otro"
               ],
               "correcta": 0,
-              "pista": "Uno se ocupa de la interfaz; el otro puede encargarse de lógica, datos y servicios."
+              "pista": "Uno se ocupa de la interfaz; el otro puede encargarse de lógica, datos y servicios.",
+              "pistas": [
+                "Trabajan juntos pero tienen diferentes roles.",
+                "Se comunican para completar las tareas."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el trabajo del backend al comprar algo.",
+              "lineas": [
+                "Recibir la orden de compra.",
+                "Verificar que hay stock.",
+                "Restar el producto del inventario.",
+                "Enviar confirmación."
+              ],
+              "pista": "Recibe, verifica, actualiza y confirma.",
+              "pistas": [
+                "La verificación es antes de cambiar el inventario.",
+                "La confirmación es el paso final."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si el backend falla al procesar un pago?",
+              "codigo": "1. Usuario toca 'Pagar'\n2. Backend da error de conexión\n3. ???",
+              "opciones": [
+                "La compra se detiene y se le avisa al usuario",
+                "El producto se entrega igual gratis",
+                "El celular se reinicia"
+              ],
+              "correcta": 0,
+              "pista": "Si el backend falla, la lógica de negocio se detiene.",
+              "pistas": [
+                "Sin validación del backend no hay cobro.",
+                "Se cancela la operación de forma segura."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         }
