@@ -41,6 +41,11 @@
               ],
               "correcta": 0,
               "pista": "En Python, lo que se muestra va entre paréntesis después de print.",
+              "pistas": [
+                "En Python, los paréntesis son obligatorios para mostrar cosas.",
+                "Fijate que el nombre de la instrucción termina con paréntesis.",
+                "La opción correcta usa print seguido de paréntesis."
+              ],
               "lenguaje": "python"
             },
             {
@@ -53,6 +58,11 @@
               ],
               "correcta": 0,
               "pista": "print(edad) muestra lo que guarda edad, no la palabra edad.",
+              "pistas": [
+                "Si pusiéramos comillas sería un texto, pero al no ponerlas usamos el valor de la variable.",
+                "print imprime lo que el nombre de la variable tiene guardado.",
+                "edad vale 12, así que eso es lo que aparece al imprimirla."
+              ],
               "lenguaje": "python"
             },
             {
@@ -69,6 +79,10 @@
               ],
               "salida": "Hola",
               "pista": "En Python, mostrar se escribe en inglés.",
+              "pistas": [
+                "Buscá la palabra inglesa para mostrar en pantalla.",
+                "Es la misma función que usaste antes para mostrar texto."
+              ],
               "lenguaje": "python"
             },
             {
@@ -85,6 +99,10 @@
               ],
               "salida": "Leo",
               "pista": "En Python, para guardar se usa un solo signo igual.",
+              "pistas": [
+                "Python usa un símbolo matemático básico para asignar valores.",
+                "No uses el igual doble, ese se usa para comparar."
+              ],
               "lenguaje": "python"
             },
             {
@@ -95,6 +113,10 @@
               "palabras_pista": [
                 "print",
                 "="
+              ],
+              "pistas": [
+                "Recordá usar comillas para los textos y el signo igual para guardar.",
+                "Primero asigná el valor a la variable y luego usá print con la variable entre paréntesis."
               ],
               "nota": "Escribilo en Python, como lo escriben los programadores."
             }
