@@ -45,14 +45,14 @@ def elegir(progreso, cursos, hoy, mapa=None, cantidad=practica.POR_SESION):
     por_leccion = {}
     por_grupo = {grupo: 0 for grupo in orden}
 
-    def rondas(limite):
+    def rondas(limite, limite_leccion=practica.MAX_POR_LECCION):
         while len(elegidas) < cantidad:
             hubo_avance = False
             for grupo in orden:
                 if por_grupo[grupo] >= limite or len(elegidas) >= cantidad:
                     continue
                 for _, leccion, paso in grupos[grupo]:
-                    if (leccion, paso) not in elegidas and por_leccion.get(leccion, 0) < practica.MAX_POR_LECCION:
+                    if (leccion, paso) not in elegidas and por_leccion.get(leccion, 0) < limite_leccion:
                         elegidas.append((leccion, paso))
                         por_leccion[leccion] = por_leccion.get(leccion, 0) + 1
                         por_grupo[grupo] += 1
@@ -63,7 +63,10 @@ def elegir(progreso, cursos, hoy, mapa=None, cantidad=practica.POR_SESION):
 
     rondas(MAX_POR_CONCEPTO)
     if len(elegidas) < cantidad:
-        rondas(max(MAX_POR_CONCEPTO, ceil(cantidad / max(1, len(orden)))))
+        # Con pocas lecciones vencidas se aflojan los dos topes, como en practica.elegir.
+        lecciones = {leccion for lista in grupos.values() for _, leccion, _ in lista}
+        rondas(max(MAX_POR_CONCEPTO, ceil(cantidad / max(1, len(orden)))),
+               max(practica.MAX_POR_LECCION, ceil(cantidad / max(1, len(lecciones)))))
     return elegidas
 
 

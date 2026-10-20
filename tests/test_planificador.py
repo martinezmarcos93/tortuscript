@@ -101,3 +101,47 @@ class PlanificadorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlanificadorBordesTests(unittest.TestCase):
+    """Bordes agregados por el director tras la prueba de mutación."""
+
+    def test_tope_exacto_de_dos_por_concepto_en_la_primera_pasada(self):
+        p, c, m = fixture()
+        m = {"ua": {"tipo": "lecciones", "curso": "c", "lecciones": ["a", "b"]},
+             "uc": {"tipo": "lecciones", "curso": "c", "lecciones": ["c", "x"]}}
+        with patch.object(dominio, "dominio", return_value={"ua": {"nivel": 1}, "uc": {"nivel": 4}}):
+            res = planificador.elegir(p, c, date(2026, 10, 19), m, 4)
+        # Dos de cada concepto aunque el de nivel 1 tenga más tarjetas.
+        self.assertEqual(res, [("a", 0), ("c", 0), ("a", 1), ("c", 1)])
+
+    def test_leccion_en_dos_unidades_usa_la_primera_del_mapa(self):
+        p, c, _ = fixture()
+        p["lecciones"] = {"a": p["lecciones"]["a"], "c": p["lecciones"]["c"]}
+        m = {"u1": {"tipo": "lecciones", "curso": "c", "lecciones": ["a"]},
+             "u2": {"tipo": "lecciones", "curso": "c", "lecciones": ["a", "c"]}}
+        with patch.object(dominio, "dominio", return_value={"u1": {"nivel": 0}, "u2": {"nivel": 5}}):
+            res = planificador.elegir(p, c, date(2026, 10, 19), m, 1)
+        self.assertEqual(res, [("a", 0)])
+        with patch.object(dominio, "dominio", return_value={"u1": {"nivel": 5}, "u2": {"nivel": 0}}):
+            res = planificador.elegir(p, c, date(2026, 10, 19), m, 1)
+        self.assertEqual(res, [("c", 0)])
+
+    def test_apagado_no_usa_el_planificador_aunque_den_distinto(self):
+        p, c, m = fixture()
+        hoy = date(2026, 10, 19)
+        with patch.object(dominio, "dominio", return_value={"ua": {"nivel": 5}, "uc": {"nivel": 0}}):
+            adaptativo = planificador.elegir_sesion(p, c, hoy, m, {"TORTU_PLANIFICADOR": "adaptativo"}, 1)
+            apagado = planificador.elegir_sesion(p, c, hoy, m, {}, 1)
+        self.assertEqual(adaptativo, [("c", 0)])
+        self.assertEqual(apagado, practica.elegir(p, c, hoy, 1))
+        self.assertNotEqual(adaptativo, apagado)
+
+    def test_una_sola_leccion_vencida_llena_la_sesion_como_practica(self):
+        cursos = [{"id": "c", "secciones": [{"lecciones": [{"id": "a", "pasos": [{"tipo": "elegir"}] * 6}]}]}]
+        p = {"lecciones": {"a": {"pasos": {str(i): {"fecha": "2026-10-01"} for i in range(6)}}}, "repaso": {}}
+        m = {"ua": {"tipo": "lecciones", "curso": "c", "lecciones": ["a"]}}
+        hoy = date(2026, 10, 19)
+        res = planificador.elegir(p, cursos, hoy, m)
+        self.assertEqual(len(res), len(practica.elegir(p, cursos, hoy)))
+        self.assertEqual(len(res), 6)
