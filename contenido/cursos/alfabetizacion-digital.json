@@ -1087,7 +1087,11 @@
                 "Eliminar los datos"
               ],
               "correcta": 0,
-              "pista": "La interfaz inicia el pedido; detrás se consultan los datos y después vuelve la respuesta."
+              "pista": "La interfaz inicia el pedido; detrás se consultan los datos y después vuelve la respuesta.",
+              "pistas": [
+                "Imaginá una cadena de favores: vos pedís, alguien busca y alguien entrega.",
+                "Cada parte de la app tiene una responsabilidad clara."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1098,7 +1102,11 @@
                 "Los datos dibujan la interfaz"
               ],
               "correcta": 0,
-              "pista": "La gracia de una arquitectura es separar responsabilidades."
+              "pista": "La gracia de una arquitectura es separar responsabilidades.",
+              "pistas": [
+                "No mezclan sus tareas; colaboran.",
+                "La interfaz es solo el punto de entrada."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1109,7 +1117,44 @@
                 "El monitor envía el pedido al navegador"
               ],
               "correcta": 0,
-              "pista": "Seguí el camino de un toque: ¿adónde va primero y qué vuelve al final?"
+              "pista": "Seguí el camino de un toque: ¿adónde va primero y qué vuelve al final?",
+              "pistas": [
+                "Empieza por vos tocando algo.",
+                "El servidor procesa el pedido en el medio."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el camino de un pedido de login.",
+              "lineas": [
+                "Usuario ingresa usuario y clave.",
+                "El frontend envía el pedido al backend.",
+                "El backend verifica los datos.",
+                "El servidor responde si es correcto."
+              ],
+              "pista": "El usuario inicia todo, el backend verifica y el servidor responde.",
+              "pistas": [
+                "Ingresar datos es el primer paso.",
+                "La verificación ocurre antes de responder."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si el servidor se cae mientras esperás la respuesta?",
+              "codigo": "1. Usuario envía datos\n2. Backend procesa...\n3. (el servidor falla)\n4. ???",
+              "opciones": [
+                "La aplicación te muestra un mensaje de error",
+                "La app inventa una respuesta exitosa",
+                "El navegador se cierra solo"
+              ],
+              "correcta": 0,
+              "pista": "Cuando un pedido no llega a destino, la app debe avisarte.",
+              "pistas": [
+                "Si no hay respuesta, no podés continuar.",
+                "Pensá cómo te informás de que algo salió mal."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         }
