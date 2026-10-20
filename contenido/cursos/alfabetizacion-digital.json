@@ -376,7 +376,11 @@
                 "Un único servidor gigante"
               ],
               "correcta": 0,
-              "pista": "Internet conecta muchas redes y dispositivos entre sí."
+              "pista": "Internet conecta muchas redes y dispositivos entre sí.",
+              "pistas": [
+                "Es como una telaraña mundial.",
+                "Une redes pequeñas en una gigante."
+              ]
             },
             {
               "tipo": "elegir",
@@ -387,7 +391,11 @@
                 "Para reemplazar el teclado"
               ],
               "correcta": 0,
-              "pista": "Una red permite intercambiar información entre dispositivos."
+              "pista": "Una red permite intercambiar información entre dispositivos.",
+              "pistas": [
+                "Sin red, las máquinas están aisladas.",
+                "Sirve para compartir datos entre equipos."
+              ]
             },
             {
               "tipo": "elegir",
@@ -398,7 +406,44 @@
                 "Que los dos celulares usen el mismo navegador"
               ],
               "correcta": 0,
-              "pista": "Pensá si el mensaje pasa por una sola máquina o por muchas conexiones."
+              "pista": "Pensá si el mensaje pasa por una sola máquina o por muchas conexiones.",
+              "pistas": [
+                "El mensaje viaja por muchos cables y antenas.",
+                "Es un trabajo en equipo de muchas redes."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el camino de un dato por Internet.",
+              "lineas": [
+                "Tu dispositivo envía el mensaje.",
+                "La red lo divide en paquetes.",
+                "Los paquetes viajan por cables.",
+                "El destino recibe y une los paquetes."
+              ],
+              "pista": "Primero sale, se divide, viaja y se vuelve a unir.",
+              "pistas": [
+                "El envío inicia todo.",
+                "Los paquetes se unen al llegar."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si se rompe un cable submarino de Internet?",
+              "codigo": "1. El dato llega al cable roto\n2. (cable roto)\n3. ???",
+              "opciones": [
+                "La red busca otro camino disponible",
+                "Internet se apaga en todo el mundo",
+                "El dato se pierde para siempre"
+              ],
+              "correcta": 0,
+              "pista": "Internet es una red de redes pensada para resistir fallos.",
+              "pistas": [
+                "Hay muchos caminos alternativos.",
+                "La red es inteligente y se redirige."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
