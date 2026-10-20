@@ -735,7 +735,11 @@
                 "El cable de alimentación"
               ],
               "correcta": 0,
-              "pista": "Un precio es información que un programa puede guardar y procesar."
+              "pista": "Un precio es información que un programa puede guardar y procesar.",
+              "pistas": [
+                "Es un valor que representa algo específico.",
+                "Los datos son piezas sueltas de información."
+              ]
             },
             {
               "tipo": "elegir",
@@ -746,7 +750,11 @@
                 "Un navegador"
               ],
               "correcta": 0,
-              "pista": "Un nombre como \"Ana\" es un dato de texto."
+              "pista": "Un nombre como \"Ana\" es un dato de texto.",
+              "pistas": [
+                "Puede ser un número, una palabra o una imagen.",
+                "Es la materia prima con la que trabajan los programas."
+              ]
             },
             {
               "tipo": "elegir",
@@ -757,7 +765,44 @@
                 "Porque hacen innecesaria la red"
               ],
               "correcta": 0,
-              "pista": "Los programas usan datos para mostrar, calcular, decidir y recordar información."
+              "pista": "Los programas usan datos para mostrar, calcular, decidir y recordar información.",
+              "pistas": [
+                "Sin datos, los programas no tendrían qué mostrar.",
+                "Los datos le dan sentido y contenido al programa."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el camino de un dato desde que se crea hasta que se muestra.",
+              "lineas": [
+                "Se crea el dato.",
+                "El programa lo guarda en memoria.",
+                "El programa procesa el dato.",
+                "Se muestra al usuario."
+              ],
+              "pista": "Un dato primero tiene que existir antes de ser procesado.",
+              "pistas": [
+                "Crear es siempre el primer paso.",
+                "Mostrar es la finalidad del proceso."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si intentás mostrar un dato que nunca se creó?",
+              "codigo": "1. (sin dato)\n2. Intentar mostrar dato\n3. ???",
+              "opciones": [
+                "El programa muestra un error o vacío",
+                "La computadora adivina un dato al azar",
+                "El programa se apaga para siempre"
+              ],
+              "correcta": 0,
+              "pista": "El programa no puede mostrar algo que no existe en su memoria.",
+              "pistas": [
+                "Si la información no fue creada, no hay nada que ver.",
+                "Los programas son literales: no inventan datos."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
