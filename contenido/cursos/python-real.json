@@ -42,9 +42,8 @@
               "correcta": 0,
               "pista": "En Python, lo que se muestra va entre paréntesis después de print.",
               "pistas": [
-                "En Python, los paréntesis son obligatorios para mostrar cosas.",
-                "Fijate que el nombre de la instrucción termina con paréntesis.",
-                "La opción correcta usa print seguido de paréntesis."
+                "Mirá cómo se llama la función y qué signo aparece después.",
+                "En Python, una llamada a función lleva sus argumentos entre paréntesis."
               ],
               "lenguaje": "python"
             },
@@ -59,9 +58,8 @@
               "correcta": 0,
               "pista": "print(edad) muestra lo que guarda edad, no la palabra edad.",
               "pistas": [
-                "Si pusiéramos comillas sería un texto, pero al no ponerlas usamos el valor de la variable.",
-                "print imprime lo que el nombre de la variable tiene guardado.",
-                "edad vale 12, así que eso es lo que aparece al imprimirla."
+                "Mirá si edad aparece entre comillas en la llamada a print.",
+                "Sin comillas, el nombre refiere al valor guardado; con comillas sería texto."
               ],
               "lenguaje": "python"
             },
@@ -80,8 +78,8 @@
               "salida": "Hola",
               "pista": "En Python, mostrar se escribe en inglés.",
               "pistas": [
-                "Buscá la palabra inglesa para mostrar en pantalla.",
-                "Es la misma función que usaste antes para mostrar texto."
+                "Buscá la función de salida que aparece en los ejemplos anteriores.",
+                "Python usa una llamada para enviar texto a la consola."
               ],
               "lenguaje": "python"
             },
@@ -100,8 +98,8 @@
               "salida": "Leo",
               "pista": "En Python, para guardar se usa un solo signo igual.",
               "pistas": [
-                "Python usa un símbolo matemático básico para asignar valores.",
-                "No uses el igual doble, ese se usa para comparar."
+                "Mirá qué operador falta entre el nombre y el texto.",
+                "Para guardar se usa el operador de asignación; el de comparación tiene dos signos."
               ],
               "lenguaje": "python"
             },
@@ -146,6 +144,10 @@
               ],
               "correcta": 0,
               "pista": "input es el preguntar de Python.",
+              "pistas": [
+                "Fijate qué función aparece en el ejemplo cuando el programa espera una respuesta.",
+                "La función de entrada entrega al programa lo que escribe la persona."
+              ],
               "lenguaje": "python"
             },
             {
@@ -162,6 +164,10 @@
                 "Leo"
               ],
               "pista": "nombre guarda lo que escribió la persona, y el + lo pega después de Hola.",
+              "pistas": [
+                "Seguí el contenido de nombre después de que termina input.",
+                "El signo + concatena textos y el valor de la variable se incorpora en ese lugar."
+              ],
               "lenguaje": "python"
             },
             {
@@ -188,6 +194,10 @@
                 "4"
               ],
               "pista": "int convierte lo que se escribió en un número, así que se puede sumar.",
+              "pistas": [
+                "Revisá qué valor recibe n después de pasar por int.",
+                "La suma se hace con un número y luego print muestra el resultado de esa cuenta."
+              ],
               "lenguaje": "python"
             },
             {
@@ -207,6 +217,10 @@
                 "rojo"
               ],
               "pista": "En Python, preguntar se escribe input.",
+              "pistas": [
+                "Mirá qué función se usó en el ejemplo de la lección para pedir un dato.",
+                "La llamada que falta debe devolver lo que se escribe después de la pregunta."
+              ],
               "lenguaje": "python"
             },
             {
@@ -254,6 +268,10 @@
               ],
               "correcta": 0,
               "pista": "sino en inglés es else.",
+              "pistas": [
+                "Mirá la palabra que inicia la alternativa en el ejemplo anterior.",
+                "En Python, la rama alternativa se escribe con una palabra reservada en inglés."
+              ],
               "lenguaje": "python"
             },
             {
@@ -266,6 +284,10 @@
               ],
               "correcta": 0,
               "pista": "7 dividido 2 sobra 1: no es par, así que se hace lo del else.",
+              "pistas": [
+                "Seguí la condición que usa el resto de la división entre dos.",
+                "El resto debe ser cero para que se ejecute la primera rama; si no, va a la alternativa."
+              ],
               "lenguaje": "python"
             },
             {
@@ -282,6 +304,10 @@
               ],
               "salida": "Menor",
               "pista": "En Python, si se escribe if.",
+              "pistas": [
+                "Mirá la palabra que abre la condición en el ejemplo de esta lección.",
+                "La estructura condicional de Python empieza con una palabra reservada seguida de la condición."
+              ],
               "lenguaje": "python"
             },
             {
@@ -295,6 +321,10 @@
                 "    print(\"Menor\")"
               ],
               "pista": "Primero n. Después if con su parte corrida y else con la suya.",
+              "pistas": [
+                "Ubicá primero la línea que asigna el valor; la condición necesita esa variable.",
+                "Después de evaluar la condición, cada rama lleva su propio print indentado."
+              ],
               "lenguaje": "python"
             },
             {
@@ -354,6 +384,10 @@
               ],
               "correcta": 0,
               "pista": "range(2) repite dos veces, y cada print va en su propia línea.",
+              "pistas": [
+                "Contá cuántas vueltas indica range y observá dónde está indentado print.",
+                "Cada vuelta ejecuta el cuerpo una vez; print agrega un salto de línea al terminar."
+              ],
               "lenguaje": "python"
             },
             {
@@ -366,6 +400,10 @@
               ],
               "correcta": 0,
               "pista": "x toma cada número de la lista, en orden, y se muestra uno por línea.",
+              "pistas": [
+                "Seguí los valores que recorre x y fijate cuántas veces se ejecuta el cuerpo.",
+                "En cada vuelta, print recibe el valor actual de x y lo escribe en una línea."
+              ],
               "lenguaje": "python"
             },
             {
@@ -382,6 +420,10 @@
               ],
               "salida": "Hola\nHola\nHola\nHola",
               "pista": "El repetir de Python es for con range y el número de veces.",
+              "pistas": [
+                "Mirá qué nombre aparece en la expresión range en el ejemplo de repetición.",
+                "La función que genera una secuencia de vueltas recibe el límite entre paréntesis."
+              ],
               "lenguaje": "python"
             },
             {
@@ -425,6 +467,10 @@
               ],
               "correcta": 0,
               "pista": "devolver en inglés es return.",
+              "pistas": [
+                "Buscá la palabra que aparece dentro de la función antes de la expresión que entrega.",
+                "En Python, una función comunica su resultado con una instrucción propia."
+              ],
               "lenguaje": "python"
             },
             {
@@ -437,6 +483,10 @@
               ],
               "correcta": 0,
               "pista": "triple(4) devuelve 4 * 3.",
+              "pistas": [
+                "Seguí el argumento que recibe la función y la operación dentro de su cuerpo.",
+                "La función multiplica su entrada por tres y print muestra lo que devuelve."
+              ],
               "lenguaje": "python"
             },
             {
@@ -453,6 +503,10 @@
               ],
               "salida": "5",
               "pista": "En Python, la palabra función se escribe def.",
+              "pistas": [
+                "Mirá qué palabra aparece al comienzo de la definición de suma en los ejemplos.",
+                "Una definición empieza con una palabra reservada, el nombre y los parámetros entre paréntesis."
+              ],
               "lenguaje": "python"
             },
             {
@@ -493,6 +547,10 @@
               ],
               "correcta": 0,
               "pista": "Va sumando: 0 + 1, después + 2, después + 3.",
+              "pistas": [
+                "Anotá el valor de total antes y después de cada vuelta del for.",
+                "La lista aporta tres valores y cada uno se agrega al acumulador antes de imprimirlo."
+              ],
               "lenguaje": "python"
             },
             {
@@ -507,6 +565,10 @@
                 "4"
               ],
               "pista": "Primero se pide el número, después se calcula el doble y al final se muestra.",
+              "pistas": [
+                "Buscá qué línea crea numero; las otras dos dependen de ese dato.",
+                "La variable doble debe calcularse antes de que print pueda mostrarla."
+              ],
               "lenguaje": "python"
             },
             {
@@ -552,6 +614,10 @@
               ],
               "correcta": 0,
               "pista": "Está entre comillas, así que es texto.",
+              "pistas": [
+                "Fijate en los signos que rodean el valor asignado.",
+                "En Python, las comillas marcan una secuencia de caracteres y no una cantidad numérica."
+              ],
               "lenguaje": "python"
             },
             {
@@ -564,6 +630,10 @@
               ],
               "correcta": 0,
               "pista": "12 no llega a 18, por eso la comparación es falsa.",
+              "pistas": [
+                "Compará el valor guardado en edad con el límite que aparece en la condición.",
+                "El operador >= solo da verdadero si el valor de la izquierda alcanza o supera el de la derecha."
+              ],
               "lenguaje": "python"
             },
             {
@@ -580,6 +650,10 @@
               ],
               "salida": "14",
               "pista": "El doble se calcula usando el dato que guardaste en n.",
+              "pistas": [
+                "Mirá qué variable recibe el valor inicial antes de calcular resultado.",
+                "Para duplicar un valor, la multiplicación debe usar el nombre donde quedó guardado."
+              ],
               "lenguaje": "python"
             },
             {
@@ -591,6 +665,10 @@
                 "print(es_mayor)"
               ],
               "pista": "Primero necesitás el dato; después podés calcular y mostrar.",
+              "pistas": [
+                "La comparación necesita que edad ya tenga un valor asignado.",
+                "Una vez calculada la condición, la última línea puede mostrar el booleano guardado."
+              ],
               "lenguaje": "python"
             },
             {
@@ -625,6 +703,10 @@
               ],
               "correcta": 1,
               "pista": "La primera posición es 0; la segunda es 1.",
+              "pistas": [
+                "Revisá el índice que aparece entre corchetes y cómo están ordenados los elementos.",
+                "Las listas empiezan a contar en cero, así que el índice apunta a una posición concreta."
+              ],
               "lenguaje": "python"
             },
             {
@@ -637,6 +719,10 @@
               ],
               "correcta": 2,
               "pista": "Contá las posiciones desde cero: 0, 1, 2.",
+              "pistas": [
+                "Anotá debajo de cada elemento su índice empezando desde cero.",
+                "El número entre corchetes selecciona el elemento que ocupa ese índice."
+              ],
               "lenguaje": "python"
             },
             {
@@ -653,6 +739,10 @@
               ],
               "salida": "orco",
               "pista": "Segundo significa posición 1 porque la cuenta empieza en cero.",
+              "pistas": [
+                "Contá los elementos desde el primero y convertí esa posición a índice.",
+                "Como el primer índice de una lista es cero, el segundo queda una posición más adelante."
+              ],
               "lenguaje": "python"
             },
             {
@@ -664,6 +754,10 @@
                 "print(objeto)"
               ],
               "pista": "Primero existe la lista; después podés acceder a una posición.",
+              "pistas": [
+                "La variable objeto usa la lista, así que fijate cuál línea debe crearla antes.",
+                "Cuando objeto ya recibió un elemento, la última línea puede mostrar esa variable."
+              ],
               "lenguaje": "python"
             },
             {
@@ -698,6 +792,10 @@
               ],
               "correcta": 1,
               "pista": "Solo 6 y 9 cumplen la condición.",
+              "pistas": [
+                "Revisá cada elemento de numeros contra el límite de la condición.",
+                "El contador aumenta una vez por cada elemento que entra en la rama del if."
+              ],
               "lenguaje": "python"
             },
             {
@@ -710,6 +808,10 @@
               ],
               "correcta": 0,
               "pista": "Antes de escribir, necesitás entender la entrada y el objetivo.",
+              "pistas": [
+                "Separá la información disponible de lo que el programa tiene que producir.",
+                "Pensá qué valores recibe el programa y cómo reconocerías que llegó al resultado esperado."
+              ],
               "lenguaje": "python"
             },
             {
@@ -726,6 +828,10 @@
               ],
               "salida": "2",
               "pista": "Cada número que cumple la condición agrega un punto.",
+              "pistas": [
+                "Mirá qué tipo de cambio necesita puntos cada vez que se cumple el if.",
+                "El contador debe aumentar en una unidad por cada elemento que pasa la condición."
+              ],
               "lenguaje": "python"
             },
             {
