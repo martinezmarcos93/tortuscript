@@ -27,7 +27,11 @@
                 "Una hoja de papel"
               ],
               "correcta": 0,
-              "pista": "Un programa contiene instrucciones que una computadora puede ejecutar."
+              "pista": "Un programa contiene instrucciones que una computadora puede ejecutar.",
+              "pistas": [
+                "Los programas son recetas para computadoras.",
+                "Son instrucciones paso a paso para hacer tareas."
+              ]
             },
             {
               "tipo": "elegir",
@@ -38,7 +42,11 @@
                 "Un dispositivo físico"
               ],
               "correcta": 0,
-              "pista": "Pensá qué tienen en común una app, un juego y una calculadora."
+              "pista": "Pensá qué tienen en común una app, un juego y una calculadora.",
+              "pistas": [
+                "No es algo físico como una silla.",
+                "Es un archivo con órdenes para la máquina."
+              ]
             },
             {
               "tipo": "elegir",
@@ -49,7 +57,43 @@
                 "Las guarda sin ejecutar nada"
               ],
               "correcta": 0,
-              "pista": "Un programa es una lista de pasos que la computadora puede seguir."
+              "pista": "Un programa es una lista de pasos que la computadora puede seguir.",
+              "pistas": [
+                "La computadora necesita saber qué hacer.",
+                "Las instrucciones le indican el camino a seguir."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená los pasos de cómo un programa hace una tarea.",
+              "lineas": [
+                "La computadora lee el programa.",
+                "Ejecuta cada instrucción en orden.",
+                "La tarea se completa."
+              ],
+              "pista": "Primero se lee, luego se hace y finalmente termina.",
+              "pistas": [
+                "El proceso empieza leyendo.",
+                "La ejecución ocurre antes de completar la tarea."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si falta una instrucción en un programa?",
+              "codigo": "1. Abrir archivo\n2. (falta)\n3. Cerrar archivo",
+              "opciones": [
+                "El programa no sabe cómo completar la tarea",
+                "La computadora se apaga sola",
+                "El programa funciona perfecto igual"
+              ],
+              "correcta": 0,
+              "pista": "Las instrucciones son necesarias para los pasos.",
+              "pistas": [
+                "Las recetas necesitan todos sus pasos.",
+                "Sin una instrucción, la máquina se detiene o falla."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
