@@ -1162,6 +1162,8 @@ def create_app(token=None):
         op = "evaluar_juego" if paso.get("juego") else "evaluar_tortuga" if paso.get("tortuga") else "evaluar"
         pedido = {"op": op, "fuente": datos.get("codigo", ""),
                   "entradas": datos.get("entradas", []), "solucion": paso["solucion"]}
+        if "casos_prueba" in paso:
+            pedido["casos"] = paso["casos_prueba"]
         if paso.get("laberinto"):
             pedido.update(laberinto=paso["laberinto"], usar=paso.get("usar") or [])
         r = correr(pedido)

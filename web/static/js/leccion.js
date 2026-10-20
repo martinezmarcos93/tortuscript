@@ -667,7 +667,8 @@
           falta_usar: [`🎉 ¡Llegó! Pero este laberinto hay que resolverlo con ${(ev.usar || []).join(", ")}.`,
                        "Buscá lo que se repite y escribilo una sola vez."],
           sin_eventos: ["🤫 Tu juego no hizo nada.", "Empezá con una escena o creando un héroe."],
-          incorrecto: esJuego ? diferenciaDelJuego(ev, r.eventos || [])
+          incorrecto: ev.caso ? [`Con lo que probaste funciona, pero si la persona escribe «${ev.caso.join(", ")}», tu programa muestra otra cosa.`, `Se esperaba:\n${ev.esperado}`, `Tu programa mostró:\n${ev.obtenido}`]
+                    : esJuego ? diferenciaDelJuego(ev, r.eventos || [])
                     : dibuja ? ["🤔 ¡Casi! Tu dibujo no es igual al objetivo.", parecido, "Compará los tamaños, los giros y los colores."]
                              : ["🤔 ¡Casi! Tu programa corre, pero muestra otra cosa.", `Se esperaba:\n${ev.esperado}`],
         }[ev.estado] || ["Revisalo otra vez."];

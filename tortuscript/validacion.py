@@ -410,6 +410,30 @@ def _validar_paso(paso, donde, hallazgos):
     return set(usadas)
 
 
+def _validar_casos_prueba(paso, donde, hallazgos):
+    casos = paso.get("casos_prueba")
+    if "casos_prueba" not in paso:
+        return
+    if (not isinstance(casos, list) or not 1 <= len(casos) <= 5
+            or any(not isinstance(caso, list) or any(not isinstance(x, str) for x in caso) for caso in casos)):
+        hallazgos.append(Hallazgo(ERROR, donde, "casos_prueba debe ser una lista de 1 a 5 listas de textos"))
+        return
+    lenguaje = paso.get("lenguaje")
+    if (paso.get("tipo") != "escribir" or paso.get("tortuga") or paso.get("juego")
+            or lenguaje == "sql" or "web" in paso
+            or lenguaje in {"html", "css", "javascript", "web-conceptual"}):
+        hallazgos.append(Hallazgo(ERROR, donde, "casos_prueba solo se permite en pasos escribir de texto"))
+        return
+    solucion = paso.get("solucion")
+    if not isinstance(solucion, str):
+        return
+    for caso in casos:
+        _, error, _ = _correr(solucion, caso, lenguaje)
+        if error:
+            hallazgos.append(Hallazgo(ERROR, donde, f"la solución da error con el caso {caso!r}: {error}"))
+            break
+
+
 def _revisar_respuestas_repetidas(leccion, hallazgos):
     """AVISO si dos `elegir` de una misma lección comparten el texto de la opción correcta."""
     vistas = {}                                   # texto de la correcta → número de paso donde apareció
@@ -475,6 +499,7 @@ def validar_curso(curso):
     en_leccion = {}           # palabra → id de la lección donde se presentó
     for seccion, leccion, i, paso in pasos(curso):
         donde = f"{leccion.get('titulo', leccion.get('id'))} · paso {i + 1} ({paso.get('tipo')})"
+        _validar_casos_prueba(paso, donde, hallazgos)
         _validar_pistas(paso, donde, hallazgos)
         for texto in _textos_del_paso(paso):
             if isinstance(texto, tuple):

@@ -19,7 +19,7 @@ import sys
 import secrets
 
 from . import tortugame
-from .evaluacion import SEMILLA_EVALUACION, evaluar, evaluar_dibujo, evaluar_laberinto
+from .evaluacion import SEMILLA_EVALUACION, evaluar, evaluar_dibujo, evaluar_laberinto, normalizar_salida
 from .limites import limitar_memoria_windows
 from .executor import ejecutar_codigo
 from .tortuga import Registro
@@ -100,6 +100,22 @@ def atender(pedido):
                                                  respuesta["entradas"], semilla)
     if pedido.get("op") == "evaluar" and not hay_error and respuesta["pregunta"] is None:
         respuesta["evaluacion"] = evaluar(pedido.get("solucion", ""), detalles, semilla)
+        if respuesta["evaluacion"]["estado"] == "correcto" and pedido.get("casos"):
+            for caso in pedido["casos"]:
+                def correr_caso(codigo, entradas_caso):
+                    _, codigo_python = _python_de(codigo)
+                    detalle = {}
+                    _, error, _ = ejecutar_codigo(
+                        codigo_python, entradas_fijas=entradas_caso, detalles=detalle,
+                        completar_con_vacio=True, semilla=semilla)
+                    return normalizar_salida(detalle.get("salida_programa", "")), error
+
+                obtenido_caso, error_caso = correr_caso(pedido.get("fuente", ""), caso)
+                esperado_caso, error_solucion = correr_caso(pedido.get("solucion", ""), caso)
+                if error_caso or error_solucion or obtenido_caso != esperado_caso:
+                    respuesta["evaluacion"].update(
+                        estado="incorrecto", esperado=esperado_caso, obtenido=obtenido_caso, caso=caso)
+                    break
     return respuesta
 
 

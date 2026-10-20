@@ -84,7 +84,8 @@
               "pista": "La respuesta de preguntar queda en una variable; comparala con el texto esperado.",
               "entradas_prueba": [
                 "mate"
-              ]
+              ],
+              "casos_prueba": [["mate"], ["sol"]]
             }
           ]
         },

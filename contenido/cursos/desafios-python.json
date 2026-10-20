@@ -36,6 +36,7 @@
               "entradas_prueba": [
                 "Tortugas"
               ],
+              "casos_prueba": [["Tortugas"], ["Dragones"]],
               "lenguaje": "python",
               "palabras_pista": [
                 "print",
@@ -73,6 +74,7 @@
               "entradas_prueba": [
                 "6"
               ],
+              "casos_prueba": [["6"], ["11"]],
               "lenguaje": "python",
               "palabras_pista": [
                 "print",
