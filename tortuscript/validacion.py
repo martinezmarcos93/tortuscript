@@ -87,7 +87,10 @@ def _palabras(codigo_tortu):
 
 def _textos_del_paso(paso):
     campos = ("texto", "consigna", "pregunta", "nota", "pista")
-    return [paso[c] for c in campos if isinstance(paso.get(c), str)]
+    textos = [paso[c] for c in campos if isinstance(paso.get(c), str)]
+    if isinstance(paso.get("pistas"), list):
+        textos.extend(("pistas", texto) for texto in paso["pistas"] if isinstance(texto, str))
+    return textos
 
 
 def _revisar_texto(texto, donde, hallazgos):
@@ -161,6 +164,29 @@ def _validar_laberinto(paso, ordenes, usadas, donde, hallazgos):
     faltan = [p for p in paso.get("usar") or [] if p not in usadas]
     if faltan:
         hallazgos.append(Hallazgo(ERROR, donde, f"el paso exige {', '.join(faltan)} pero la solución no lo usa"))
+
+
+def _validar_pistas(paso, donde, hallazgos):
+    tipo = paso.get("tipo")
+    if "pistas" in paso:
+        pistas = paso["pistas"]
+        mensaje = None
+        if tipo not in ("elegir", "predecir", "completar", "ordenar"):
+            mensaje = "pistas solo se permiten en elegir, predecir, completar y ordenar"
+        elif not isinstance(pistas, list):
+            mensaje = "pistas debe ser una lista de 1 a 3 textos no vacíos y distintos"
+        elif not 1 <= len(pistas) <= 3 or any(not isinstance(p, str) or not p.strip() for p in pistas):
+            mensaje = "pistas debe ser una lista de 1 a 3 textos no vacíos y distintos"
+        elif len(set(pistas)) != len(pistas):
+            mensaje = "pistas no puede contener textos repetidos"
+        if mensaje:
+            hallazgos.append(Hallazgo(ERROR, donde, mensaje))
+        elif tipo in ("elegir", "predecir"):
+            opciones, correcta = paso.get("opciones"), paso.get("correcta")
+            if isinstance(opciones, list) and isinstance(correcta, int) and not isinstance(correcta, bool) and 0 <= correcta < len(opciones):
+                correcta_txt = str(opciones[correcta])
+                if len(correcta_txt) >= 3 and any(correcta_txt in pista for pista in pistas):
+                    hallazgos.append(Hallazgo(ERROR, donde, "pistas no deben contener la opción correcta"))
 
 
 def _validar_paso(paso, donde, hallazgos):
@@ -424,8 +450,14 @@ def validar_curso(curso):
     en_leccion = {}           # palabra → id de la lección donde se presentó
     for seccion, leccion, i, paso in pasos(curso):
         donde = f"{leccion.get('titulo', leccion.get('id'))} · paso {i + 1} ({paso.get('tipo')})"
+        _validar_pistas(paso, donde, hallazgos)
         for texto in _textos_del_paso(paso):
-            _revisar_texto(texto, donde, hallazgos)
+            if isinstance(texto, tuple):
+                temporales = []
+                _revisar_texto(texto[1], donde, temporales)
+                hallazgos.extend(Hallazgo(ERROR, h.donde, f"pistas: {h.mensaje}") for h in temporales)
+            else:
+                _revisar_texto(texto, donde, hallazgos)
 
         if paso.get("lenguaje") == "web-conceptual":
             continue

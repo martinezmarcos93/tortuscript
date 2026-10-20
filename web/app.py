@@ -1075,7 +1075,7 @@ def create_app(token=None):
             abort(400)                           # se evalúa ejecutando: .../evaluar
         clave = (_perfil_contexto(), leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
-        r = motor.comprobar(paso, (_json_objeto()).get("respuesta"), _ejecutar_para_motor(paso))
+        r = motor.comprobar(paso, (_json_objeto()).get("respuesta"), _ejecutar_para_motor(paso), errores_previos=estado_paso["errores"])
         if not r["ok"]:
             estado_paso["errores"] += 1
             return jsonify(ok=False, pista=r["pista"], malos=r["malos"],
@@ -1292,7 +1292,7 @@ def create_app(token=None):
         leccion_id, i, paso = _tarjeta_de_la_sesion(datos)
         clave = (_perfil_contexto(), "practica", leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
-        r = motor.comprobar(paso, datos.get("respuesta"), _ejecutar_para_motor(paso))
+        r = motor.comprobar(paso, datos.get("respuesta"), _ejecutar_para_motor(paso), errores_previos=estado_paso["errores"])
         if not r["ok"]:
             estado_paso["errores"] += 1
             return jsonify(ok=False, pista=r["pista"], malos=r["malos"],
