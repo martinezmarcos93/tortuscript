@@ -1037,17 +1037,17 @@
             },
             {
               "tipo": "ordenar",
-              "consigna": "Ordená los pasos para proteger una cuenta.",
+              "consigna": "Ordená qué pasa cuando alguien cae en un mensaje falso que pide la contraseña.",
               "lineas": [
-                "Crear una contraseña única.",
-                "Activar la seguridad extra si es posible.",
-                "No compartir datos personales.",
-                "Cerrar la sesión al terminar."
+                "Llega un mensaje que imita a tu banco o a un juego.",
+                "La persona toca el enlace.",
+                "Escribe su contraseña en una página falsa.",
+                "Alguien más entra a su cuenta."
               ],
-              "pista": "La seguridad empieza con una clave única y termina con el cierre de sesión.",
+              "pista": "Pensá qué tiene que pasar antes de que alguien pueda robar una contraseña.",
               "pistas": [
-                "Pensá en la protección antes de usar la cuenta.",
-                "El cierre es el último paso de la seguridad."
+                "Todo empieza con algo que llega a tu celular o tu correo.",
+                "Lo último es lo que hace quien engañó."
               ],
               "lenguaje": "web-conceptual"
             },
@@ -1064,7 +1064,7 @@
               "pista": "La seguridad se debilita si una sola falla afecta a todas.",
               "pistas": [
                 "Pensá si una misma llave abre todas las puertas de tu casa.",
-                "Si te roban la clave en un lugar, tienen acceso a todo."
+                "Fijate qué podría probar quien robó la clave del sitio 2."
               ],
               "lenguaje": "web-conceptual"
             }
@@ -1132,7 +1132,7 @@
                 "El backend verifica los datos.",
                 "El servidor responde si es correcto."
               ],
-              "pista": "El usuario inicia todo, el backend verifica y el servidor responde.",
+              "pista": "Algo tiene que llegar al backend antes de que pueda verificarse.",
               "pistas": [
                 "Ingresar datos es el primer paso.",
                 "La verificación ocurre antes de responder."
@@ -1255,7 +1255,11 @@
                 "Hacer que una página cargue más rápido"
               ],
               "correcta": 0,
-              "pista": "Git trabaja con la historia del código."
+              "pista": "Git trabaja con la historia del código.",
+              "pistas": [
+                "Es un asistente para tu proyecto.",
+                "Guarda cada cambio que hacés."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1266,7 +1270,44 @@
                 "Una copia del proyecto en otra computadora"
               ],
               "correcta": 0,
-              "pista": "Un commit deja una fotografía lógica de cambios del proyecto."
+              "pista": "Un commit deja una fotografía lógica de cambios del proyecto.",
+              "pistas": [
+                "Es un punto de guardado.",
+                "Registra qué cambió y cuándo."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el flujo básico de trabajo con Git.",
+              "lineas": [
+                "Hacer cambios en los archivos.",
+                "Preparar los cambios.",
+                "Guardarlos con un commit.",
+                "Ver la historia del proyecto."
+              ],
+              "pista": "Antes de ver la historia, tiene que haber algo guardado en ella.",
+              "pistas": [
+                "El flujo empieza con editar.",
+                "El commit viene antes de revisar la historia."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si querés volver a un estado anterior del código?",
+              "codigo": "1. Commitear versión 1\n2. Commitear versión 2\n3. Commitear versión 3\n4. Querer volver a la versión 1",
+              "opciones": [
+                "Git te deja regresar a un commit anterior",
+                "Es imposible volver atrás en Git",
+                "Se pierden todos los cambios para siempre"
+              ],
+              "correcta": 0,
+              "pista": "Git guarda la historia para poder moverte entre versiones.",
+              "pistas": [
+                "Pensá en los puntos de guardado de un videojuego.",
+                "Fijate qué guarda Git cada vez que hacés un commit."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -1287,7 +1328,11 @@
                 "Un programa para escribir código"
               ],
               "correcta": 0,
-              "pista": "El repositorio reúne archivos y la historia que Git registra."
+              "pista": "El repositorio reúne archivos y la historia que Git registra.",
+              "pistas": [
+                "Pensá qué guarda Git además de los archivos.",
+                "Es la carpeta de un proyecto junto con todo lo que le pasó."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1298,7 +1343,44 @@
                 "Son el mismo programa con dos nombres"
               ],
               "correcta": 0,
-              "pista": "Git es la herramienta de control de versiones; GitHub es una plataforma que trabaja con repositorios."
+              "pista": "Git es la herramienta de control de versiones; GitHub es una plataforma que trabaja con repositorios.",
+              "pistas": [
+                "Una es una herramienta que usás en tu computadora; la otra, un sitio de Internet.",
+                "Pensá cuál registra los cambios y cuál sirve para compartirlos."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo se comparte un proyecto en GitHub.",
+              "lineas": [
+                "Hacés cambios en tu computadora.",
+                "Los guardás con un commit.",
+                "Los subís al repositorio de GitHub.",
+                "Otra persona ve los cambios nuevos."
+              ],
+              "pista": "Para compartir algo, primero tiene que estar guardado.",
+              "pistas": [
+                "Todo empieza en tu propia computadora.",
+                "Lo último es lo que ve la otra persona."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué ve tu compañera en GitHub?",
+              "codigo": "1. Hacés un commit en tu computadora\n2. No lo subís a GitHub\n3. Tu compañera abre el repositorio\n4. ???",
+              "opciones": [
+                "Todavía no ve tus cambios",
+                "Ve tus cambios al instante",
+                "El repositorio se borra"
+              ],
+              "correcta": 0,
+              "pista": "Pensá dónde quedó guardado el commit.",
+              "pistas": [
+                "Un commit queda primero en tu computadora.",
+                "GitHub solo muestra lo que alguien subió."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         }
