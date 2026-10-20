@@ -287,6 +287,15 @@ def _completado(paso, rellenos):
     return codigo
 
 
+def _pista(paso, tipo, errores_previos):
+    pista = paso.get("pista") or PISTAS_GENERICAS[tipo]
+    pistas = paso.get("pistas")
+    if isinstance(pistas, list) and pistas and all(isinstance(p, str) and p.strip() for p in pistas):
+        nivel = errores_previos if isinstance(errores_previos, int) and not isinstance(errores_previos, bool) and errores_previos >= 0 else 0
+        return pistas[min(nivel, len(pistas) - 1)]
+    return pista
+
+
 def _mismo_resultado(paso, ejecutar, fuente_a, fuente_b, entradas):
     """True si ambos programas dan el mismo resultado sin errores: el mismo texto en pantalla o,
     en los pasos de tortuga, el mismo dibujo. `ejecutar(fuente, entradas)` devuelve
@@ -301,7 +310,7 @@ def _mismo_resultado(paso, ejecutar, fuente_a, fuente_b, entradas):
     return normalizar_salida(a["salida"]) != "" and normalizar_salida(a["salida"]) == normalizar_salida(b["salida"])
 
 
-def comprobar(paso, respuesta, ejecutar=None):
+def comprobar(paso, respuesta, ejecutar=None, errores_previos=0):
     """Comprueba la respuesta a un paso que NO es 'escribir' (ese se evalúa ejecutando).
 
     respuesta: elegir/predecir → el texto de la opción; completar → lista de textos;
@@ -316,7 +325,7 @@ def comprobar(paso, respuesta, ejecutar=None):
 
     if tipo in ("elegir", "predecir"):
         ok = isinstance(respuesta, str) and respuesta == str(paso["opciones"][paso["correcta"]])
-        return {"ok": ok, "pista": None if ok else paso.get("pista") or PISTAS_GENERICAS[tipo], "malos": None}
+        return {"ok": ok, "pista": None if ok else _pista(paso, tipo, errores_previos), "malos": None}
 
     if tipo == "completar":
         esperado = paso["respuesta"]
@@ -335,7 +344,7 @@ def comprobar(paso, respuesta, ejecutar=None):
                 resultado = ejecutar(_completado(paso, respuesta), entradas)
                 if resultado is not None and normalizar_salida(resultado["salida"]) == normalizar_salida(paso["salida"]):
                     return {"ok": True, "pista": None, "malos": None}
-        return {"ok": False, "pista": paso.get("pista") or PISTAS_GENERICAS["completar"], "malos": malos}
+        return {"ok": False, "pista": _pista(paso, "completar", errores_previos), "malos": malos}
 
     if tipo == "ordenar":
         esperado = paso["lineas"]
@@ -348,7 +357,7 @@ def comprobar(paso, respuesta, ejecutar=None):
                                  paso.get("entradas_prueba") or []):
             return {"ok": True, "pista": None, "malos": None}
         malos = [i for i, (r, e) in enumerate(zip(respuesta, esperado)) if r != e]
-        return {"ok": False, "pista": paso.get("pista") or PISTAS_GENERICAS["ordenar"], "malos": malos}
+        return {"ok": False, "pista": _pista(paso, "ordenar", errores_previos), "malos": malos}
 
     raise ValueError(f"tipo de paso sin comprobación directa: {tipo!r}")
 

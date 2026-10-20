@@ -34,7 +34,7 @@ CARPETA = Path(__file__).resolve().parent.parent / "contenido" / "cursos"
 CURSO_PRINCIPAL = "primeros-pasos"
 # Orden en que aparecen los cursos en el camino. Un curso puede pedir haber terminado una
 # lección de otro: {"requiere": {"leccion": "<id>"}} en su JSON.
-ORDEN_CURSOS = ("alfabetizacion-digital", "primeros-pasos", "tortuga", "proyectos", "python-real", "web-esencial", "sql-fundamentos", "tortuaria", "juegos")
+ORDEN_CURSOS = ("alfabetizacion-digital", "primeros-pasos", "tortuga", "proyectos", "python-real", "web-esencial", "sql-fundamentos", "tortuaria", "juegos", "desafios-tortuscript", "desafios-python")
 
 TIPOS = ("explicacion", "elegir", "completar", "ordenar", "predecir", "escribir")
 HUECO = "___"

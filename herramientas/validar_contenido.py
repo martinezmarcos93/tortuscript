@@ -11,8 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tortuscript.contenido import CARPETA, cargar_curso, pasos  # noqa: E402
-from tortuscript.validacion import ERROR, validar_curso  # noqa: E402
+from tortuscript.contenido import CARPETA, cargar_curso, pasos, todos_los_cursos  # noqa: E402
+from tortuscript.validacion import ERROR, validar_curso, validar_transferencias  # noqa: E402
 from tortuscript import proyectos_integradores  # noqa: E402
 
 
@@ -21,6 +21,12 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")     # Windows: consola/pipe en cp1252
     ids = sys.argv[1:] or sorted(p.stem for p in CARPETA.glob("*.json"))
     total_errores = 0
+    errores_transferencia = [h for h in validar_transferencias(todos_los_cursos()) if h.nivel == ERROR]
+    if errores_transferencia:
+        print("\n🔗 Transferencias")
+        for h in errores_transferencia:
+            print("   ", h)
+        total_errores += len(errores_transferencia)
     for curso_id in ids:
         curso = cargar_curso(curso_id)
         hallazgos = validar_curso(curso)

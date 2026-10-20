@@ -35,6 +35,7 @@ if str(RAIZ) not in sys.path:
 from tortuscript import contenido, evaluacion, leccion as motor, liga, logros, progreso  # noqa: E402
 from tortuscript import web_evaluacion, sql_evaluacion  # noqa: E402
 from tortuscript import practica as espaciado  # noqa: E402
+from tortuscript import planificador  # noqa: E402
 from tortuscript import proyectos as mis_proyectos  # noqa: E402
 from tortuscript import proyectos_integradores, catalogo_producto  # noqa: E402
 from tortuscript import diagnostico, intereses, pagos, respaldo, tutor as tortu_llm  # noqa: E402
@@ -413,7 +414,7 @@ def create_app(token=None):
         """La unidad del catálogo que este pedido quiere abrir, o None si no toca contenido de una unidad."""
         args = request.view_args or {}
         if "leccion_id" in args:
-            return catalogo_producto.unidad_de_leccion(args["leccion_id"])
+            return catalogo_producto.unidad_de_cobro(args["leccion_id"])
         if "proyecto_id" in args and request.path.startswith(("/proyectos-integradores/", "/api/proyectos-integradores/")):
             return catalogo_producto.unidad_de_proyecto(args["proyecto_id"])
         return None
@@ -646,7 +647,7 @@ def create_app(token=None):
             for curso in camino:
                 for seccion in curso.get("secciones", []):
                     for leccion in seccion.get("lecciones", []):
-                        leccion["de_pago"] = _bloqueada_por_pago(catalogo_producto.unidad_de_leccion(leccion["id"]), indice)
+                        leccion["de_pago"] = _bloqueada_por_pago(catalogo_producto.unidad_de_cobro(leccion["id"]), indice)
         return camino
 
     def _leccion_o_404(leccion_id):
@@ -876,7 +877,7 @@ def create_app(token=None):
     def practica():
         """Práctica del día: hasta 6 tarjetas que ya tocan, de lecciones distintas (repaso espaciado)."""
         p = _cargar_progreso()
-        elegidas = espaciado.elegir(p, _cursos(), date.today())
+        elegidas = planificador.elegir_sesion(p, _cursos(), date.today())
         if not elegidas:
             return render_template("practica_vacia.html")
         practicas[_perfil_contexto()] = {"dia": str(date.today()), "pasos": elegidas}
@@ -1074,7 +1075,7 @@ def create_app(token=None):
             abort(400)                           # se evalúa ejecutando: .../evaluar
         clave = (_perfil_contexto(), leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
-        r = motor.comprobar(paso, (_json_objeto()).get("respuesta"), _ejecutar_para_motor(paso))
+        r = motor.comprobar(paso, (_json_objeto()).get("respuesta"), _ejecutar_para_motor(paso), errores_previos=estado_paso["errores"])
         if not r["ok"]:
             estado_paso["errores"] += 1
             return jsonify(ok=False, pista=r["pista"], malos=r["malos"],
@@ -1161,6 +1162,8 @@ def create_app(token=None):
         op = "evaluar_juego" if paso.get("juego") else "evaluar_tortuga" if paso.get("tortuga") else "evaluar"
         pedido = {"op": op, "fuente": datos.get("codigo", ""),
                   "entradas": datos.get("entradas", []), "solucion": paso["solucion"]}
+        if "casos_prueba" in paso:
+            pedido["casos"] = paso["casos_prueba"]
         if paso.get("laberinto"):
             pedido.update(laberinto=paso["laberinto"], usar=paso.get("usar") or [])
         r = correr(pedido)
@@ -1291,7 +1294,7 @@ def create_app(token=None):
         leccion_id, i, paso = _tarjeta_de_la_sesion(datos)
         clave = (_perfil_contexto(), "practica", leccion_id, i)
         estado_paso = intentos.setdefault(clave, {"errores": 0, "revelado": False})
-        r = motor.comprobar(paso, datos.get("respuesta"), _ejecutar_para_motor(paso))
+        r = motor.comprobar(paso, datos.get("respuesta"), _ejecutar_para_motor(paso), errores_previos=estado_paso["errores"])
         if not r["ok"]:
             estado_paso["errores"] += 1
             return jsonify(ok=False, pista=r["pista"], malos=r["malos"],

@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 
 from . import tortuga, tortugame
-from .contenido import HUECO, TIPOS, pasos
+from .contenido import HUECO, ORDEN_CURSOS, TIPOS, lecciones, pasos
 from .evaluacion import SEMILLA_EVALUACION, normalizar_salida
 from .executor import ejecutar_codigo
 from .translator import TraductorTortuScript, detectar_tipo, palabras_usadas
@@ -87,7 +87,10 @@ def _palabras(codigo_tortu):
 
 def _textos_del_paso(paso):
     campos = ("texto", "consigna", "pregunta", "nota", "pista")
-    return [paso[c] for c in campos if isinstance(paso.get(c), str)]
+    textos = [paso[c] for c in campos if isinstance(paso.get(c), str)]
+    if isinstance(paso.get("pistas"), list):
+        textos.extend(("pistas", texto) for texto in paso["pistas"] if isinstance(texto, str))
+    return textos
 
 
 def _revisar_texto(texto, donde, hallazgos):
@@ -161,6 +164,29 @@ def _validar_laberinto(paso, ordenes, usadas, donde, hallazgos):
     faltan = [p for p in paso.get("usar") or [] if p not in usadas]
     if faltan:
         hallazgos.append(Hallazgo(ERROR, donde, f"el paso exige {', '.join(faltan)} pero la solución no lo usa"))
+
+
+def _validar_pistas(paso, donde, hallazgos):
+    tipo = paso.get("tipo")
+    if "pistas" in paso:
+        pistas = paso["pistas"]
+        mensaje = None
+        if tipo not in ("elegir", "predecir", "completar", "ordenar"):
+            mensaje = "pistas solo se permiten en elegir, predecir, completar y ordenar"
+        elif not isinstance(pistas, list):
+            mensaje = "pistas debe ser una lista de 1 a 3 textos no vacíos y distintos"
+        elif not 1 <= len(pistas) <= 3 or any(not isinstance(p, str) or not p.strip() for p in pistas):
+            mensaje = "pistas debe ser una lista de 1 a 3 textos no vacíos y distintos"
+        elif len(set(pistas)) != len(pistas):
+            mensaje = "pistas no puede contener textos repetidos"
+        if mensaje:
+            hallazgos.append(Hallazgo(ERROR, donde, mensaje))
+        elif tipo in ("elegir", "predecir"):
+            opciones, correcta = paso.get("opciones"), paso.get("correcta")
+            if isinstance(opciones, list) and isinstance(correcta, int) and not isinstance(correcta, bool) and 0 <= correcta < len(opciones):
+                correcta_txt = str(opciones[correcta])
+                if len(correcta_txt) >= 3 and any(correcta_txt in pista for pista in pistas):
+                    hallazgos.append(Hallazgo(ERROR, donde, "pistas no deben contener la opción correcta"))
 
 
 def _validar_paso(paso, donde, hallazgos):
@@ -384,6 +410,30 @@ def _validar_paso(paso, donde, hallazgos):
     return set(usadas)
 
 
+def _validar_casos_prueba(paso, donde, hallazgos):
+    casos = paso.get("casos_prueba")
+    if "casos_prueba" not in paso:
+        return
+    if (not isinstance(casos, list) or not 1 <= len(casos) <= 5
+            or any(not isinstance(caso, list) or any(not isinstance(x, str) for x in caso) for caso in casos)):
+        hallazgos.append(Hallazgo(ERROR, donde, "casos_prueba debe ser una lista de 1 a 5 listas de textos"))
+        return
+    lenguaje = paso.get("lenguaje")
+    if (paso.get("tipo") != "escribir" or paso.get("tortuga") or paso.get("juego")
+            or lenguaje == "sql" or "web" in paso
+            or lenguaje in {"html", "css", "javascript", "web-conceptual"}):
+        hallazgos.append(Hallazgo(ERROR, donde, "casos_prueba solo se permite en pasos escribir de texto"))
+        return
+    solucion = paso.get("solucion")
+    if not isinstance(solucion, str):
+        return
+    for caso in casos:
+        _, error, _ = _correr(solucion, caso, lenguaje)
+        if error:
+            hallazgos.append(Hallazgo(ERROR, donde, f"la solución da error con el caso {caso!r}: {error}"))
+            break
+
+
 def _revisar_respuestas_repetidas(leccion, hallazgos):
     """AVISO si dos `elegir` de una misma lección comparten el texto de la opción correcta."""
     vistas = {}                                   # texto de la correcta → número de paso donde apareció
@@ -399,6 +449,31 @@ def _revisar_respuestas_repetidas(leccion, hallazgos):
             hallazgos.append(Hallazgo(AVISO, donde, f"respuesta correcta repetida: «{texto}» ya es la correcta del paso {vistas[texto]}"))
         else:
             vistas[texto] = i + 1
+
+
+def validar_transferencias(cursos):
+    """Valida referencias de transferencia entre cursos según su orden."""
+    hallazgos = []
+    cursos = list(cursos)
+    orden = {curso_id: i for i, curso_id in enumerate(ORDEN_CURSOS)}
+    indices = {leccion.get("id"): curso.get("id") for curso in cursos for _, leccion in lecciones(curso)}
+    for curso in cursos:
+        for _, reto in lecciones(curso):
+            transferencia = reto.get("transferencia")
+            if transferencia is None:
+                continue
+            donde = reto.get("id", "lección")
+            conceptos = transferencia.get("conceptos") if isinstance(transferencia, dict) else None
+            distintos = set(conceptos) if isinstance(conceptos, list) and all(isinstance(x, str) for x in conceptos) else set()
+            if len(distintos) < 2:
+                hallazgos.append(Hallazgo(ERROR, donde, "transferencia necesita al menos 2 conceptos distintos"))
+            elif any(concepto not in indices or indices[concepto] == curso.get("id")
+                     or orden.get(indices[concepto], len(orden)) >= orden.get(curso.get("id"), -1)
+                     for concepto in distintos):
+                hallazgos.append(Hallazgo(ERROR, donde, "transferencia debe referir lecciones de otros cursos anteriores"))
+            if not isinstance(transferencia, dict) or transferencia.get("asistencia") not in {"guiada", "autonoma"}:
+                hallazgos.append(Hallazgo(ERROR, donde, "transferencia.asistencia debe ser «guiada» o «autonoma»"))
+    return hallazgos
 
 
 def validar_curso(curso):
@@ -424,8 +499,15 @@ def validar_curso(curso):
     en_leccion = {}           # palabra → id de la lección donde se presentó
     for seccion, leccion, i, paso in pasos(curso):
         donde = f"{leccion.get('titulo', leccion.get('id'))} · paso {i + 1} ({paso.get('tipo')})"
+        _validar_casos_prueba(paso, donde, hallazgos)
+        _validar_pistas(paso, donde, hallazgos)
         for texto in _textos_del_paso(paso):
-            _revisar_texto(texto, donde, hallazgos)
+            if isinstance(texto, tuple):
+                temporales = []
+                _revisar_texto(texto[1], donde, temporales)
+                hallazgos.extend(Hallazgo(h.nivel, h.donde, f"pistas: {h.mensaje}") for h in temporales)
+            else:
+                _revisar_texto(texto, donde, hallazgos)
 
         if paso.get("lenguaje") == "web-conceptual":
             continue

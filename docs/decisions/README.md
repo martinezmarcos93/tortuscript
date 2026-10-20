@@ -64,6 +64,8 @@ Las medidas de endurecimiento que no condicionan el modelo de producto, por ejem
 | [ADR-050](ADR-050-gratuidad-y-puertas-de-pago.md) | Qué es gratis y cuándo se pide pagar | Aceptada |
 | [ADR-051](ADR-051-registro-de-cuentas-y-confirmacion-de-pagos.md) | Registro de cuentas y confirmación de pagos en el panel de admin | Propuesta |
 | [ADR-052](ADR-052-modelo-de-dominio-pedagogico.md) | Modelo de dominio pedagógico y planificación adaptativa | Aceptada |
+| [ADR-053](ADR-053-acceso-por-conceptos-requeridos.md) | Acceso a desafíos y juegos según los conceptos que requieren | Aceptada |
+| [ADR-054](ADR-054-depurador-paso-a-paso.md) | Depurador paso a paso para programas de texto | Aceptada |
 
 ## Documentos de producto
 

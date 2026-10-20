@@ -6,6 +6,24 @@ consultan antes de fijarlos.
 ## Sin publicar
 
 ### Agregado
+- **Pistas graduadas (P4).** Los pasos rápidos pueden tener `pistas` (1 a 3, de menos a más ayuda) que se muestran de a una
+  por cada error; `pista` sigue como respaldo y «Ver respuesta» no cambia. Validador nuevo y guía en `docs/GUIA_PISTAS.md`.
+  Contenido: todos los pasos rápidos de Alfabetización digital y de las dos primeras secciones de Python real.
+- **Alfabetización digital desde más ángulos (P1).** Cada una de sus 16 lecciones suma al final un paso `ordenar` y uno
+  `predecir` conceptuales. Solo se agregaron pasos al final: el progreso guardado no cambia
+  (`herramientas/verificar_solo_agregados.py` lo comprueba).
+- **Mapa de cobertura pedagógica (P1)** (`herramientas/cobertura_pedagogica.py`, `docs/audits/COBERTURA_PEDAGOGICA.md`):
+  qué formas de práctica tiene cada unidad y qué desafíos la usan.
+- **Acceso de desafíos según lo que hace falta saber (ADR-053).** Un desafío es gratis si solo necesita lecciones gratuitas;
+  si necesita alguna premium, la puerta de pago lo trata como esa unidad.
+- **Casos de prueba ocultos** en pasos `escribir` (`casos_prueba`): además de lo que prueba el chico, el programa se
+  compara con la solución en otras entradas. Lo usan los desafíos que piden datos.
+- **Métricas pedagógicas locales (P6)** (`tortuscript/metricas_pedagogicas.py`, `herramientas/informe_pedagogico.py`):
+  resumen de un archivo de progreso, sin telemetría ni datos nuevos. Informe de validación en
+  `docs/audits/VALIDACION_PEDAGOGICA_P6.md` (las mejoras siguen siendo hipótesis hasta probarlas con alumnos).
+- **Desafíos de transferencia**: dos cursos optativos al completar Primeros pasos y Python real, con retos que combinan
+  lecciones previas y se evalúan por el comportamiento del programa; el acceso comercial se deriva de las lecciones usadas.
+- **Planificador adaptativo de repaso (apagado por defecto).** `TORTU_PLANIFICADOR=adaptativo` lo enciende; si falla, vuelve al repaso anterior.
 - **Modelo de dominio pedagógico V1 (`tortuscript/dominio.py`, ADR-052).** Estima por concepto (las 37 unidades del mapa curricular) cuánta evidencia de dominio hay, en 6 estados de `sin_evidencia` a `consolidado`, derivándola del progreso existente: no guarda datos nuevos, no cambia el esquema y no castiga la ayuda. Todavía no lo usa ninguna pantalla ni el repaso.
 - **ADR-052 aceptada y especificación del modelo de dominio pedagógico V1** (`docs/MODELO_DOMINIO_V1.md`). El dominio por concepto se deriva del progreso existente: no cambia el esquema ni recopila datos nuevos. Todavía sin código.
 - **El XP de un ejercicio ya no puede retroceder (T3).** `progreso.registrar_ejercicio` rechaza, sin tocar nada y con aviso en el log, una combinación incoherente: XP negativo, o más estrellas con menos XP que lo ya guardado. Política decidida por Marcos el 18/10/2026. No cambia el esquema ni el XP ya ganado.
