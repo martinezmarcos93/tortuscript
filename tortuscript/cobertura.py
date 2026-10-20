@@ -63,3 +63,21 @@ def tabla_markdown(cob):
         faltan = ", ".join(_ROTULOS[c] for c in d["faltan"]) or "—"
         filas.append(f"| `{uid}` | {d['curso']} | {d['pasos']} | {marcas} | {faltan} |")
     return "\n".join(filas) + "\n"
+
+
+def matriz_transferencia(cursos, mapa):
+    """{unidad_id: [desafíos que la usan]} (P5): un desafío usa una unidad si declara alguna lección de ella."""
+    salida, unidad_de = {}, {}
+    for uid, u in mapa.items():
+        if isinstance(u, dict) and u.get("tipo") == "lecciones":
+            salida[uid] = []
+            for lec in u.get("lecciones", []):
+                unidad_de.setdefault(lec, uid)          # como en el planificador: gana la primera unidad del mapa
+    for curso in cursos if isinstance(cursos, list) else []:
+        for sec in curso.get("secciones", []) if isinstance(curso, dict) else []:
+            for lec in sec.get("lecciones", []):
+                conceptos = (lec.get("transferencia") or {}).get("conceptos") or []
+                for uid in dict.fromkeys(unidad_de[c] for c in conceptos if c in unidad_de):
+                    if lec.get("id") not in salida[uid]:
+                        salida[uid].append(lec.get("id"))
+    return salida

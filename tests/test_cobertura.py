@@ -73,3 +73,19 @@ class CoberturaTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MatrizTransferenciaTests(unittest.TestCase):
+    def test_desafio_cuenta_para_la_unidad_de_sus_lecciones(self):
+        desafios = {"id": "d", "secciones": [{"id": "s", "lecciones": [
+            {"id": "r1", "transferencia": {"conceptos": ["l1", "l2", "l3"]}, "pasos": []},
+            {"id": "r2", "transferencia": {"conceptos": ["l3", "fuera-del-mapa"]}, "pasos": []},
+            {"id": "r3", "pasos": []}]}]}
+        matriz = cobertura.matriz_transferencia(CURSOS + [desafios], MAPA)
+        self.assertEqual(matriz, {"completa": ["r1"], "solo-elegir": ["r1", "r2"], "curso-fantasma": []})
+
+    def test_datos_reales_cubre_todas_las_unidades(self):
+        mapa = dominio.cargar_mapa()
+        matriz = cobertura.matriz_transferencia(contenido.todos_los_cursos(), mapa)
+        self.assertEqual(set(matriz), {u for u, d in mapa.items() if d.get("tipo") == "lecciones"})
+        self.assertTrue(any(matriz.values()), "los desafíos de Python usan unidades del mapa")

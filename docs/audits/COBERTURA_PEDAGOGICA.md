@@ -8,21 +8,21 @@ Categorías según el tipo de paso (`docs/MODELO_DOMINIO_V1.md`): `elegir` → r
 
 - Unidades de lecciones: **35**
 - Con las cuatro categorías: **18**
-- Con una sola categoría (16): `nivel0-programa`, `nivel0-lenguaje`, `nivel0-codigo`, `nivel0-navegador`, `nivel0-internet`, `nivel0-servidor`, `nivel0-frontend`, `nivel0-backend`, `nivel0-datos`, `nivel0-base-datos`, `nivel0-api`, `nivel0-seguridad`, `nivel0-integracion`, `nivel0-json`, `nivel0-git`, `nivel0-github`
+- Con una sola categoría (8): `nivel0-datos`, `nivel0-base-datos`, `nivel0-api`, `nivel0-seguridad`, `nivel0-integracion`, `nivel0-json`, `nivel0-git`, `nivel0-github`
 - Sin producción autónoma (16): `nivel0-programa`, `nivel0-lenguaje`, `nivel0-codigo`, `nivel0-navegador`, `nivel0-internet`, `nivel0-servidor`, `nivel0-frontend`, `nivel0-backend`, `nivel0-datos`, `nivel0-base-datos`, `nivel0-api`, `nivel0-seguridad`, `nivel0-integracion`, `nivel0-json`, `nivel0-git`, `nivel0-github`
 
 ## Por unidad
 
 | Unidad | Curso | Pasos | Reconocimiento | Predicción | Construcción | Producción | Faltan |
 |---|---|---|---|---|---|---|---|
-| `nivel0-programa` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-lenguaje` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-codigo` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-navegador` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-internet` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-servidor` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-frontend` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
-| `nivel0-backend` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
+| `nivel0-programa` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-lenguaje` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-codigo` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-navegador` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-internet` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-servidor` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-frontend` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
+| `nivel0-backend` | alfabetizacion-digital | 6 | ✅ | ✅ | ✅ | — | Producción |
 | `nivel0-datos` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
 | `nivel0-base-datos` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
 | `nivel0-api` | alfabetizacion-digital | 4 | ✅ | — | — | — | Predicción, Construcción, Producción |
@@ -50,3 +50,45 @@ Categorías según el tipo de paso (`docs/MODELO_DOMINIO_V1.md`): `elegir` → r
 | `sql-group` | sql-fundamentos | 5 | ✅ | ✅ | ✅ | ✅ | — |
 | `sql-join` | sql-fundamentos | 5 | ✅ | ✅ | ✅ | ✅ | — |
 | `sql-seguridad` | sql-fundamentos | 5 | ✅ | ✅ | ✅ | ✅ | — |
+
+## Desafíos por unidad (P5)
+
+6 de 35 unidades tienen al menos un desafío de transferencia. Los desafíos de TortuScript usan lecciones de «primeros pasos», que no están en el mapa.
+
+| Unidad | Desafíos |
+|---|---|
+| `nivel0-programa` | — |
+| `nivel0-lenguaje` | — |
+| `nivel0-codigo` | — |
+| `nivel0-navegador` | — |
+| `nivel0-internet` | — |
+| `nivel0-servidor` | — |
+| `nivel0-frontend` | — |
+| `nivel0-backend` | — |
+| `nivel0-datos` | — |
+| `nivel0-base-datos` | — |
+| `nivel0-api` | — |
+| `nivel0-seguridad` | — |
+| `nivel0-integracion` | — |
+| `nivel0-json` | — |
+| `nivel0-git` | — |
+| `nivel0-github` | — |
+| `python-puente` | `saludo-de-equipo`, `doble-o-nada` |
+| `python-control` | `saludo-de-equipo`, `filtro-de-nombres` |
+| `python-funciones` | `funcion-de-puntos` |
+| `python-programa` | `funcion-de-puntos` |
+| `python-datos` | `doble-o-nada` |
+| `python-listas` | `filtro-de-nombres` |
+| `python-problemas` | — |
+| `web-html-estructura` | — |
+| `web-css-apariencia` | — |
+| `web-js-comportamiento` | — |
+| `web-mini-productos` | — |
+| `sql-tablas` | — |
+| `sql-select` | — |
+| `sql-where` | — |
+| `sql-order` | — |
+| `sql-agregaciones` | — |
+| `sql-group` | — |
+| `sql-join` | — |
+| `sql-seguridad` | — |

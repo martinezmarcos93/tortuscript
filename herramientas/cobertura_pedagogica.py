@@ -27,14 +27,24 @@ def _texto_resumen(res):
             f"- Sin producción autónoma ({len(res['sin_produccion'])}): {lista(res['sin_produccion'])}\n")
 
 
+def _texto_desafios(cursos, mapa):
+    matriz = cobertura.matriz_transferencia(cursos, mapa)
+    filas = [f"| `{u}` | " + (", ".join(f"`{d}`" for d in retos) or "—") + " |" for u, retos in matriz.items()]
+    con = sum(1 for retos in matriz.values() if retos)
+    return (f"\n## Desafíos por unidad (P5)\n\n{con} de {len(matriz)} unidades tienen al menos un desafío de transferencia. "
+            "Los desafíos de TortuScript usan lecciones de «primeros pasos», que no están en el mapa.\n\n"
+            "| Unidad | Desafíos |\n|---|---|\n" + "\n".join(filas) + "\n")
+
+
 def informe(fecha):
-    cob = cobertura.cobertura(contenido.todos_los_cursos(), dominio.cargar_mapa())
+    cursos, mapa = contenido.todos_los_cursos(), dominio.cargar_mapa()
+    cob = cobertura.cobertura(cursos, mapa)
     return (f"# Cobertura pedagógica por unidad (P1)\n\n"
             f"Generado con `herramientas/cobertura_pedagogica.py --escribir` el {fecha}. No editar a mano.\n\n"
             "Categorías según el tipo de paso (`docs/MODELO_DOMINIO_V1.md`): `elegir` → reconocimiento, "
             "`predecir` → predicción, `completar`/`ordenar` → construcción, `escribir` → producción.\n\n"
             "## Resumen\n\n" + _texto_resumen(cobertura.resumen(cob)) +
-            "\n## Por unidad\n\n" + cobertura.tabla_markdown(cob))
+            "\n## Por unidad\n\n" + cobertura.tabla_markdown(cob) + _texto_desafios(cursos, mapa))
 
 
 def main():
