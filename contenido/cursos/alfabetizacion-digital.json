@@ -782,8 +782,8 @@
               ],
               "pista": "Un dato primero tiene que existir antes de ser procesado.",
               "pistas": [
-                "Crear es siempre el primer paso.",
-                "Mostrar es la finalidad del proceso."
+                "Pensá qué necesita existir antes de todo lo demás.",
+                "Lo que ve la persona usuaria es el resultado de los otros pasos."
               ],
               "lenguaje": "web-conceptual"
             },
@@ -868,7 +868,7 @@
                 "El programa resta el stock.",
                 "Se registra la venta."
               ],
-              "pista": "Primero sabés el precio, luego actualizás el stock.",
+              "pista": "Antes de cambiar el stock, el programa necesita saber algo del producto.",
               "pistas": [
                 "Consultar es antes de modificar.",
                 "El registro de la venta es el cierre."
@@ -887,8 +887,8 @@
               "correcta": 0,
               "pista": "Los programas actúan según la información que encuentran.",
               "pistas": [
-                "Si el dato dice que no hay, el programa no lo vende.",
-                "La base de datos da la verdad sobre el producto."
+                "Fijate qué número devolvió la consulta.",
+                "El programa decide según lo que guarda la base de datos."
               ],
               "lenguaje": "web-conceptual"
             }
@@ -911,7 +911,11 @@
                 "Para convertir una PC en un servidor automáticamente"
               ],
               "correcta": 0,
-              "pista": "Una API define cómo pedir y recibir cosas entre programas."
+              "pista": "Una API define cómo pedir y recibir cosas entre programas.",
+              "pistas": [
+                "Es como un punto de encuentro para que los sistemas hablen.",
+                "Define el idioma y las reglas del intercambio."
+              ]
             },
             {
               "tipo": "elegir",
@@ -922,7 +926,11 @@
                 "Mostrar una página al usuario"
               ],
               "correcta": 0,
-              "pista": "La API permite pedir datos y recibir una respuesta del servicio."
+              "pista": "La API permite pedir datos y recibir una respuesta del servicio.",
+              "pistas": [
+                "Funciona como una intermediaria.",
+                "Abre la puerta para usar funciones de otros programas."
+              ]
             },
             {
               "tipo": "elegir",
@@ -933,7 +941,44 @@
                 "Sí: API significa base de datos"
               ],
               "correcta": 0,
-              "pista": "Una API puede consultar una base de datos, pero no es la base de datos."
+              "pista": "Una API puede consultar una base de datos, pero no es la base de datos.",
+              "pistas": [
+                "Son cosas distintas: una guarda datos, la otra comunica.",
+                "La API es el medio, la base de datos es el depósito."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo un programa usa una API para obtener el clima.",
+              "lineas": [
+                "El programa hace el pedido a la API.",
+                "La API valida el pedido.",
+                "La API consulta el servicio de clima.",
+                "El programa recibe los datos."
+              ],
+              "pista": "Algo tiene que pedirse antes de poder revisarse.",
+              "pistas": [
+                "La validación va después del pedido.",
+                "La recepción es el final del proceso."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si pedís datos a una API que no existe?",
+              "codigo": "1. El programa pide datos a una API\n2. La dirección de la API está mal escrita\n3. ???",
+              "opciones": [
+                "Recibís una respuesta de error",
+                "La API te adivina qué querías pedir",
+                "El servidor se desconecta de Internet"
+              ],
+              "correcta": 0,
+              "pista": "Pensá qué pasa cuando alguien recibe un pedido que no puede cumplir.",
+              "pistas": [
+                "La API no puede entregar algo que no encontró.",
+                "Pensá cómo se entera el programa de que el pedido falló."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
