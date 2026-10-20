@@ -133,8 +133,9 @@ Cada pista pasa por la misma revisión de texto que `pista`.
 
 ### Cursos nuevos (aditivos)
 
-- `contenido/cursos/desafios-tortuscript.json` (`requiere` la última lección de `primeros-pasos`) y
-  `contenido/cursos/desafios-python.json` (`requiere` la última lección de `python-real`), agregados al final de `ORDEN_CURSOS`.
+- `contenido/cursos/desafios-tortuscript.json` (`"requiere": {"curso": "primeros-pasos"}`) y
+  `contenido/cursos/desafios-python.json` (`"requiere": {"curso": "python-real"}`), agregados al final de `ORDEN_CURSOS`.
+- 4 desafíos por curso como mínimo, en una o dos secciones; al menos 1 `guiada` y 2 `autonoma` por curso.
 - Cada lección es un desafío: un paso `explicacion` con el problema (sin solución) y uno o más pasos `escribir` evaluados
   **por comportamiento** (`entradas_prueba` y salida/dibujo esperados), nunca por el texto exacto del programa.
 - Cada lección lleva `"transferencia": {"conceptos": [unidad_ids del mapa], "asistencia": "guiada" | "autonoma"}`.
