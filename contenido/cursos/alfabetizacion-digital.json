@@ -464,7 +464,11 @@
                 "Es el nombre del navegador"
               ],
               "correcta": 0,
-              "pista": "Servidor viene de servir: responde pedidos y ofrece recursos."
+              "pista": "Servidor viene de servir: responde pedidos y ofrece recursos.",
+              "pistas": [
+                "Es la máquina que tiene los datos.",
+                "Está siempre encendido esperando que alguien le pida algo."
+              ]
             },
             {
               "tipo": "elegir",
@@ -475,7 +479,11 @@
                 "Ser una contraseña"
               ],
               "correcta": 0,
-              "pista": "El servidor responde al pedido con los datos o recursos disponibles."
+              "pista": "El servidor responde al pedido con los datos o recursos disponibles.",
+              "pistas": [
+                "No navega, responde.",
+                "Es un servicio que entrega información."
+              ]
             },
             {
               "tipo": "elegir",
@@ -486,7 +494,44 @@
                 "Dibuja los botones en tu pantalla"
               ],
               "correcta": 0,
-              "pista": "La respuesta del servidor llega después del pedido."
+              "pista": "La respuesta del servidor llega después del pedido.",
+              "pistas": [
+                "El servidor es quien tiene el archivo.",
+                "Su trabajo es entregarlo."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el ciclo pedido-respuesta.",
+              "lineas": [
+                "Navegador hace un pedido.",
+                "Internet transporta el pedido.",
+                "Servidor recibe y busca datos.",
+                "Servidor envía respuesta."
+              ],
+              "pista": "Primero pedís, viaja, se busca y vuelve.",
+              "pistas": [
+                "El pedido va antes que la búsqueda.",
+                "El envío es lo último."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si pedís una página que no existe?",
+              "codigo": "1. Pedido\n2. Servidor busca archivo\n3. Archivo no encontrado",
+              "opciones": [
+                "El servidor te responde con un error (ej. 404)",
+                "El servidor crea la página al instante",
+                "El servidor se reinicia"
+              ],
+              "correcta": 0,
+              "pista": "El servidor te avisa cuando no encuentra lo que buscás.",
+              "pistas": [
+                "Un error es la forma de decir 'no está'.",
+                "No puede inventar archivos."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
