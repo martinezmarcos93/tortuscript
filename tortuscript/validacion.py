@@ -12,11 +12,14 @@ Uso: validar_curso(curso) -> list[Hallazgo];  herramientas/validar_contenido.py 
 import ast
 from collections import Counter
 import itertools
+import json
 import re
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 
 from . import tortuga, tortugame
-from .contenido import HUECO, TIPOS, pasos
+from .contenido import HUECO, TIPOS, lecciones, pasos
 from .evaluacion import SEMILLA_EVALUACION, normalizar_salida
 from .executor import ejecutar_codigo
 from .translator import TraductorTortuScript, detectar_tipo, palabras_usadas
@@ -401,8 +404,36 @@ def _revisar_respuestas_repetidas(leccion, hallazgos):
             vistas[texto] = i + 1
 
 
-def validar_curso(curso):
+@lru_cache(maxsize=1)
+def _cargar_mapa_curricular():
+    ruta = Path(__file__).resolve().parent.parent / "contenido" / "mapa_curricular.json"
+    with ruta.open(encoding="utf-8") as archivo:
+        return json.load(archivo)
+
+
+def _validar_transferencia(curso, mapa, hallazgos):
+    unidades = (mapa or {}).get("unidades", {})
+    ids_unidad = {identificador for identificador, unidad in unidades.items()
+                  if unidad.get("tipo") == "lecciones"}
+    for _, leccion in lecciones(curso):
+        transferencia = leccion.get("transferencia")
+        if transferencia is None:
+            continue
+        donde = leccion.get("id", "lección")
+        conceptos = transferencia.get("conceptos") if isinstance(transferencia, dict) else None
+        if not isinstance(conceptos, list) or len(conceptos) < 2:
+            hallazgos.append(Hallazgo(ERROR, donde, "transferencia necesita al menos 2 conceptos"))
+        elif any(not isinstance(concepto, str) or concepto not in ids_unidad for concepto in conceptos):
+            hallazgos.append(Hallazgo(ERROR, donde, "transferencia contiene un concepto que no es unidad lecciones del mapa"))
+        if not isinstance(transferencia, dict) or transferencia.get("asistencia") not in {"guiada", "autonoma"}:
+            hallazgos.append(Hallazgo(ERROR, donde, "transferencia.asistencia debe ser «guiada» o «autonoma»"))
+
+
+def validar_curso(curso, mapa=None):
     hallazgos = []
+    if mapa is None and any("transferencia" in l for _, l in lecciones(curso)):
+        mapa = _cargar_mapa_curricular()
+    _validar_transferencia(curso, mapa or {}, hallazgos)
     # ── estructura ──
     if not curso.get("secciones"):
         return [Hallazgo(ERROR, curso.get("id", "curso"), "el curso no tiene secciones")]

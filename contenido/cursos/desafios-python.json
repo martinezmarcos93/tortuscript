@@ -1,0 +1,161 @@
+{
+  "id": "desafios-python",
+  "titulo": "Desafíos de Python",
+  "icono": "🐍",
+  "descripcion": "Desafíos para combinar lo que ya aprendiste.",
+  "version": 1,
+  "requiere": {
+    "curso": "python-real"
+  },
+  "secciones": [
+    {
+      "id": "desafios",
+      "nivel": 1,
+      "titulo": "Desafíos",
+      "lecciones": [
+        {
+          "id": "saludo-de-equipo",
+          "titulo": "Saludo de equipo",
+          "transferencia": {
+            "conceptos": [
+              "python-puente",
+              "python-control"
+            ],
+            "asistencia": "guiada"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "En un torneo preguntá el nombre del equipo y mostrá tres veces «Vamos, » seguido de ese nombre."
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "equipo = input(\"Nombre del equipo: \")\nfor _ in range(3):\n    print(\"Vamos, \" + equipo)",
+              "pista": "Guardá lo que responde input y usá un ciclo para repetir el saludo.",
+              "entradas_prueba": [
+                "Tortugas"
+              ],
+              "lenguaje": "python",
+              "palabras_pista": [
+                "print",
+                "if",
+                "for",
+                "input",
+                "int",
+                "def",
+                "return",
+                "+"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "doble-o-nada",
+          "titulo": "Doble o nada",
+          "transferencia": {
+            "conceptos": [
+              "python-puente",
+              "python-control"
+            ],
+            "asistencia": "autonoma"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "Una máquina pregunta cuántas fichas ganaste. Convertí la respuesta a número y mostrá el doble."
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "fichas = int(input(\"¿Cuántas fichas? \"))\nprint(fichas * 2)",
+              "pista": "input trae texto; acordate de convertirlo antes de multiplicar.",
+              "entradas_prueba": [
+                "6"
+              ],
+              "lenguaje": "python",
+              "palabras_pista": [
+                "print",
+                "if",
+                "for",
+                "input",
+                "int",
+                "def",
+                "return",
+                "+"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "filtro-de-nombres",
+          "titulo": "Filtro de nombres",
+          "transferencia": {
+            "conceptos": [
+              "python-control",
+              "python-listas"
+            ],
+            "asistencia": "autonoma"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "Tenés una lista de tres nombres. Mostrá solamente los que tienen más de tres letras."
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "nombres = [\"Sol\", \"Luna\", \"Tomi\"]\nfor nombre in nombres:\n    if len(nombre) > 3:\n        print(nombre)",
+              "pista": "Recorré la lista y dentro del ciclo tomá una decisión para cada nombre.",
+              "lenguaje": "python",
+              "palabras_pista": [
+                "print",
+                "if",
+                "for",
+                "input",
+                "int",
+                "def",
+                "return",
+                "+"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "funcion-de-puntos",
+          "titulo": "Función de puntos",
+          "transferencia": {
+            "conceptos": [
+              "python-funciones",
+              "python-programa"
+            ],
+            "asistencia": "autonoma"
+          },
+          "pasos": [
+            {
+              "tipo": "explicacion",
+              "texto": "Creá una función que reciba los puntos de una partida y devuelva el doble. Probala con 8 y mostrá el resultado."
+            },
+            {
+              "tipo": "escribir",
+              "consigna": "Escribí un programa que resuelva el desafío.",
+              "solucion": "def doble(puntos):\n    return puntos * 2\n\nprint(doble(8))",
+              "pista": "Definí la función con un dato de entrada y usá return para entregar el cálculo.",
+              "lenguaje": "python",
+              "palabras_pista": [
+                "print",
+                "if",
+                "for",
+                "input",
+                "int",
+                "def",
+                "return",
+                "+"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

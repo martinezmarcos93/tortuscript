@@ -6,6 +6,8 @@ consultan antes de fijarlos.
 ## Sin publicar
 
 ### Agregado
+- **Desafíos de transferencia**: dos cursos optativos al completar Primeros pasos y Python real, con retos que combinan
+  conceptos y se evalúan por el comportamiento del programa.
 - **Modelo de dominio pedagógico V1 (`tortuscript/dominio.py`, ADR-052).** Estima por concepto (las 37 unidades del mapa curricular) cuánta evidencia de dominio hay, en 6 estados de `sin_evidencia` a `consolidado`, derivándola del progreso existente: no guarda datos nuevos, no cambia el esquema y no castiga la ayuda. Todavía no lo usa ninguna pantalla ni el repaso.
 - **ADR-052 aceptada y especificación del modelo de dominio pedagógico V1** (`docs/MODELO_DOMINIO_V1.md`). El dominio por concepto se deriva del progreso existente: no cambia el esquema ni recopila datos nuevos. Todavía sin código.
 - **El XP de un ejercicio ya no puede retroceder (T3).** `progreso.registrar_ejercicio` rechaza, sin tocar nada y con aviso en el log, una combinación incoherente: XP negativo, o más estrellas con menos XP que lo ya guardado. Política decidida por Marcos el 18/10/2026. No cambia el esquema ni el XP ya ganado.
