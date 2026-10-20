@@ -18,21 +18,21 @@
           "titulo": "Mensaje en ronda",
           "transferencia": {
             "conceptos": [
-              "python-puente",
-              "python-control"
+              "tu-primera-variable",
+              "repetir"
             ],
             "asistencia": "guiada"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "En una radio escolar te piden mostrar tres veces un saludo con el nombre que elegiste.",
-              "codigo": "nombre es \"Lua\"\nmostrar nombre\nrepetir 2 veces:\n    mostrar \"¡Eh!\""
+              "texto": "En la radio escolar, guardá «Luz» en una variable y mostrá exactamente «Hola Luz» tres veces.",
+              "codigo": "mostrar \"Buen día\"\nrepetir 2 veces:\n    mostrar \"¡Vamos!\""
             },
             {
               "tipo": "escribir",
               "consigna": "Escribí un programa que resuelva el desafío.",
-              "solucion": "nombre es \"Luz\"\nrepetir 3 veces:\n    mostrar \"Hola \" + nombre",
+              "solucion": "repetir 3 veces:\n    mostrar \"Hola Luz\"",
               "pista": "Guardá el nombre antes de repetir; el mensaje se arma juntando texto y variable."
             }
           ]
@@ -42,16 +42,16 @@
           "titulo": "Puntos del juego",
           "transferencia": {
             "conceptos": [
-              "python-control",
-              "python-datos"
+              "suma",
+              "si-es-grande"
             ],
             "asistencia": "autonoma"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "En un juego juntaste 7 puntos y después ganaste 5 más. Mostrá «¡Nivel nuevo!» si llegaste a 10; si no, mostrá cuántos puntos tenés.",
-              "codigo": "puntos es 11\nsi puntos > 10:\n    mostrar \"Grande\"\nsino:\n    mostrar \"Chico\""
+              "texto": "En un juego juntaste 7 puntos y ganaste 5 más. Mostrá exactamente «¡Nivel nuevo!» si el total llega a 10 o más; si no, mostrá el total.",
+              "codigo": "total es 4\nsi total > 3:\n    mostrar \"Pasa\"\nsino:\n    mostrar \"Seguí\""
             },
             {
               "tipo": "escribir",
@@ -66,16 +66,16 @@
           "titulo": "Clave secreta",
           "transferencia": {
             "conceptos": [
-              "python-puente",
-              "python-control"
+              "pedir-el-nombre",
+              "contrasena"
             ],
             "asistencia": "autonoma"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "Un robot pregunta una clave. Si la respuesta es «mate», muestra «Adelante»; si no, muestra «Probá otra vez».",
-              "codigo": "clave es preguntar(\"¿Tu nombre? \" )\nmostrar clave"
+              "texto": "Un robot pregunta una clave. Con la respuesta «mate», muestra exactamente «Adelante»; con la respuesta «sol», muestra exactamente «Probá otra vez».",
+              "codigo": "respuesta es preguntar(\"¿Color? \")\nsi respuesta == \"verde\":\n    mostrar \"Sí\"\nsino:\n    mostrar \"No\""
             },
             {
               "tipo": "escribir",
@@ -93,15 +93,15 @@
           "titulo": "Tabla relámpago",
           "transferencia": {
             "conceptos": [
-              "python-control",
-              "python-problemas"
+              "contador",
+              "tabla-del-2"
             ],
             "asistencia": "autonoma"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "Para una competencia, mostrá la tabla del 3 desde 3 hasta 15, de tres en tres."
+              "texto": "Para una competencia, mostrà los números 3, 6, 9, 12 y 15, cada uno en una línea."
             },
             {
               "tipo": "escribir",

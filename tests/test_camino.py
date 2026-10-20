@@ -206,7 +206,7 @@ class TestWebCamino(Base):
         self.assertEqual(html.count('class="parada'), 46)
         self.assertIn("¡Te toca!", html)
         self.assertIn('href="/leccion/hola-mundo"', html)
-        self.assertIn("0/108", html)
+        self.assertIn("0/116", html)
 
     def test_aprender_lleva_a_la_leccion_actual(self):
         self.post("/api/onboarding", {"meta_min": 10})

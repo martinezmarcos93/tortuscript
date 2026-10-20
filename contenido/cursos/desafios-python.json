@@ -18,15 +18,15 @@
           "titulo": "Saludo de equipo",
           "transferencia": {
             "conceptos": [
-              "python-puente",
-              "python-control"
+              "py-input",
+              "py-for"
             ],
             "asistencia": "guiada"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "En un torneo preguntá el nombre del equipo y mostrá tres veces «Vamos, » seguido de ese nombre."
+              "texto": "En el torneo, la entrada de prueba será «Tortugas». Mostrá exactamente «Vamos, Tortugas» tres veces."
             },
             {
               "tipo": "escribir",
@@ -55,15 +55,15 @@
           "titulo": "Doble o nada",
           "transferencia": {
             "conceptos": [
-              "python-puente",
-              "python-control"
+              "py-input",
+              "py-datos"
             ],
             "asistencia": "autonoma"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "Una máquina pregunta cuántas fichas ganaste. Convertí la respuesta a número y mostrá el doble."
+              "texto": "La entrada de prueba es 6 fichas. Pedí ese número y mostrá exactamente 12, que es el doble."
             },
             {
               "tipo": "escribir",
@@ -92,15 +92,15 @@
           "titulo": "Filtro de nombres",
           "transferencia": {
             "conceptos": [
-              "python-control",
-              "python-listas"
+              "py-listas",
+              "py-if"
             ],
             "asistencia": "autonoma"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "Tenés una lista de tres nombres. Mostrá solamente los que tienen más de tres letras."
+              "texto": "Con la lista Sol, Luna y Tomi, mostrá exactamente Luna y Tomi, cada uno en una línea: son los nombres con más de tres letras."
             },
             {
               "tipo": "escribir",
@@ -126,15 +126,15 @@
           "titulo": "Función de puntos",
           "transferencia": {
             "conceptos": [
-              "python-funciones",
-              "python-programa"
+              "py-def",
+              "py-final"
             ],
             "asistencia": "autonoma"
           },
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "Creá una función que reciba los puntos de una partida y devuelva el doble. Probala con 8 y mostrá el resultado."
+              "texto": "Creá una función que devuelva el doble de los puntos. Al probarla con 8, mostrá exactamente 16."
             },
             {
               "tipo": "escribir",

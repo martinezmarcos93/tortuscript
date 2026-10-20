@@ -8,7 +8,7 @@ import json
 from datetime import date
 from pathlib import Path
 
-from . import practica
+from . import contenido, practica
 
 RAIZ = Path(__file__).resolve().parent.parent
 CATALOGO = RAIZ / "docs" / "catalogo_curricular_v1.json"
@@ -232,6 +232,24 @@ def _unidades_por_contenido():
 def unidad_de_leccion(leccion_id):
     """La unidad del catálogo a la que pertenece una lección, o None si la lección no figura en el mapa curricular."""
     return _unidades_por_contenido()[0].get(leccion_id)
+
+
+def unidad_de_cobro(leccion_id):
+    """Unidad comercial que determina el acceso a una lección y sus desafíos."""
+    unidad = unidad_de_leccion(leccion_id)
+    if unidad is not None:
+        return unidad
+    reto = next((l for curso in contenido.todos_los_cursos()
+                 for _, l in contenido.lecciones(curso) if l.get("id") == leccion_id), None)
+    if reto is None:
+        return None
+    transferencia = reto.get("transferencia") or {}
+    conceptos = transferencia.get("conceptos") or reto.get("conceptos", [])
+    indice = _indice_unidades()
+    unidades = _unidades_por_contenido()[0]
+    candidatas = {unidades.get(concepto) for concepto in conceptos if unidades.get(concepto)}
+    return next((uid for uid in cargar_mapa()["unidades"]
+                 if uid in candidatas and estado_comercial(uid, indice) == "premium"), None)
 
 
 def unidad_de_proyecto(proyecto_id):

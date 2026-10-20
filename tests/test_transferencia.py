@@ -1,36 +1,39 @@
 import unittest
 
-from tortuscript import contenido, leccion
+from tortuscript import catalogo_producto, contenido, leccion
 from tortuscript.evaluacion import normalizar_salida
-from tortuscript.validacion import ERROR, _correr, validar_curso
+from tortuscript.validacion import ERROR, _correr, validar_transferencias
 
 
 class TestReglaTransferencia(unittest.TestCase):
-    def curso(self, transferencia):
-        return {"id": "sintetico", "secciones": [{"id": "s", "lecciones": [{
-            "id": "reto", "pasos": [], "transferencia": transferencia,
-        }]}]}
+    def cursos(self, transferencia, anterior="hola-mundo"):
+        curso = lambda cid, lid, transfer=None: {"id": cid, "secciones": [{"id": "s", "lecciones": [
+            {"id": lid, "pasos": [], **({"transferencia": transfer} if transfer is not None else {})}
+        ]}]}
+        base = curso("primeros-pasos", anterior)
+        base["secciones"][0]["lecciones"].append({"id": "tu-primera-variable", "pasos": []})
+        return [base, curso("desafios-tortuscript", "reto", transferencia)]
 
-    def errores(self, transferencia):
-        return [h.mensaje for h in validar_curso(self.curso(transferencia), {
-            "unidades": {"u1": {"tipo": "lecciones"}, "u2": {"tipo": "lecciones"},
-                         "proyecto": {"tipo": "proyecto"}},
-        }) if h.nivel == ERROR]
+    def errores(self, transferencia, anterior="hola-mundo"):
+        return [h.mensaje for h in validar_transferencias(self.cursos(transferencia, anterior)) if h.nivel == ERROR]
 
     def test_menos_de_dos_conceptos(self):
-        self.assertIn("transferencia necesita al menos 2 conceptos",
-                      self.errores({"conceptos": ["u1"], "asistencia": "guiada"}))
+        self.assertIn("transferencia necesita al menos 2 conceptos distintos",
+                      self.errores({"conceptos": ["hola-mundo", "hola-mundo"], "asistencia": "guiada"}))
 
     def test_concepto_que_no_es_unidad_lecciones(self):
-        self.assertIn("transferencia contiene un concepto que no es unidad lecciones del mapa",
-                      self.errores({"conceptos": ["u1", "proyecto"], "asistencia": "guiada"}))
+        self.assertTrue(self.errores({"conceptos": ["hola-mundo", "inventada"], "asistencia": "guiada"}))
+
+    def test_concepto_del_mismo_curso_o_posterior(self):
+        self.assertTrue(self.errores({"conceptos": ["hola-mundo", "reto"], "asistencia": "guiada"}))
+        self.assertTrue(self.errores({"conceptos": ["hola-mundo", "py-print"], "asistencia": "guiada"}))
 
     def test_asistencia_invalida(self):
         self.assertIn("transferencia.asistencia debe ser «guiada» o «autonoma»",
                       self.errores({"conceptos": ["u1", "u2"], "asistencia": "libre"}))
 
     def test_transferencia_valida(self):
-        self.assertEqual([], self.errores({"conceptos": ["u1", "u2"], "asistencia": "autonoma"}))
+        self.assertEqual([], self.errores({"conceptos": ["hola-mundo", "tu-primera-variable"], "asistencia": "autonoma"}))
 
 
 class TestCursosDeTransferencia(unittest.TestCase):
@@ -82,6 +85,8 @@ class TestCursosDeTransferencia(unittest.TestCase):
                         esperada, entradas = self.ESPERADAS[reto["id"]]
                         self.assertEqual(normalizar_salida(esperada), normalizar_salida(salida))
                         self.assertEqual(entradas, paso.get("entradas_prueba", []))
+                    self.assertEqual([], [h for h in validar_transferencias(contenido.todos_los_cursos())
+                                          if h.nivel == ERROR])
 
     def test_minimo_y_asistencias_por_curso(self):
         for curso_id in ("desafios-tortuscript", "desafios-python"):
@@ -90,6 +95,28 @@ class TestCursosDeTransferencia(unittest.TestCase):
             self.assertGreaterEqual(len(asistencias), 4)
             self.assertGreaterEqual(asistencias.count("guiada"), 1)
             self.assertGreaterEqual(asistencias.count("autonoma"), 2)
+
+
+class TestUnidadDeCobro(unittest.TestCase):
+    def test_unidad_de_leccion_del_mapa(self):
+        self.assertEqual(catalogo_producto.unidad_de_leccion("py-if"), catalogo_producto.unidad_de_cobro("py-if"))
+
+    def test_leccion_fuera_del_mapa_sin_conceptos(self):
+        self.assertIsNone(catalogo_producto.unidad_de_cobro("tortuga-avanzar"))
+
+    def test_desafios_tortuscript_son_gratis(self):
+        for _, reto in contenido.lecciones(contenido.cargar_curso("desafios-tortuscript")):
+            self.assertIsNone(catalogo_producto.unidad_de_cobro(reto["id"]))
+
+    def test_conceptos_gratuitos_no_cobran_y_premium_si(self):
+        from unittest.mock import patch
+        def reto(conceptos):
+            return {"id": "reto-sintetico", "transferencia": {"conceptos": conceptos}, "pasos": []}
+        curso = {"id": "sintetico", "secciones": [{"id": "s", "lecciones": [reto(["hola-mundo", "tu-primera-variable"])]}]}
+        with patch.object(contenido, "todos_los_cursos", return_value=[curso]):
+            self.assertIsNone(catalogo_producto.unidad_de_cobro("reto-sintetico"))
+            curso["secciones"][0]["lecciones"] = [reto(["py-if", "py-for"])]
+            self.assertEqual("python-control", catalogo_producto.unidad_de_cobro("reto-sintetico"))
 
 
 if __name__ == "__main__":

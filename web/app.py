@@ -414,7 +414,7 @@ def create_app(token=None):
         """La unidad del catálogo que este pedido quiere abrir, o None si no toca contenido de una unidad."""
         args = request.view_args or {}
         if "leccion_id" in args:
-            return catalogo_producto.unidad_de_leccion(args["leccion_id"])
+            return catalogo_producto.unidad_de_cobro(args["leccion_id"])
         if "proyecto_id" in args and request.path.startswith(("/proyectos-integradores/", "/api/proyectos-integradores/")):
             return catalogo_producto.unidad_de_proyecto(args["proyecto_id"])
         return None
@@ -647,7 +647,7 @@ def create_app(token=None):
             for curso in camino:
                 for seccion in curso.get("secciones", []):
                     for leccion in seccion.get("lecciones", []):
-                        leccion["de_pago"] = _bloqueada_por_pago(catalogo_producto.unidad_de_leccion(leccion["id"]), indice)
+                        leccion["de_pago"] = _bloqueada_por_pago(catalogo_producto.unidad_de_cobro(leccion["id"]), indice)
         return camino
 
     def _leccion_o_404(leccion_id):
