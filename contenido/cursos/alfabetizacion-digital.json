@@ -288,7 +288,11 @@
                 "SQL"
               ],
               "correcta": 0,
-              "pista": "Firefox es un programa para navegar por la Web."
+              "pista": "Firefox es un programa para navegar por la Web.",
+              "pistas": [
+                "Los navegadores te dejan visitar páginas.",
+                "Son la puerta de entrada a la web."
+              ]
             },
             {
               "tipo": "elegir",
@@ -299,7 +303,11 @@
                 "Crear hardware"
               ],
               "correcta": 0,
-              "pista": "El navegador solicita recursos y los presenta en pantalla."
+              "pista": "El navegador solicita recursos y los presenta en pantalla.",
+              "pistas": [
+                "El navegador actua como cliente.",
+                "Pide datos a la red y te los muestra."
+              ]
             },
             {
               "tipo": "elegir",
@@ -310,7 +318,44 @@
                 "Convierte la página en un aparato físico"
               ],
               "correcta": 0,
-              "pista": "Primero indicás qué querés visitar; después el navegador pide lo necesario."
+              "pista": "Primero indicás qué querés visitar; después el navegador pide lo necesario.",
+              "pistas": [
+                "Pide solo lo de la página actual.",
+                "Interpreta el código y te da la imagen final."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená las acciones del navegador al abrir una página.",
+              "lineas": [
+                "Escribir la dirección web.",
+                "El navegador pide la página.",
+                "El servidor responde.",
+                "El navegador la muestra."
+              ],
+              "pista": "Primero escribís, se pide, responde el servidor y finalmente se muestra.",
+              "pistas": [
+                "El pedido va antes de la respuesta.",
+                "Mostrás la web al final."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si el navegador no tiene conexión a Internet?",
+              "codigo": "1. Escribir dirección\n2. Intentar pedir página\n3. Sin señal",
+              "opciones": [
+                "Muestra un mensaje de error de conexión",
+                "Inventa el contenido de la página",
+                "Muestra otra web al azar"
+              ],
+              "correcta": 0,
+              "pista": "Sin red, el navegador no puede obtener los recursos de la web.",
+              "pistas": [
+                "No puede descargar la información.",
+                "Te avisa que no se pudo conectar."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
