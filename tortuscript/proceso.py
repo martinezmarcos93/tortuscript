@@ -93,10 +93,29 @@ def normalizar_pedido(pedido):
         if len(entrada) > ENTRADA_MAX:
             raise TrabajoInvalido("Una de las respuestas es demasiado larga.")
         limpias.append(entrada)
+    casos = pedido.get("casos")
+    if casos is not None:
+        if not isinstance(casos, list) or not 1 <= len(casos) <= 5:
+            raise TrabajoInvalido("Los casos de prueba no son válidos.")
+        casos_limpios = []
+        for caso in casos:
+            if not isinstance(caso, list) or len(caso) > ENTRADAS_MAX:
+                raise TrabajoInvalido("Los casos de prueba no son válidos.")
+            caso_limpio = []
+            for entrada in caso:
+                if isinstance(entrada, bool) or not isinstance(entrada, (str, int, float)):
+                    raise TrabajoInvalido("Los casos de prueba no son válidos.")
+                entrada = str(entrada)
+                if len(entrada) > ENTRADA_MAX:
+                    raise TrabajoInvalido("Una de las respuestas es demasiado larga.")
+                caso_limpio.append(entrada)
+            casos_limpios.append(caso_limpio)
     semilla = pedido.get("semilla")
     if isinstance(semilla, bool) or not isinstance(semilla, int) or not 0 <= semilla < 2 ** 31:
         semilla = None                                       # el worker elige una al azar
     limpio = {"op": pedido["op"], "fuente": fuente, "entradas": limpias, "semilla": semilla}
+    if casos is not None:
+        limpio["casos"] = casos_limpios
     for clave in ("solucion", "laberinto", "usar"):
         if clave in pedido:
             limpio[clave] = pedido[clave]
