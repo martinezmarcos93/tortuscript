@@ -735,7 +735,11 @@
                 "El cable de alimentación"
               ],
               "correcta": 0,
-              "pista": "Un precio es información que un programa puede guardar y procesar."
+              "pista": "Un precio es información que un programa puede guardar y procesar.",
+              "pistas": [
+                "Es un valor que representa algo específico.",
+                "Los datos son piezas sueltas de información."
+              ]
             },
             {
               "tipo": "elegir",
@@ -746,7 +750,11 @@
                 "Un navegador"
               ],
               "correcta": 0,
-              "pista": "Un nombre como \"Ana\" es un dato de texto."
+              "pista": "Un nombre como \"Ana\" es un dato de texto.",
+              "pistas": [
+                "Puede ser un número, una palabra o una imagen.",
+                "Es la materia prima con la que trabajan los programas."
+              ]
             },
             {
               "tipo": "elegir",
@@ -757,7 +765,44 @@
                 "Porque hacen innecesaria la red"
               ],
               "correcta": 0,
-              "pista": "Los programas usan datos para mostrar, calcular, decidir y recordar información."
+              "pista": "Los programas usan datos para mostrar, calcular, decidir y recordar información.",
+              "pistas": [
+                "Sin datos, los programas no tendrían qué mostrar.",
+                "Los datos le dan sentido y contenido al programa."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el camino de un dato desde que se crea hasta que se muestra.",
+              "lineas": [
+                "Se crea el dato.",
+                "El programa lo guarda en memoria.",
+                "El programa procesa el dato.",
+                "Se muestra al usuario."
+              ],
+              "pista": "Un dato primero tiene que existir antes de ser procesado.",
+              "pistas": [
+                "Pensá qué necesita existir antes de todo lo demás.",
+                "Lo que ve la persona usuaria es el resultado de los otros pasos."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si intentás mostrar un dato que nunca se creó?",
+              "codigo": "1. (sin dato)\n2. Intentar mostrar dato\n3. ???",
+              "opciones": [
+                "El programa muestra un error o vacío",
+                "La computadora adivina un dato al azar",
+                "El programa se apaga para siempre"
+              ],
+              "correcta": 0,
+              "pista": "El programa no puede mostrar algo que no existe en su memoria.",
+              "pistas": [
+                "Si la información no fue creada, no hay nada que ver.",
+                "Los programas son literales: no inventan datos."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -778,7 +823,11 @@
                 "Para conectar el monitor al teclado"
               ],
               "correcta": 0,
-              "pista": "Una base de datos está pensada para almacenar y consultar información."
+              "pista": "Una base de datos está pensada para almacenar y consultar información.",
+              "pistas": [
+                "Es un sistema para gestionar muchos datos juntos.",
+                "Permite encontrar rápido lo que necesitás."
+              ]
             },
             {
               "tipo": "elegir",
@@ -789,7 +838,11 @@
                 "El color del monitor"
               ],
               "correcta": 0,
-              "pista": "Pensá qué necesita saber una tienda para vender: qué tiene y a qué precio."
+              "pista": "Pensá qué necesita saber una tienda para vender: qué tiene y a qué precio.",
+              "pistas": [
+                "Guarda detalles sobre las cosas.",
+                "Almacena los valores que cambian, como el stock."
+              ]
             },
             {
               "tipo": "elegir",
@@ -800,7 +853,44 @@
                 "Muestra una página sin buscar nada"
               ],
               "correcta": 0,
-              "pista": "Primero se hace el pedido y después la base devuelve lo que se pidió."
+              "pista": "Primero se hace el pedido y después la base devuelve lo que se pidió.",
+              "pistas": [
+                "La base de datos responde a un pedido específico.",
+                "Es como preguntarle a un bibliotecario por un libro."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo una tienda usa su base de datos al vender.",
+              "lineas": [
+                "El cliente elige un producto.",
+                "El programa consulta el precio.",
+                "El programa resta el stock.",
+                "Se registra la venta."
+              ],
+              "pista": "Antes de cambiar el stock, el programa necesita saber algo del producto.",
+              "pistas": [
+                "Consultar es antes de modificar.",
+                "El registro de la venta es el cierre."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si pedís un producto que figura sin stock?",
+              "codigo": "1. Pedir producto\n2. Consultar stock: 0\n3. ???",
+              "opciones": [
+                "El programa te avisa que no hay stock",
+                "El programa vende igual y lo inventa",
+                "La base de datos se borra"
+              ],
+              "correcta": 0,
+              "pista": "Los programas actúan según la información que encuentran.",
+              "pistas": [
+                "Fijate qué número devolvió la consulta.",
+                "El programa decide según lo que guarda la base de datos."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -821,7 +911,11 @@
                 "Para convertir una PC en un servidor automáticamente"
               ],
               "correcta": 0,
-              "pista": "Una API define cómo pedir y recibir cosas entre programas."
+              "pista": "Una API define cómo pedir y recibir cosas entre programas.",
+              "pistas": [
+                "Es como un punto de encuentro para que los sistemas hablen.",
+                "Define el idioma y las reglas del intercambio."
+              ]
             },
             {
               "tipo": "elegir",
@@ -832,7 +926,11 @@
                 "Mostrar una página al usuario"
               ],
               "correcta": 0,
-              "pista": "La API permite pedir datos y recibir una respuesta del servicio."
+              "pista": "La API permite pedir datos y recibir una respuesta del servicio.",
+              "pistas": [
+                "Funciona como una intermediaria.",
+                "Abre la puerta para usar funciones de otros programas."
+              ]
             },
             {
               "tipo": "elegir",
@@ -843,7 +941,44 @@
                 "Sí: API significa base de datos"
               ],
               "correcta": 0,
-              "pista": "Una API puede consultar una base de datos, pero no es la base de datos."
+              "pista": "Una API puede consultar una base de datos, pero no es la base de datos.",
+              "pistas": [
+                "Son cosas distintas: una guarda datos, la otra comunica.",
+                "La API es el medio, la base de datos es el depósito."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo un programa usa una API para obtener el clima.",
+              "lineas": [
+                "El programa hace el pedido a la API.",
+                "La API valida el pedido.",
+                "La API consulta el servicio de clima.",
+                "El programa recibe los datos."
+              ],
+              "pista": "Algo tiene que pedirse antes de poder revisarse.",
+              "pistas": [
+                "La validación va después del pedido.",
+                "La recepción es el final del proceso."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si pedís datos a una API que no existe?",
+              "codigo": "1. El programa pide datos a una API\n2. La dirección de la API está mal escrita\n3. ???",
+              "opciones": [
+                "Recibís una respuesta de error",
+                "La API te adivina qué querías pedir",
+                "El servidor se desconecta de Internet"
+              ],
+              "correcta": 0,
+              "pista": "Pensá qué pasa cuando alguien recibe un pedido que no puede cumplir.",
+              "pistas": [
+                "La API no puede entregar algo que no encontró.",
+                "Pensá cómo se entera el programa de que el pedido falló."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -864,7 +999,11 @@
                 "Abrir todos los archivos desconocidos"
               ],
               "correcta": 0,
-              "pista": "Una contraseña única y difícil de adivinar reduce riesgos."
+              "pista": "Una contraseña única y difícil de adivinar reduce riesgos.",
+              "pistas": [
+                "Evitá usar datos personales como tu fecha de nacimiento.",
+                "Mezclá letras, números y símbolos."
+              ]
             },
             {
               "tipo": "elegir",
@@ -875,7 +1014,11 @@
                 "Publicar la contraseña para preguntar si es real"
               ],
               "correcta": 0,
-              "pista": "Los mensajes inesperados que piden credenciales deben verificarse antes de actuar."
+              "pista": "Los mensajes inesperados que piden credenciales deben verificarse antes de actuar.",
+              "pistas": [
+                "Nunca des tu clave en un enlace que no sea el oficial.",
+                "Si dudás, mejor no interactúes con el mensaje."
+              ]
             },
             {
               "tipo": "elegir",
@@ -886,7 +1029,44 @@
                 "Un navegador"
               ],
               "correcta": 0,
-              "pista": "La seguridad busca reducir accesos indebidos y proteger información."
+              "pista": "La seguridad busca reducir accesos indebidos y proteger información.",
+              "pistas": [
+                "No se trata solo de programas, sino de hábitos.",
+                "Es el escudo para tu información."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená qué pasa cuando alguien cae en un mensaje falso que pide la contraseña.",
+              "lineas": [
+                "Llega un mensaje que imita a tu banco o a un juego.",
+                "La persona toca el enlace.",
+                "Escribe su contraseña en una página falsa.",
+                "Alguien más entra a su cuenta."
+              ],
+              "pista": "Pensá qué tiene que pasar antes de que alguien pueda robar una contraseña.",
+              "pistas": [
+                "Todo empieza con algo que llega a tu celular o tu correo.",
+                "Lo último es lo que hace quien engañó."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si usás la misma contraseña en todos lados?",
+              "codigo": "1. Usar clave A en sitio 1\n2. Usar clave A en sitio 2\n3. Sitio 2 sufre un robo de datos\n4. ???",
+              "opciones": [
+                "Todas tus cuentas corren peligro",
+                "Solo el sitio 2 pierde datos",
+                "El sitio 1 se hace más seguro"
+              ],
+              "correcta": 0,
+              "pista": "La seguridad se debilita si una sola falla afecta a todas.",
+              "pistas": [
+                "Pensá si una misma llave abre todas las puertas de tu casa.",
+                "Fijate qué podría probar quien robó la clave del sitio 2."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -907,7 +1087,11 @@
                 "Eliminar los datos"
               ],
               "correcta": 0,
-              "pista": "La interfaz inicia el pedido; detrás se consultan los datos y después vuelve la respuesta."
+              "pista": "La interfaz inicia el pedido; detrás se consultan los datos y después vuelve la respuesta.",
+              "pistas": [
+                "Imaginá una cadena de favores: vos pedís, alguien busca y alguien entrega.",
+                "Cada parte de la app tiene una responsabilidad clara."
+              ]
             },
             {
               "tipo": "elegir",
@@ -918,7 +1102,11 @@
                 "Los datos dibujan la interfaz"
               ],
               "correcta": 0,
-              "pista": "La gracia de una arquitectura es separar responsabilidades."
+              "pista": "La gracia de una arquitectura es separar responsabilidades.",
+              "pistas": [
+                "No mezclan sus tareas; colaboran.",
+                "La interfaz es solo el punto de entrada."
+              ]
             },
             {
               "tipo": "elegir",
@@ -929,7 +1117,44 @@
                 "El monitor envía el pedido al navegador"
               ],
               "correcta": 0,
-              "pista": "Seguí el camino de un toque: ¿adónde va primero y qué vuelve al final?"
+              "pista": "Seguí el camino de un toque: ¿adónde va primero y qué vuelve al final?",
+              "pistas": [
+                "Empieza por vos tocando algo.",
+                "El servidor procesa el pedido en el medio."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el camino de un pedido de login.",
+              "lineas": [
+                "Usuario ingresa usuario y clave.",
+                "El frontend envía el pedido al backend.",
+                "El backend verifica los datos.",
+                "El servidor responde si es correcto."
+              ],
+              "pista": "Algo tiene que llegar al backend antes de que pueda verificarse.",
+              "pistas": [
+                "Ingresar datos es el primer paso.",
+                "La verificación ocurre antes de responder."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si el servidor se cae mientras esperás la respuesta?",
+              "codigo": "1. Usuario envía datos\n2. Backend procesa...\n3. (el servidor falla)\n4. ???",
+              "opciones": [
+                "La aplicación te muestra un mensaje de error",
+                "La app inventa una respuesta exitosa",
+                "El navegador se cierra solo"
+              ],
+              "correcta": 0,
+              "pista": "Cuando un pedido no llega a destino, la app debe avisarte.",
+              "pistas": [
+                "Si no hay respuesta, no podés continuar.",
+                "Pensá cómo te informás de que algo salió mal."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         }
@@ -957,7 +1182,11 @@
                 "Mostrar una página web en el navegador"
               ],
               "correcta": 0,
-              "pista": "JSON describe datos; no es una pieza de hardware."
+              "pista": "JSON describe datos; no es una pieza de hardware.",
+              "pistas": [
+                "Es un lenguaje para organizar información.",
+                "Se usa para transmitir datos entre computadoras."
+              ]
             },
             {
               "tipo": "elegir",
@@ -968,7 +1197,44 @@
                 "El valor que se guarda dentro del dato"
               ],
               "correcta": 0,
-              "pista": "En JSON una clave ayuda a saber qué significa un valor."
+              "pista": "En JSON una clave ayuda a saber qué significa un valor.",
+              "pistas": [
+                "Es la etiqueta del dato.",
+                "Funciona como el título de una caja."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená la estructura de un dato JSON básico.",
+              "lineas": [
+                "Abrir llave.",
+                "Escribir clave.",
+                "Escribir valor.",
+                "Cerrar llave."
+              ],
+              "pista": "Un objeto JSON empieza con una llave y tiene claves y valores adentro.",
+              "pistas": [
+                "La apertura inicia el objeto.",
+                "La clave va antes que el valor."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si falta una llave de cierre en JSON?",
+              "codigo": "{\n  \"nombre\": \"Juan\"\n(falta cierre)",
+              "opciones": [
+                "El programa da un error y no puede leer los datos",
+                "El programa ignora el error y funciona",
+                "La computadora arregla el formato sola"
+              ],
+              "correcta": 0,
+              "pista": "JSON es estricto con sus reglas de formato.",
+              "pistas": [
+                "Sin todas las piezas, la estructura está rota.",
+                "Es como una oración sin punto final."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -989,7 +1255,11 @@
                 "Hacer que una página cargue más rápido"
               ],
               "correcta": 0,
-              "pista": "Git trabaja con la historia del código."
+              "pista": "Git trabaja con la historia del código.",
+              "pistas": [
+                "Es un asistente para tu proyecto.",
+                "Guarda cada cambio que hacés."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1000,7 +1270,44 @@
                 "Una copia del proyecto en otra computadora"
               ],
               "correcta": 0,
-              "pista": "Un commit deja una fotografía lógica de cambios del proyecto."
+              "pista": "Un commit deja una fotografía lógica de cambios del proyecto.",
+              "pistas": [
+                "Es un punto de guardado.",
+                "Registra qué cambió y cuándo."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená el flujo básico de trabajo con Git.",
+              "lineas": [
+                "Hacer cambios en los archivos.",
+                "Preparar los cambios.",
+                "Guardarlos con un commit.",
+                "Ver la historia del proyecto."
+              ],
+              "pista": "Antes de ver la historia, tiene que haber algo guardado en ella.",
+              "pistas": [
+                "El flujo empieza con editar.",
+                "El commit viene antes de revisar la historia."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si querés volver a un estado anterior del código?",
+              "codigo": "1. Commitear versión 1\n2. Commitear versión 2\n3. Commitear versión 3\n4. Querer volver a la versión 1",
+              "opciones": [
+                "Git te deja regresar a un commit anterior",
+                "Es imposible volver atrás en Git",
+                "Se pierden todos los cambios para siempre"
+              ],
+              "correcta": 0,
+              "pista": "Git guarda la historia para poder moverte entre versiones.",
+              "pistas": [
+                "Pensá en los puntos de guardado de un videojuego.",
+                "Fijate qué guarda Git cada vez que hacés un commit."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
@@ -1021,7 +1328,11 @@
                 "Un programa para escribir código"
               ],
               "correcta": 0,
-              "pista": "El repositorio reúne archivos y la historia que Git registra."
+              "pista": "El repositorio reúne archivos y la historia que Git registra.",
+              "pistas": [
+                "Pensá qué guarda Git además de los archivos.",
+                "Es la carpeta de un proyecto junto con todo lo que le pasó."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1032,7 +1343,44 @@
                 "Son el mismo programa con dos nombres"
               ],
               "correcta": 0,
-              "pista": "Git es la herramienta de control de versiones; GitHub es una plataforma que trabaja con repositorios."
+              "pista": "Git es la herramienta de control de versiones; GitHub es una plataforma que trabaja con repositorios.",
+              "pistas": [
+                "Una es una herramienta que usás en tu computadora; la otra, un sitio de Internet.",
+                "Pensá cuál registra los cambios y cuál sirve para compartirlos."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená cómo se comparte un proyecto en GitHub.",
+              "lineas": [
+                "Hacés cambios en tu computadora.",
+                "Los guardás con un commit.",
+                "Los subís al repositorio de GitHub.",
+                "Otra persona ve los cambios nuevos."
+              ],
+              "pista": "Para compartir algo, primero tiene que estar guardado.",
+              "pistas": [
+                "Todo empieza en tu propia computadora.",
+                "Lo último es lo que ve la otra persona."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué ve tu compañera en GitHub?",
+              "codigo": "1. Hacés un commit en tu computadora\n2. No lo subís a GitHub\n3. Tu compañera abre el repositorio\n4. ???",
+              "opciones": [
+                "Todavía no ve tus cambios",
+                "Ve tus cambios al instante",
+                "El repositorio se borra"
+              ],
+              "correcta": 0,
+              "pista": "Pensá dónde quedó guardado el commit.",
+              "pistas": [
+                "Un commit queda primero en tu computadora.",
+                "GitHub solo muestra lo que alguien subió."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         }
