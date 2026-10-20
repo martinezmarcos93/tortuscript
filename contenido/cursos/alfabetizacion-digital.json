@@ -999,7 +999,11 @@
                 "Abrir todos los archivos desconocidos"
               ],
               "correcta": 0,
-              "pista": "Una contraseña única y difícil de adivinar reduce riesgos."
+              "pista": "Una contraseña única y difícil de adivinar reduce riesgos.",
+              "pistas": [
+                "Evitá usar datos personales como tu fecha de nacimiento.",
+                "Mezclá letras, números y símbolos."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1010,7 +1014,11 @@
                 "Publicar la contraseña para preguntar si es real"
               ],
               "correcta": 0,
-              "pista": "Los mensajes inesperados que piden credenciales deben verificarse antes de actuar."
+              "pista": "Los mensajes inesperados que piden credenciales deben verificarse antes de actuar.",
+              "pistas": [
+                "Nunca des tu clave en un enlace que no sea el oficial.",
+                "Si dudás, mejor no interactúes con el mensaje."
+              ]
             },
             {
               "tipo": "elegir",
@@ -1021,7 +1029,44 @@
                 "Un navegador"
               ],
               "correcta": 0,
-              "pista": "La seguridad busca reducir accesos indebidos y proteger información."
+              "pista": "La seguridad busca reducir accesos indebidos y proteger información.",
+              "pistas": [
+                "No se trata solo de programas, sino de hábitos.",
+                "Es el escudo para tu información."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená los pasos para proteger una cuenta.",
+              "lineas": [
+                "Crear una contraseña única.",
+                "Activar la seguridad extra si es posible.",
+                "No compartir datos personales.",
+                "Cerrar la sesión al terminar."
+              ],
+              "pista": "La seguridad empieza con una clave única y termina con el cierre de sesión.",
+              "pistas": [
+                "Pensá en la protección antes de usar la cuenta.",
+                "El cierre es el último paso de la seguridad."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si usás la misma contraseña en todos lados?",
+              "codigo": "1. Usar clave A en sitio 1\n2. Usar clave A en sitio 2\n3. Sitio 2 sufre un robo de datos\n4. ???",
+              "opciones": [
+                "Todas tus cuentas corren peligro",
+                "Solo el sitio 2 pierde datos",
+                "El sitio 1 se hace más seguro"
+              ],
+              "correcta": 0,
+              "pista": "La seguridad se debilita si una sola falla afecta a todas.",
+              "pistas": [
+                "Pensá si una misma llave abre todas las puertas de tu casa.",
+                "Si te roban la clave en un lugar, tienen acceso a todo."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
