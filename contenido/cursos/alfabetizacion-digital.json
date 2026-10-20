@@ -201,7 +201,11 @@
                 "La señal de Wi-Fi"
               ],
               "correcta": 0,
-              "pista": "El código describe qué debe hacer el programa."
+              "pista": "El código describe qué debe hacer el programa.",
+              "pistas": [
+                "Es el texto que forma el programa.",
+                "Son los planos que indican cómo construir la función."
+              ]
             },
             {
               "tipo": "elegir",
@@ -212,7 +216,11 @@
                 "un mapa: no tiene ningún orden"
               ],
               "correcta": 0,
-              "pista": "Pensá en algo que se hace siguiendo pasos, uno después de otro."
+              "pista": "Pensá en algo que se hace siguiendo pasos, uno después de otro.",
+              "pistas": [
+                "Si mezclás los ingredientes antes de tiempo, la comida sale mal.",
+                "El orden lógico es vital."
+              ]
             },
             {
               "tipo": "elegir",
@@ -223,7 +231,43 @@
                 "Porque el orden cambia el tamaño del monitor"
               ],
               "correcta": 0,
-              "pista": "Muchas instrucciones usan datos o resultados producidos antes."
+              "pista": "Muchas instrucciones usan datos o resultados producidos antes.",
+              "pistas": [
+                "No podés cocinar algo que todavía no preparaste.",
+                "Cada paso prepara el terreno para el siguiente."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená las partes de una pequeña tarea de código.",
+              "lineas": [
+                "Crear variable de datos.",
+                "Usar el dato en una función.",
+                "Mostrar el resultado."
+              ],
+              "pista": "Primero definís, luego usás y finalmente mostrás.",
+              "pistas": [
+                "La definición ocurre al principio.",
+                "Mostrar es el último paso del proceso."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué ocurre si invertimos los pasos anteriores?",
+              "codigo": "1. Mostrar resultado\n2. Usar dato en función\n3. Crear variable",
+              "opciones": [
+                "El código falla porque no conoce el dato al mostrarlo",
+                "La computadora adivina qué hacer",
+                "Funciona igual de bien"
+              ],
+              "correcta": 0,
+              "pista": "La computadora necesita conocer los datos antes de mostrarlos.",
+              "pistas": [
+                "La máquina no puede mostrar algo que no existe todavía.",
+                "El orden garantiza que los datos estén disponibles."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
