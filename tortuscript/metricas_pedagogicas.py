@@ -1,10 +1,19 @@
 
-import math
-from . import dominio, planificador, contenido
+"""Métricas pedagógicas locales (P6, docs/ESPECIFICACION_P1_P6.md).
+
+Puro: solo lee lo que el progreso ya guarda; no recopila datos nuevos ni manda nada afuera.
+"""
+from . import dominio, planificador
 
 ESTADOS = dominio.ESTADOS
 
+
+def _entero(valor, minimo=None):
+    return isinstance(valor, int) and not isinstance(valor, bool) and (minimo is None or valor >= minimo)
+
+
 def metricas(progreso, cursos, mapa=None):
+    """Resumen de pasos, escritura, repaso y conceptos de un perfil. Los registros dañados se cuentan y se ignoran."""
     if not isinstance(progreso, dict):
         progreso = {}
     
@@ -104,9 +113,7 @@ def metricas(progreso, cursos, mapa=None):
         aciertos = tarjeta.get("aciertos", 0)
         fallos = tarjeta.get("fallos", 0)
         
-        if not (isinstance(caja, int) and not isinstance(caja, bool) and
-                isinstance(aciertos, int) and not isinstance(aciertos, bool) and
-                isinstance(fallos, int) and not isinstance(fallos, bool)):
+        if not (_entero(caja, 0) and _entero(aciertos, 0) and _entero(fallos, 0)):
             res["datos_danados"] += 1
             continue
             
@@ -120,17 +127,11 @@ def metricas(progreso, cursos, mapa=None):
         res["repaso"]["tasa_acierto"] = round(res["repaso"]["aciertos"] / (res["repaso"]["aciertos"] + res["repaso"]["fallos"]), 3)
         
     # 3. Conceptos y Recomendaciones
-    try:
-        dom = dominio.dominio(progreso, cursos, unidades)
-        for uid, estado in dom.items():
-            est = estado.get("estado")
-            if est in res["conceptos"]:
-                res["conceptos"][est] += 1
-            
-            reco = planificador.recomendar(estado)
-            if reco:
-                res["recomendaciones"][uid] = reco
-    except Exception:
-        pass
-        
+    # dominio ya ignora los datos dañados sin lanzar
+    for uid, estado in dominio.dominio(progreso, cursos, unidades).items():
+        res["conceptos"][estado["estado"]] += 1
+        reco = planificador.recomendar(estado)
+        if reco:
+            res["recomendaciones"][uid] = reco
+
     return res
