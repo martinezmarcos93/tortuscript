@@ -1,6 +1,6 @@
 # Roadmap — Ideas de «Inventa tus propios juegos de computadora con Python»
 
-**Estado:** propuesta. No autoriza por sí sola cambios de arquitectura: las fases marcadas «ADR» necesitan una ADR aceptada por Marcos.
+**Estado:** aprobado por Marcos en alcance (19/10/2026). L5 tiene ADR-054 aceptada; L6 (si cambian límites) y L7a necesitan su propia ADR.
 **Fuente:** `src/InventarConPython_3a_es.pdf` de la carpeta del proyecto (Al Sweigart, 3ª ed., traducción de A. Carella, A. Pernin y F. Palm; 380 págs.).
 **Redactado por:** Claude Code, 19/10/2026.
 
@@ -69,19 +69,34 @@ Evaluación por comportamiento con `entradas_prueba`; las partes con azar usan s
 - Lecciones donde se **ordena** un diagrama (pasos `ordenar` con frases en castellano, no código) y se **predice** qué camino toma una entrada.
 - Si hace falta dibujar el diagrama: SVG estático en `web/static/img/` referenciado desde la explicación. Sin editor de diagramas en V1.
 
-### L5 — Depurador paso a paso para programas de texto (I4) (motor, riesgo alto, **ADR**)
+### L5 — Depurador paso a paso para programas de texto (I4) (motor, riesgo alto, **ADR-054 aceptada**)
 
-- Ejecutar línea por línea mostrando la tabla de variables y la salida acumulada, con «siguiente línea» y «correr hasta el final». Reutiliza la marca de línea que ya tiene la tortuga.
-- Toca la ejecución de código del alumno: requiere ADR, revisión de seguridad del worker y del sandbox, y límites de pasos y de tiempo. No se empieza sin la ADR aceptada.
+- Entra en V1 (Marcos, 19/10). Diseño en ADR-054: el programa corre entero una sola vez en el worker de siempre y deja un
+  **registro** de pasos (línea, variables, salida); la página lo reproduce con «siguiente», «anterior» y «hasta el final».
+- Antes de integrar: revisión de seguridad de lo que se serializa desde el worker y tests de los topes.
 
 ### L6 — Simular para decidir (I9) (contenido + límites de ejecución, riesgo medio, **ADR** si cambian los límites)
 
 - Para 14–15: «¿qué estrategia de ta-te-ti gana más?». Simular N partidas con semilla, contar resultados, sacar conclusiones. Enseña a experimentar y conecta con SQL/datos.
 - Puede chocar con los límites de tiempo del ejecutor: medir primero; si hay que subir límites, ADR.
 
-### L7 — Juegos gráficos en tiempo real (I12) (evaluar, **ADR**)
+### L7 — Juegos gráficos (I12): evaluación de complejidad
 
-- Bucle de juego, teclado y colisiones en el navegador. Probablemente le corresponde a Croco-Script (16–20, ADR-037) y no a TortuScript. Primero decidir dónde va.
+Criterio de Marcos (19/10): todo lo de Croco-Script es de alto nivel. Evaluación:
+
+- **Cómo funciona hoy TortuGame:** el programa del chico corre entero y deja un registro de eventos que la página anima
+  después; el mismo intérprete existe en Python (referencia y evaluación) y en JS (`web/static/js/tortugame/interprete.js`),
+  y los tests de conformidad exigen que den el mismo registro. Es un modelo **por turnos**.
+- **Un juego en tiempo real** (bucle de cuadros, teclado continuo, colisiones, sprites, sonido) rompe ese modelo: el código
+  del chico tiene que correr en cada cuadro reaccionando a entradas que no se conocen de antemano. Exige un runtime nuevo
+  en el navegador, conformidad Python↔JS de un modelo continuo, otra forma de evaluar (no hay una salida fija que comparar)
+  y otra revisión de seguridad. **Complejidad alta → Croco-Script.**
+- **Lo que sí cabe en TortuScript (L7a, complejidad media):** juegos **por turnos con teclado** en la grilla de 8×5 que ya
+  usa TortuGame. Cada tecla es un turno: el chico escribe la función que reacciona a `arriba/abajo/izquierda/derecha` y
+  el juego avanza un paso (esquivar, juntar objetos, llegar a la salida). Se evalúa con una secuencia de teclas fija y su
+  registro esperado, sin salir del modelo actual. Necesita una extensión de TortuGame (ADR nueva, porque cambia ADR-006/007).
+- **L7b (Croco-Script):** bucle en tiempo real, colisiones y animación continua (las ideas de los capítulos 17–20 del libro).
+  Se propone en el roadmap de Croco-Script, no en este.
 
 ## 3. Dependencias con el roadmap pedagógico
 
@@ -89,8 +104,9 @@ Evaluación por comportamiento con `entradas_prueba`; las partes con azar usan s
 - L2.1 y L2.2 son la continuación natural de **P4** (feedback orientado al error).
 - El planificador (**P3**) y las métricas (**P6**) toman los juegos nuevos solo si entran al mapa curricular; en V1 quedan fuera, como Juegos y Tortuaria.
 
-## 4. Decisiones para Marcos
+## 4. Decisiones de Marcos (19/10/2026)
 
-1. ¿Los cursos de juegos nuevos son gratis o premium? Hoy, lo que queda fuera del mapa curricular queda abierto (ADR-050).
-2. ¿L5 (depurador) entra en V1 o queda para después de la revisión de seguridad?
-3. ¿L7 va en TortuScript o en Croco-Script?
+1. **Gratis o premium según lo que hace falta saber** (ADR-053): si un juego o desafío se resuelve con lo que se aprende
+   gratis, es gratis; si necesita alguna lección premium, queda bloqueado. Cada lección declara sus conceptos.
+2. **L5 entra** (ADR-054).
+3. **L7 según su complejidad:** el tiempo real va a Croco-Script (L7b); los juegos por turnos con teclado (L7a) quedan en TortuScript.

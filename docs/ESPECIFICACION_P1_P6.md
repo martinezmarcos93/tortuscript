@@ -138,20 +138,28 @@ Cada pista pasa por la misma revisión de texto que `pista`.
 - 4 desafíos por curso como mínimo, en una o dos secciones; al menos 1 `guiada` y 2 `autonoma` por curso.
 - Cada lección es un desafío: un paso `explicacion` con el problema (sin solución) y uno o más pasos `escribir` evaluados
   **por comportamiento** (`entradas_prueba` y salida/dibujo esperados), nunca por el texto exacto del programa.
-- Cada lección lleva `"transferencia": {"conceptos": [unidad_ids del mapa], "asistencia": "guiada" | "autonoma"}`.
-  Un desafío combina **al menos 2 conceptos**. Las pistas de un desafío `autonoma` orientan, no dan código.
+- Cada lección lleva `"transferencia": {"conceptos": [ids de lecciones], "asistencia": "guiada" | "autonoma"}`:
+  las **lecciones ya existentes** que enseñan lo que hace falta (ADR-053). Un desafío combina **al menos 2**, de cursos
+  anteriores en `ORDEN_CURSOS` (no de cursos de desafíos). Las pistas de un desafío `autonoma` orientan, no dan código.
 - No exige nada que no se haya enseñado antes: el validador de presentación ya lo comprueba para TortuScript.
 - Los cursos nuevos no entran al mapa curricular (como Tortuga, Juegos o Proyectos): no cambian `Curriculum.v1` ni la puerta de pago.
 
 ### Validador
 
-Si una lección tiene `transferencia`: ERROR si `conceptos` tiene menos de 2 elementos, si alguno no es una unidad `lecciones`
-del mapa, o si `asistencia` no es `guiada`/`autonoma`.
+Si una lección tiene `transferencia`: ERROR si `conceptos` tiene menos de 2 ids distintos, si alguno no es una lección de
+otro curso anterior en `ORDEN_CURSOS`, o si `asistencia` no es `guiada`/`autonoma`. Como necesita ver todos los cursos,
+esta regla corre en `herramientas/validar_contenido.py` (y en un test), no dentro de `validar_curso`.
 
 ### Matriz
 
 `tortuscript/cobertura.py` suma `matriz_transferencia(cursos, mapa) -> {unidad_id: [ids de lecciones de desafío que la usan]}`
-(todas las unidades `lecciones`, lista vacía si ninguna) y el informe de P1 agrega la columna «Desafíos».
+(todas las unidades `lecciones`, lista vacía si ninguna; una lección declarada cuenta para su unidad del mapa) y el informe
+de P1 agrega la sección «Desafíos por unidad».
+
+### Consignas evaluables
+
+La consigna dice **exactamente** qué tiene que mostrar el programa (los textos y valores fijos están en la consigna).
+Si el problema depende de un dato, el programa lo pide con `preguntar`/`input` y el paso trae `entradas_prueba`.
 
 ---
 
@@ -183,3 +191,12 @@ Imprime las métricas de un archivo de progreso local en texto legible. Solo lec
 
 `docs/audits/VALIDACION_PEDAGOGICA_P6.md`: línea de base, qué se puede y qué no se puede medir con los datos actuales,
 qué es hipótesis y qué está demostrado, y decisiones recomendadas. Lo escribe el director.
+
+---
+
+## Acceso de las lecciones fuera del mapa (ADR-053, aceptada el 19/10/2026)
+
+- `catalogo_producto.unidad_de_cobro(leccion_id) -> str | None`: la unidad del mapa si la lección está en él; si no, de las
+  lecciones declaradas en `transferencia.conceptos` o `conceptos`, la unidad premium que aparece primero en el mapa; si no hay, `None`.
+- `web/app.py`: `_unidad_del_pedido` y la marca `de_pago` del camino usan `unidad_de_cobro`.
+- Validador: en `desafios-*` y en los cursos de juegos nuevos, toda lección declara conceptos.

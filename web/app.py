@@ -35,6 +35,7 @@ if str(RAIZ) not in sys.path:
 from tortuscript import contenido, evaluacion, leccion as motor, liga, logros, progreso  # noqa: E402
 from tortuscript import web_evaluacion, sql_evaluacion  # noqa: E402
 from tortuscript import practica as espaciado  # noqa: E402
+from tortuscript import planificador  # noqa: E402
 from tortuscript import proyectos as mis_proyectos  # noqa: E402
 from tortuscript import proyectos_integradores, catalogo_producto  # noqa: E402
 from tortuscript import diagnostico, intereses, pagos, respaldo, tutor as tortu_llm  # noqa: E402
@@ -876,7 +877,7 @@ def create_app(token=None):
     def practica():
         """Práctica del día: hasta 6 tarjetas que ya tocan, de lecciones distintas (repaso espaciado)."""
         p = _cargar_progreso()
-        elegidas = espaciado.elegir(p, _cursos(), date.today())
+        elegidas = planificador.elegir_sesion(p, _cursos(), date.today())
         if not elegidas:
             return render_template("practica_vacia.html")
         practicas[_perfil_contexto()] = {"dia": str(date.today()), "pasos": elegidas}
