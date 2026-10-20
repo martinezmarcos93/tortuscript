@@ -552,7 +552,11 @@
                 "Un cable de red"
               ],
               "correcta": 0,
-              "pista": "El frontend es la parte visible e interactiva para el usuario."
+              "pista": "El frontend es la parte visible e interactiva para el usuario.",
+              "pistas": [
+                "Es lo que ves en tu pantalla.",
+                "Incluye colores, botones y textos."
+              ]
             },
             {
               "tipo": "elegir",
@@ -563,7 +567,11 @@
                 "El cable de red"
               ],
               "correcta": 0,
-              "pista": "El botón forma parte de la interfaz con la que interactuás."
+              "pista": "El botón forma parte de la interfaz con la que interactuás.",
+              "pistas": [
+                "No incluye cómo se guardan los datos.",
+                "Es lo que tenés frente a vos."
+              ]
             },
             {
               "tipo": "elegir",
@@ -574,7 +582,43 @@
                 "La red mundial completa"
               ],
               "correcta": 0,
-              "pista": "Frontend se refiere a la parte con la que interactúa directamente el usuario."
+              "pista": "Frontend se refiere a la parte con la que interactúa directamente el usuario.",
+              "pistas": [
+                "Es el frente de la aplicación.",
+                "Es lo que diseñás para el usuario."
+              ]
+            },
+            {
+              "tipo": "ordenar",
+              "consigna": "Ordená los elementos de una interfaz.",
+              "lineas": [
+                "Título principal.",
+                "Botones de acción.",
+                "Imagen de perfil."
+              ],
+              "pista": "El título va primero, luego acciones y la imagen al final.",
+              "pistas": [
+                "El título encabeza todo.",
+                "La imagen es un detalle final."
+              ],
+              "lenguaje": "web-conceptual"
+            },
+            {
+              "tipo": "predecir",
+              "pregunta": "¿Qué pasa si cambiás el diseño del frontend?",
+              "codigo": "1. Cambiar color de botón\n2. Guardar archivo\n3. Recargar página",
+              "opciones": [
+                "El usuario ve un diseño nuevo",
+                "El servidor borra los datos",
+                "El botón deja de funcionar"
+              ],
+              "correcta": 0,
+              "pista": "El frontend es lo que el usuario ve directamente.",
+              "pistas": [
+                "Si cambiás la pinta, cambia lo que ves.",
+                "Es un cambio cosmético pero visible."
+              ],
+              "lenguaje": "web-conceptual"
             }
           ]
         },
