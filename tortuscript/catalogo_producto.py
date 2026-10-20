@@ -234,17 +234,28 @@ def unidad_de_leccion(leccion_id):
     return _unidades_por_contenido()[0].get(leccion_id)
 
 
+@functools.lru_cache(maxsize=1)
+def _conceptos_declarados():
+    """{lección fuera del mapa: [lecciones que declara necesitar]} (ADR-053). El contenido no cambia en ejecución."""
+    salida = {}
+    for curso in contenido.todos_los_cursos():
+        for _, leccion in contenido.lecciones(curso):
+            transferencia = leccion.get("transferencia") or {}
+            conceptos = transferencia.get("conceptos") or leccion.get("conceptos") or []
+            if conceptos:
+                salida[leccion.get("id")] = list(conceptos)
+    return salida
+
+
 def unidad_de_cobro(leccion_id):
-    """Unidad comercial que determina el acceso a una lección y sus desafíos."""
+    """La unidad que cobra una lección (ADR-053): la suya si está en el mapa; si no, la primera unidad premium
+    (en el orden del mapa) entre las lecciones que declara necesitar; None si no necesita nada premium."""
     unidad = unidad_de_leccion(leccion_id)
     if unidad is not None:
         return unidad
-    reto = next((l for curso in contenido.todos_los_cursos()
-                 for _, l in contenido.lecciones(curso) if l.get("id") == leccion_id), None)
-    if reto is None:
+    conceptos = _conceptos_declarados().get(leccion_id)
+    if not conceptos:
         return None
-    transferencia = reto.get("transferencia") or {}
-    conceptos = transferencia.get("conceptos") or reto.get("conceptos", [])
     indice = _indice_unidades()
     unidades = _unidades_por_contenido()[0]
     candidatas = {unidades.get(concepto) for concepto in conceptos if unidades.get(concepto)}

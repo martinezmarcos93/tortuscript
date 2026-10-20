@@ -27,12 +27,12 @@
             {
               "tipo": "explicacion",
               "texto": "En la radio escolar, guardá «Luz» en una variable y mostrá exactamente «Hola Luz» tres veces.",
-              "codigo": "mostrar \"Buen día\"\nrepetir 2 veces:\n    mostrar \"¡Vamos!\""
+              "codigo": "saludo es \"Buen día\"\nrepetir 2 veces:\n    mostrar saludo"
             },
             {
               "tipo": "escribir",
               "consigna": "Escribí un programa que resuelva el desafío.",
-              "solucion": "repetir 3 veces:\n    mostrar \"Hola Luz\"",
+              "solucion": "nombre es \"Luz\"\nrepetir 3 veces:\n    mostrar \"Hola \" + nombre",
               "pista": "Guardá el nombre antes de repetir; el mensaje se arma juntando texto y variable."
             }
           ]
@@ -101,7 +101,7 @@
           "pasos": [
             {
               "tipo": "explicacion",
-              "texto": "Para una competencia, mostrà los números 3, 6, 9, 12 y 15, cada uno en una línea."
+              "texto": "Para una competencia, mostrá los números 3, 6, 9, 12 y 15, cada uno en una línea."
             },
             {
               "tipo": "escribir",

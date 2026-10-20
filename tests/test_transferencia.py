@@ -113,9 +113,13 @@ class TestUnidadDeCobro(unittest.TestCase):
         def reto(conceptos):
             return {"id": "reto-sintetico", "transferencia": {"conceptos": conceptos}, "pasos": []}
         curso = {"id": "sintetico", "secciones": [{"id": "s", "lecciones": [reto(["hola-mundo", "tu-primera-variable"])]}]}
+        limpiar = catalogo_producto._conceptos_declarados.cache_clear      # el índice se cachea: el contenido no cambia
+        self.addCleanup(limpiar)
         with patch.object(contenido, "todos_los_cursos", return_value=[curso]):
+            limpiar()
             self.assertIsNone(catalogo_producto.unidad_de_cobro("reto-sintetico"))
             curso["secciones"][0]["lecciones"] = [reto(["py-if", "py-for"])]
+            limpiar()
             self.assertEqual("python-control", catalogo_producto.unidad_de_cobro("reto-sintetico"))
 
 
